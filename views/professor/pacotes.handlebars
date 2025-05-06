@@ -1,0 +1,31 @@
+<h2>Adicionar Pacote de Créditos</h2>
+
+<h2>Adicionar Pacote para {{aluno.nome}}</h2>
+
+<form method="POST" action="/professor/aluno/{{aluno.id}}/pacote">
+  <label>Quantidade de Créditos:</label>
+  <input type="number" name="quantidade" class="form-control" required>
+
+  <label>Validade (data limite):</label>
+  <input type="date" name="validade" class="form-control" required>
+
+  <button class="btn btn-primary mt-3">Salvar Pacote</button>
+</form>
+
+
+<form method="POST" action="/professor/pacotes">
+  <label>Aluno:</label>
+  <select name="aluno_id">
+    {{#each alunos}}
+      <option value="{{this.id}}">{{this.nome}}</option>
+    {{/each}}
+  </select>
+
+  <label>Créditos:</label>
+  <input type="number" name="creditos" required>
+
+  <label>Validade:</label>
+  <input type="date" name="validade" required>
+
+  <button type="submit">Cadastrar Pacote</button>
+</form>

@@ -1,0 +1,14 @@
+<h2>Aulas Disponíveis</h2>
+
+{{#each aulas}}
+  <div class="card mb-3 p-3">
+    <h4>{{this.tipo_nome}} com {{this.professor_nome}}</h4>
+    <p>Data: {{this.data}}</p>
+    <p>Horário: {{this.horario}}</p>
+    <p>Vagas: {{this.vagas}}</p>
+
+    <form method="POST" action="/aluno/aulas/agendar/{{this.id}}">
+      <button type="submit" class="btn btn-primary">Agendar</button>
+    </form>
+  </div>
+{{/each}}

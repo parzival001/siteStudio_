@@ -1,0 +1,22 @@
+<h2>Editar Aula</h2>
+<form method="POST" action="/professor/aulas/editar/{{aula.id}}">
+  <label>Categoria:</label>
+  <select name="categoria_id">
+    {{#each categorias}}
+      <option value="{{this.id}}" {{#if (eq this.id ../aula.categoria_id)}}selected{{/if}}>
+        {{this.nome}}
+      </option>
+    {{/each}}
+  </select>
+
+  <label>Data:</label>
+  <input type="date" name="data" value="{{aula.data}}" required>
+
+  <label>Horário:</label>
+  <input type="time" name="horario" value="{{aula.horario}}" required>
+
+  <label>Vagas:</label>
+  <input type="number" name="vagas" value="{{aula.vagas}}" required>
+
+  <button type="submit">Salvar</button>
+</form>

@@ -1,0 +1,17 @@
+<h2>Editar Aluno</h2>
+
+<form method="POST" action="/professor/alunos/{{aluno.id}}/editar">
+  <div class="mb-3">
+    <label for="nome">Nome:</label>
+    <input type="text" name="nome" class="form-control" value="{{aluno.nome}}" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="email">Email:</label>
+    <input type="email" name="email" class="form-control" value="{{aluno.email}}" required>
+  </div>
+
+  <!-- Adicione outros campos se desejar -->
+
+  <button type="submit" class="btn btn-primary">Salvar</button>
+</form>

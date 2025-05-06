@@ -1,0 +1,14 @@
+<h2>Seus Dados Pessoais</h2>
+
+<form method="POST" action="/professor/meus-dados">
+  <label>Telefone:</label>
+  <input type="text" name="telefone" class="form-control" value="{{professor.telefone}}">
+
+  <label>Especialidade:</label>
+  <input type="text" name="especialidade" class="form-control" value="{{professor.especialidade}}">
+
+  <label>Sobre você:</label>
+  <textarea name="bio" class="form-control">{{professor.bio}}</textarea>
+
+  <button class="btn btn-primary mt-3">Salvar</button>
+</form>

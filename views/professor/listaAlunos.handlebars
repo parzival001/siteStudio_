@@ -1,0 +1,21 @@
+<h2>Alunos Cadastrados</h2>
+
+<form method="GET" action="/professor/alunos" class="mb-3">
+  <input type="text" name="busca" class="form-control" placeholder="Buscar aluno por nome...">
+</form>
+
+{{#each alunos}}
+  <div class="card p-3 mb-3">
+    <h5>{{this.nome}}</h5>
+    <p>Email: {{this.email}}</p>
+
+    <a href="/professor/alunos/{{this.id}}/editar" class="btn btn-warning btn-sm">Editar</a>
+    <form method="POST" action="/professor/alunos/{{this.id}}/deletar" style="display:inline;">
+      <a href="/professor/aluno/{{this.id}}/deletar" class="btn btn-danger btn-sm">Deletar</a>
+    </form>
+    <a href="/professor/anamnese/{{this.id}}" class="btn btn-info btn-sm">Anamnese</a>
+  </div>
+{{else}}
+  <p class="text-muted">Nenhum aluno cadastrado.</p>
+{{/each}}
+<a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>

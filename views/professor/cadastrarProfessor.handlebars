@@ -1,0 +1,41 @@
+<h2>Cadastrar Professor</h2>
+<form method="POST" action="/professor/cadastrar">
+  <div class="mb-3">
+    <label>Nome:</label>
+    <input type="text" name="nome" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Email:</label>
+    <input type="email" name="email" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Senha:</label>
+    <input type="password" name="senha" class="form-control" required>
+  </div>
+  <button class="btn btn-success">Cadastrar</button>
+</form>
+
+<hr>
+
+<h2>Professores Cadastrados</h2>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Email</th>
+    </tr>
+  </thead>
+  <tbody>
+     {{#each professores}}
+      <tr>
+        <td>{{this.nome}}</td>
+        <td>{{this.email}}</td>
+        <td>
+          <form method="POST" action="/professor/deletar/{{this.id}}" onsubmit="return confirm('Tem certeza que deseja excluir este professor?');">
+            <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+          </form>
+        </td>
+      </tr>
+    {{/each}}
+  </tbody>
+</table>

@@ -1,0 +1,53 @@
+<h2>Anamnese de {{aluno.nome}}</h2>
+
+{{#if jaTemAnamnese}}
+  <a href="/professor/aluno/{{aluno.id}}/anamnese/{{anamneseId}}" class="btn btn-info mb-3">Ver Anamnese</a>
+{{/if}}
+
+<form method="POST" action="/professor/alunos/{{aluno.id}}/anamnese">
+  <div class="row">
+    <div class="col-md-4">
+      <label>Peso:</label>
+      <input type="text" name="peso" value="{{anamnese.peso}}" class="form-control">
+    </div>
+    <div class="col-md-4">
+      <label>Estatura:</label>
+      <input type="text" name="estatura" value="{{anamnese.estatura}}" class="form-control">
+    </div>
+    <div class="col-md-4">
+      <label>Contato de Emergência (Nome):</label>
+      <input type="text" name="contato_emergencia_nome" value="{{anamnese.contato_emergencia_nome}}" class="form-control">
+      <label>Telefone:</label>
+      <input type="text" name="contato_emergencia_telefone" value="{{anamnese.contato_emergencia_telefone}}" class="form-control">
+    </div>
+  </div>
+  <hr>
+  <div class="row">
+    {{!-- Campos booleanos (Sim/Não) --}}
+    {{#each (array 
+      "tempo_sentado" "atividade_fisica" "fumante" "alcool" "alimentacao" "gestante" 
+      "tratamento_medico" "lesoes" "marcapasso" "metais" "problema_cervical" 
+      "procedimento_cirurgico" "alergia_medicamentosa" "hipertensao" "hipotensao" 
+      "diabetes" "epilepsia" "labirintite") as |campo|}}
+      <div class="col-md-3 mb-2">
+        <label>{{capitalize (replace campo "_" " ")}}?</label>
+        <select name="{{campo}}" class="form-select">
+          <option value="Sim" {{#ifCond (lookup ../anamnese campo) '==' 'Sim'}}selected{{/ifCond}}>Sim</option>
+          <option value="Não" {{#ifCond (lookup ../anamnese campo) '==' 'Não'}}selected{{/ifCond}}>Não</option>
+        </select>
+      </div>
+    {{/each}}
+  </div>
+
+  <hr>
+  <div class="mb-3">
+    <label>Observações:</label>
+    <textarea name="observacoes" class="form-control">{{anamnese.observacoes}}</textarea>
+  </div>
+  <div class="form-check mb-3">
+    <input type="checkbox" name="aceite_termo" class="form-check-input" {{#if anamnese.aceite_termo}}checked{{/if}}>
+    <label class="form-check-label">Termo de responsabilidade: Aceito</label>
+  </div>
+  <button type="submit" class="btn btn-primary">Salvar Anamnese</button>
+  <a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
+</form>

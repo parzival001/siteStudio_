@@ -1,0 +1,9 @@
+<form method="POST" action="/login">
+  {{#if error}}
+    <div class="alert alert-danger">{{error}}</div>
+  {{/if}}
+  <input type="email" name="email" placeholder="Email" required>
+  <input type="password" name="senha" placeholder="Senha" required>
+  <button type="submit">Entrar</button>
+</form>
+

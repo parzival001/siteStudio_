@@ -1,0 +1,39 @@
+<h2>Dados Pessoais dos Alunos</h2>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Data de Nascimento</th>
+      <th>Endereço</th>
+      <th>Cidade/UF</th>
+      <th>Telefone</th>
+      <th>RG</th>
+      <th>CPF</th>
+      <th>Contrato</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each alunos}}
+    <tr>
+      <td>{{this.nome}}</td>
+      <td>{{this.data_nascimento}}</td>
+      <td>{{this.endereco}}, {{this.complemento}}, {{this.cep}}</td>
+      <td>{{this.cidade}} - {{this.uf}}</td>
+      <td>{{this.telefone}}</td>
+      <td>{{this.rg}}</td>
+      <td>{{this.cpf}}</td>
+      <td>
+        {{#if this.contrato_pdf}}
+          <a href="/uploads/contratos/{{this.contrato_pdf}}" target="_blank">Ver Contrato</a>
+        {{else}}
+          <form action="/professor/upload-contrato/{{this.id}}" method="POST" enctype="multipart/form-data">
+            <input type="file" name="contrato" accept="application/pdf" required>
+            <button class="btn btn-sm btn-primary">Enviar</button>
+          </form>
+        {{/if}}
+      </td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>

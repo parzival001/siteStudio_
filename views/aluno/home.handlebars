@@ -1,0 +1,44 @@
+<h2>Olá, {{aluno.nome}}!</h2>
+<p>Essas são as aulas disponíveis para agendamento:</p>
+
+{{#each aulas}}
+  <div class="card p-3 mb-3">
+    <h5>{{this.tipo_nome}} com {{this.professor_nome}}</h5>
+    <p>Data: {{this.data}} às {{this.horario}}</p>
+    <p>Vagas: {{this.vagas}}</p>
+
+    {{#ifCond ../aulasAgendadas 'includes' this.id}}
+      <form method="POST" action="/aluno/cancelar/{{this.id}}">
+        <button class="btn btn-warning">Cancelar Agendamento</button>
+      </form>
+    {{else}}
+      <form method="POST" action="/aluno/agendar/{{this.id}}">
+        <button class="btn btn-primary">Agendar Aula</button>
+      </form>
+    {{/ifCond}}
+  </div>
+{{/each}}
+
+<hr>
+<h4>Pacotes Disponíveis</h4>
+<ul>
+  {{#each pacotes}}
+    <li>Créditos: {{this.creditos}} - Válido até: {{this.data_validade}}</li>
+  {{/each}}
+</ul>
+
+<h4>Histórico de Aulas Concluídas</h4>
+<ul>
+  {{#each historico}}
+    <li>{{this.tipo_nome}} com {{this.professor_nome}} em {{this.data}} às {{this.horario}}</li>
+  {{else}}
+    <li>Nenhuma aula concluída ainda.</li>
+  {{/each}}
+</ul>
+
+<h4>Dados Pessoais</h4>
+<p><strong>Nome:</strong> {{aluno.nome}}</p>
+<p><strong>Email:</strong> {{aluno.email}}</p>
+
+<h4>Anamnese</h4>
+<p>{{anamnese}}</p>

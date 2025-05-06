@@ -1,0 +1,28 @@
+<h2>Editar Aula Fixa</h2>
+
+<form method="POST" action="/professor/aulas-fixas/editar/{{aula.id}}">
+  <label>Tipo de Aula:</label>
+  <select class="form-select" name="tipo_id">
+    {{#each tipos}}
+      <option value="{{this.id}}" {{#if (eq this.id ../aula.tipo_id)}}selected{{/if}}>{{this.nome}}</option>
+    {{/each}}
+  </select>
+
+  <label>Professor:</label>
+  <select class="form-select" name="professor_id">
+    {{#each professores}}
+      <option value="{{this.id}}" {{#if (eq this.id ../aula.professor_id)}}selected{{/if}}>{{this.nome}}</option>
+    {{/each}}
+  </select>
+
+  <label>Dia da Semana:</label>
+  <input type="text" name="dia_semana" value="{{aula.dia_semana}}" class="form-control">
+
+  <label>Horário:</label>
+  <input type="time" name="horario" value="{{aula.horario}}" class="form-control">
+
+  <label>Vagas:</label>
+  <input type="number" name="vagas" value="{{aula.vagas}}" class="form-control">
+
+  <button type="submit" class="btn btn-primary mt-3">Salvar</button>
+</form>

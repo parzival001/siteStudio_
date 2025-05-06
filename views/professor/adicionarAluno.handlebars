@@ -1,0 +1,13 @@
+<h2>Adicionar Aluno à Aula: {{aula.tipo_nome}} - {{aula.data}} às {{aula.horario}}</h2>
+
+<form method="POST" action="/professor/aulas/{{aula.id}}/adicionar-aluno">
+  <div class="mb-3">
+    <label for="aluno">Escolha o aluno:</label>
+    <select class="form-select" name="aluno_id" required>
+      {{#each alunos}}
+        <option value="{{this.id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Adicionar</button>
+</form>
