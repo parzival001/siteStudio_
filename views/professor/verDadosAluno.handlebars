@@ -7,6 +7,12 @@
   <li><strong>Telefone:</strong> {{aluno.telefone}}</li>
   <li><strong>RG:</strong> {{aluno.rg}}</li>
   <li><strong>CPF:</strong> {{aluno.cpf}}</li>
+  <h3>Contrato do Aluno</h3>
+{{#if aluno.contrato_pdf}}
+  <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank">Ver Contrato em PDF</a>
+{{else}}
+  <p>Nenhum contrato enviado.</p>
+{{/if}}
 </ul>
 
 <a href="/professor/dadosPessoaisAlunos" class="btn btn-secondary">Voltar</a>

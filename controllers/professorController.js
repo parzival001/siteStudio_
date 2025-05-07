@@ -650,12 +650,12 @@ exports.deletarAulaFixa = async (req, res) => {
 
 // Função para formatar a data no formato yyyy-mm-dd
 
-function formatDateForDisplay(date) {
+function formatDateForInput(date) {
   const d = new Date(date);
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return `${year}-${month}-${day}`; // formato aceito por <input type="date">
 }
 
 exports.verDadosPessoaisAlunos = async (req, res) => {
@@ -673,7 +673,7 @@ exports.verDadosPessoaisAlunos = async (req, res) => {
 
     // Formatar a data de nascimento para o formato dd/mm/yyyy
     alunos.forEach(aluno => {
-      aluno.data_nascimento = formatDateForDisplay(aluno.data_nascimento);
+      aluno.data_nascimento = formatDateForInput(aluno.data_nascimento);
     });
 
     res.render('professor/dadosPessoaisAlunos', { alunos });
@@ -703,6 +703,14 @@ exports.uploadContrato = async (req, res) => {
 };
 
 //Ver dados alunos
+function formatDateForDisplay(date) {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 exports.verDadosAluno = async (req, res) => {
   const alunoId = req.params.id;
 
@@ -714,7 +722,10 @@ exports.verDadosAluno = async (req, res) => {
       return res.status(404).send('Aluno não encontrado');
     }
 
-    res.render('professor/verDadosAluno', { aluno }); // nome exato do .hbs
+    // 🟢 Formatando a data para exibição
+    aluno.data_nascimento = formatDateForDisplay(aluno.data_nascimento);
+
+    res.render('professor/verDadosAluno', { aluno });
   } catch (err) {
     console.error('Erro ao buscar dados do aluno:', err);
     res.status(500).send('Erro ao buscar dados do aluno');
@@ -725,6 +736,7 @@ exports.verDadosAluno = async (req, res) => {
 exports.atualizarDadosAluno = async (req, res) => {
   const alunoId = req.params.id;
   const { nome, data_nascimento, endereco, cidade_uf, telefone, rg, cpf } = req.body;
+
 
   // Dividir cidade e UF
   const [cidade, uf] = cidade_uf.split(' - ');

@@ -53,6 +53,7 @@ app.set('view engine', 'handlebars');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads/contratos', express.static('uploads/contratos'));
 
 // Configuração da sessão
 app.use(session({
