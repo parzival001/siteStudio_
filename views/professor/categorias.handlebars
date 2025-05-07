@@ -1,0 +1,29 @@
+<h2>Categorias</h2>
+
+<!-- Formulário de criação -->
+<form action="/professor/categorias" method="POST" class="mb-4 d-flex gap-2">
+  <input type="text" name="nome" class="form-control" placeholder="Nome da categoria" required>
+  <button type="submit" class="btn btn-primary">Adicionar</button>
+</form>
+
+<!-- Lista de categorias -->
+<table class="table">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each categorias}}
+    <tr>
+      <td>{{this.nome}}</td>
+      <td>
+        <form action="/professor/categorias/{{this.categoria_id}}/delete" method="POST" class="d-inline">
+          <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+        </form>
+      </td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>

@@ -78,7 +78,10 @@ router.post('/aulas-fixas/deletar/:id', authProfessor, professorController.delet
 //router.post('/aulas-fixas/remover-aluno', authProfessor, professorController.removerAlunoAulaFixa);
 router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, professorController.removerAlunoAulaFixa);
 
-
+//categorias
+router.get('/categorias', professorController.listarCategorias);
+router.post('/categorias', professorController.criarCategoria);
+router.post('/categorias/:id/delete', professorController.deletarCategoria);
 
 // Alunos
 router.get('/alunos/cadastrar', authProfessor, professorController.formCadastroAluno);

@@ -758,3 +758,22 @@ exports.atualizarDadosAluno = async (req, res) => {
     res.status(500).send('Erro ao atualizar dados do aluno.');
   }
 };
+
+
+//CATEGORIAS
+exports.listarCategorias = async (req, res) => {
+  const [categorias] = await db.query('SELECT * FROM categorias');
+  res.render('professor/categorias', { categorias });
+};
+
+exports.criarCategoria = async (req, res) => {
+  const { nome } = req.body;
+  await db.query('INSERT INTO categorias (nome) VALUES (?)', [nome]);
+  res.redirect('/professor/categorias');
+};
+
+exports.deletarCategoria = async (req, res) => {
+  const id = req.params.id;
+  await db.query('DELETE FROM categorias WHERE categoria_id = ?', [id]);
+  res.redirect('/professor/categorias');
+};
