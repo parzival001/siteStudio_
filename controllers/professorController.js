@@ -1,11 +1,18 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const express = require('express');
+const router = express.Router();
+
+
 
 // Controller para rotas de 'professor'
 
 exports.home = (req, res) => {
   res.render('professor/home', { nome: req.session.user.nome });
 };
+
+
+
 
 exports.criarAula = async (req, res) => {
   const { professor_id, categoria_id, data, horario, vagas } = req.body;
@@ -635,25 +642,107 @@ exports.deletarAulaFixa = async (req, res) => {
   }
 };
 
-//Dados Pessoais
+
+
+
+
+
+
+// Função para formatar a data no formato yyyy-mm-dd
+
+function formatDateForDisplay(date) {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 exports.verDadosPessoaisAlunos = async (req, res) => {
   try {
+    // Certifique-se de que o SELECT inclui o campo "id"
     const [alunos] = await db.query(`
-      SELECT nome, data_nascimento, endereco, complemento, cep, cidade, uf, telefone, rg, cpf 
+      SELECT id, nome, data_nascimento, endereco, complemento, cep, cidade, uf, telefone, rg, cpf
       FROM alunos
     `);
+
+    if (!alunos || alunos.length === 0) {
+      console.error('Nenhum aluno encontrado');
+      return res.status(404).send('Nenhum aluno encontrado');
+    }
+
+    // Formatar a data de nascimento para o formato dd/mm/yyyy
+    alunos.forEach(aluno => {
+      aluno.data_nascimento = formatDateForDisplay(aluno.data_nascimento);
+    });
+
     res.render('professor/dadosPessoaisAlunos', { alunos });
   } catch (err) {
-    console.error('Erro ao listar dados pessoais dos alunos:', err);
-    res.status(500).send('Erro ao buscar dados pessoais');
+    console.error('Erro ao buscar dados pessoais dos alunos:', err);
+    return res.status(500).send('Erro ao buscar dados pessoais: ' + err.message);
   }
 };
 
-router.get('/dados-alunos', async (req, res) => {
-  try {
-    const [alunos] = await db.query('SELECT * FROM alunos');
-    res.render('professor/dadosAlunos', { alunos });
-  } catch (err) {
-    res.status(500).send('Erro ao carregar alunos');
+//contrato 
+
+exports.uploadContrato = async (req, res) => {
+  const alunoId = req.body.alunoId;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).send('Nenhum arquivo enviado.');
   }
-});
+
+  try {
+    await db.query('UPDATE alunos SET contrato_pdf = ? WHERE id = ?', [file.filename, alunoId]);
+    res.redirect('/professor/alunos');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao salvar o contrato.');
+  }
+};
+
+//Ver dados alunos
+exports.verDadosAluno = async (req, res) => {
+  const alunoId = req.params.id;
+
+  try {
+    const [resultado] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+    const aluno = resultado[0];
+
+    if (!aluno) {
+      return res.status(404).send('Aluno não encontrado');
+    }
+
+    res.render('professor/verDadosAluno', { aluno }); // nome exato do .hbs
+  } catch (err) {
+    console.error('Erro ao buscar dados do aluno:', err);
+    res.status(500).send('Erro ao buscar dados do aluno');
+  }
+};
+
+// Atualizar Dados do Aluno
+exports.atualizarDadosAluno = async (req, res) => {
+  const alunoId = req.params.id;
+  const { nome, data_nascimento, endereco, cidade_uf, telefone, rg, cpf } = req.body;
+
+  // Dividir cidade e UF
+  const [cidade, uf] = cidade_uf.split(' - ');
+
+  // Dividir endereço, complemento e CEP
+  const partesEndereco = endereco.split(',');
+  const enderecoFinal = partesEndereco[0]?.trim() || '';
+  const complemento = partesEndereco[1]?.trim() || '';
+  const cep = partesEndereco[2]?.trim() || '';
+
+  try {
+    await db.query(
+      `UPDATE alunos SET nome = ?, data_nascimento = ?, endereco = ?, complemento = ?, cep = ?, cidade = ?, uf = ?, telefone = ?, rg = ?, cpf = ? WHERE id = ?`,
+      [nome, data_nascimento, enderecoFinal, complemento, cep, cidade, uf, telefone, rg, cpf, alunoId]
+    );
+    res.redirect('/professor/dadosPessoaisAlunos');
+  } catch (err) {
+    console.error('Erro ao atualizar dados do aluno:', err);
+    res.status(500).send('Erro ao atualizar dados do aluno.');
+  }
+};

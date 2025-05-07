@@ -4,24 +4,10 @@ const session = require('express-session');
 const path = require('path');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt'); // Incluído para usar no login
-
+const upload = require('./utils/upload');
 const app = express();
 
-const multer = require('multer');
 
-// Configuração do multer para o upload de arquivos
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/uploads');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));  // Usando timestamp para nome do arquivo
-  }
-});
-
-const upload = multer({ storage: storage });
-
-module.exports = upload;
 
 
 
@@ -79,6 +65,8 @@ app.use(session({
 const authRoutes = require('./routes/auth');
 const professorRoutes = require('./routes/professor');
 const alunoRoutes = require('./routes/aluno');
+const authController = require('./controllers/authController');
+
 
 app.use('/', authRoutes);
 app.use('/professor', professorRoutes);

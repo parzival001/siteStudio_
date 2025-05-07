@@ -4,34 +4,48 @@ const multer = require('multer');
 const path = require('path');
 const db = require('../config/db'); // Ajuste conforme sua estrutura
 
-// Configuração do multer
+const professorController = require('../controllers/professorController');
+
+
+// Configuração do armazenamento dos arquivos PDF
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/uploads/contratos/');
+    cb(null, 'uploads/contratos/');
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'contrato-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
+
 const upload = multer({ storage: storage });
 
 // Rota POST para upload do contrato
 router.post('/upload-contrato/:id', upload.single('contrato'), async (req, res) => {
   const alunoId = req.params.id;
+
+  if (!req.file) {
+    return res.status(400).send('Nenhum arquivo enviado.');
+  }
+
   const contratoPdf = req.file.filename;
 
   try {
+    // Verificar se o aluno existe antes de tentar atualizar
+    const [aluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+    if (!aluno) {
+      return res.status(404).send('Aluno não encontrado.');
+    }
+
+    // Atualizar o contrato no banco de dados
     await db.query('UPDATE alunos SET contrato_pdf = ? WHERE id = ?', [contratoPdf, alunoId]);
-    res.redirect('/professor/dados-alunos'); // Ajuste essa rota se necessário
+    res.redirect('/professor/dadosPessoaisAlunos'); // Redireciona para a página de dados do aluno
   } catch (err) {
     console.error('Erro ao salvar contrato:', err);
     res.status(500).send('Erro ao salvar contrato.');
   }
 });
-
-
-
 
 
 
@@ -67,7 +81,6 @@ router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, profes
 
 
 // Alunos
-router.get('/alunos', authProfessor, professorController.listaAlunos);
 router.get('/alunos/cadastrar', authProfessor, professorController.formCadastroAluno);
 router.post('/alunos/cadastrar', authProfessor, professorController.cadastrarAluno);
 router.get('/aluno/:id/deletar', authProfessor, professorController.deletarAluno);
@@ -77,6 +90,21 @@ router.get('/professores', professorController.listarProfessores);
 
 //Daods Pessoais
 router.get('/dados-pessoais-alunos', professorController.verDadosPessoaisAlunos);
+router.get('/dadosPessoaisAlunos', professorController.verDadosPessoaisAlunos);
+router.post('/atualizar-dados-aluno/:id', professorController.atualizarDadosAluno);
+router.get('/ver-dados-aluno/:id', professorController.verDadosAluno);
+
+
+router.get('/dados-alunos', async (req, res) => {
+  try {
+    const [alunos] = await db.query('SELECT * FROM alunos');
+    res.render('professor/dadosAlunos', { alunos });
+  } catch (err) {
+    res.status(500).send('Erro ao carregar alunos');
+  }
+});
+
+
 
 // Pacotes
 router.get('/pacotes', authProfessor, professorController.formPacotes);
@@ -456,8 +484,24 @@ router.post('/upload-contrato/:id', upload.single('contrato'), async (req, res) 
   res.redirect('/professor/dados-pessoais-alunos');
 });
 
-router.post('/upload-contrato/:id', upload.single('contrato'), async (req, res) => {
-  // ...
+// Rota GET para exibir o formulário de atualização
+router.get('/atualizar-dados-aluno/:id', async (req, res) => {
+  const alunoId = req.params.id;
+  
+  try {
+    const [aluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+    
+    if (aluno.length > 0) {
+      res.render('professor/atualizarDadosAluno', { aluno: aluno[0] });
+    } else {
+      res.status(404).send('Aluno não encontrado');
+    }
+  } catch (err) {
+    console.error('Erro ao buscar dados do aluno:', err);
+    res.status(500).send('Erro ao carregar dados do aluno');
+  }
 });
+
+
 
 module.exports = router;
