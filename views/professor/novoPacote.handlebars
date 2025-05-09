@@ -1,0 +1,53 @@
+<h2>Cadastrar Novo Pacote</h2>
+
+<form action="/professor/pacotes/novo" method="POST">
+  <div class="mb-2">
+    <label>Aluno</label>
+    <select name="aluno_id" class="form-control" required>
+      {{#each alunos}}
+        <option value="{{this.id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  <div class="mb-2">
+    <label>Tipo de Pacote</label>
+    <select name="tipo" class="form-control" required>
+      <option value="mensal">Mensal</option>
+      <option value="trimestral">Trimestral</option>
+      <option value="semestral">Semestral</option>
+    </select>
+  </div>
+
+  <div class="mb-2">
+    <label>Quantidade de Aulas</label>
+    <input type="number" name="quantidade_aulas" class="form-control" required>
+  </div>
+
+  <div class="mb-2">
+    <label>Data de Início</label>
+    <input type="date" name="data_inicio" class="form-control" required>
+  </div>
+
+  <div class="mb-2">
+    <label>Categoria</label>
+    <select name="categoria_id" class="form-control">
+      {{#each categorias}}
+        <option value="{{this.id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+    <small class="form-text text-muted">Se marcar Passe Livre, a categoria será ignorada.</small>
+  </div>
+
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="passe_livre" value="1" id="passeLivreCheck">
+    <label class="form-check-label" for="passeLivreCheck">Passe Livre</label>
+  </div>
+
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="pago" value="1" id="pagoCheck">
+    <label class="form-check-label" for="pagoCheck">Pago</label>
+  </div>
+
+  <button type="submit" class="btn btn-primary mt-3">Salvar Pacote</button>
+</form>

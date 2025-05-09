@@ -1,0 +1,41 @@
+
+
+ {{!-- CREATE TABLE pacotes ( 
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(100),
+  tipo ENUM('unitario', 'mensal', 'trimestral', 'semestral', 'livre'),
+  quantidade_aulas INT,
+  validade_dias INT,
+  categoria_id INT,
+  passe_livre BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)
+);
+
+CREATE TABLE aluno_pacotes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  aluno_id INT,
+  pacote_id INT,
+  creditos_disponiveis INT,
+  data_inicio DATE,
+  data_fim DATE,
+  pago BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (aluno_id) REFERENCES alunos(id),
+  FOREIGN KEY (pacote_id) REFERENCES pacotes(id)
+); 
+
+CREATE TABLE pacotes_aluno (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  aluno_id INT NOT NULL,
+  categoria_id INT, -- pode ser NULL se for passe livre
+  tipo ENUM('mensal', 'trimestral', 'semestral') NOT NULL,
+  quantidade_aulas INT NOT NULL,
+  data_inicio DATE NOT NULL,
+  data_validade DATE NOT NULL,
+  aulas_utilizadas INT DEFAULT 0,
+  passe_livre BOOLEAN DEFAULT FALSE,
+  pago BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (aluno_id) REFERENCES alunos(id),
+  FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)
+);
+
+--}}

@@ -1,8 +1,9 @@
 <h2 class="mb-4">Pacotes de {{aluno.nome}}</h2>
 
 <a href="/professor/alunos" class="btn btn-secondary mb-3">← Voltar</a>
+<a href="/professor/pacotes/novo/{{aluno.id}}" class="btn btn-primary mb-3">+ Novo Pacote</a>
 
-<table class="table table-hover">
+<table class="table table-bordered">
   <thead>
     <tr>
       <th>Tipo</th>
@@ -28,9 +29,7 @@
         {{#if this.expirado}}<span class="badge bg-danger">Vencido</span>
         {{else}}<span class="badge bg-success">Válido</span>{{/if}}
       </td>
-      <td>
-        {{#if this.pago}}Sim{{else}}Não{{/if}}
-      </td>
+      <td>{{#if this.pago}}Sim{{else}}Não{{/if}}</td>
     </tr>
     {{/each}}
   </tbody>

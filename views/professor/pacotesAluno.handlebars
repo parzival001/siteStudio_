@@ -1,0 +1,131 @@
+<h2>Pacotes de Aulas - {{aluno.nome}}</h2>
+
+<!-- Formulário para adicionar novo pacote -->
+<form action="/professor/pacotes/criar" method="POST" class="mb-4">
+  <input type="hidden" name="aluno_id" value="{{aluno.id}}">
+
+  <div class="row g-2 mb-2">
+    <div class="col-md-3">
+      <label>Categoria:</label>
+      <select name="categoria_id" class="form-control" required>
+        {{#each categorias}}
+          <option value="{{this.id}}">{{this.nome}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label>Qtd. Aulas:</label>
+      <input type="number" name="quantidade_aulas" class="form-control" required>
+    </div>
+
+    <div class="col-md-2">
+      <label>Validade (dias):</label>
+      <input type="number" name="validade_dias" class="form-control" required>
+    </div>
+
+    <div class="col-md-2">
+      <label>Passe Livre?</label>
+      <select name="passe_livre" class="form-control">
+        <option value="0">Não</option>
+        <option value="1">Sim</option>
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label>Pago?</label>
+      <select name="pago" class="form-control">
+        <option value="1">Sim</option>
+        <option value="0">Não</option>
+      </select>
+    </div>
+
+    <div class="col-md-1 d-flex align-items-end">
+      <button type="submit" class="btn btn-success w-100">Adicionar</button>
+    </div>
+  </div>
+</form>
+
+<!-- Lista de pacotes -->
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Categoria</th>
+      <th>Qtd. Aulas</th>
+      <th>Usadas</th>
+      <th>Validade</th>
+      <th>Status</th>
+      <th>Passe Livre</th>
+      <th>Pago</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each pacotes}}
+    <tr class="{{#ifCond this.pago '==' 0}}table-danger{{else}}table-success{{/ifCond}}">
+      <td>{{this.categoria_nome}}</td>
+      <td>{{this.quantidade_aulas}}</td>
+      <td>{{this.aulas_usadas}}</td>
+      <td>{{formatDate this.validade}}</td>
+      <td>
+        {{#if (isVencido this.validade)}}
+          <span class="text-danger">Vencido</span>
+        {{else if (venceEm7Dias this.validade)}}
+          <span class="text-warning">Vence em breve</span>
+        {{else}}
+          <span class="text-success">Ativo</span>
+        {{/if}}
+      </td>
+      <td>{{#ifCond this.passe_livre '==' 1}}Sim{{else}}Não{{/ifCond}}</td>
+      <td>{{#ifCond this.pago '==' 1}}Sim{{else}}Não{{/ifCond}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+
+
+<div class="container mt-4">
+  <h2>Pacotes do Aluno</h2>
+
+  <a href="/professor/alunos" class="btn btn-secondary mb-3">Voltar para alunos</a>
+
+  {{#if pacotes.length}}
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Categoria</th>
+          <th>Aulas</th>
+          <th>Utilizadas</th>
+          <th>Data Início</th>
+          <th>Validade</th>
+          <th>Pago</th>
+          <th>Passe Livre</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each pacotes}}
+          <tr>
+            <td>{{tipo}}</td>
+            <td>{{categoria_nome}}</td>
+            <td>{{quantidade_aulas}}</td>
+            <td>{{aulas_utilizadas}}</td>
+            <td>{{data_inicio}}</td>
+            <td>{{data_validade}}</td>
+            <td>{{#if pago}}Sim{{else}}Não{{/if}}</td>
+            <td>{{#if passe_livre}}Sim{{else}}Não{{/if}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p>Este aluno ainda não possui pacotes cadastrados.</p>
+  {{/if}}
+</div>
+
+
+
+
+
+
+<a href="/professor/alunos" class="btn btn-secondary">Voltar para alunos</a>

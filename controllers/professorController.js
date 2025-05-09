@@ -14,6 +14,9 @@ exports.home = (req, res) => {
 
 
 
+
+
+
 exports.criarAula = async (req, res) => {
   const { professor_id, categoria_id, data, horario, vagas } = req.body;
   try {
@@ -334,7 +337,7 @@ exports.formNovaAulaFixa = async (req, res) => {
 exports.listarAlunos = async (req, res) => {
   try {
     const [alunos] = await db.query('SELECT * FROM alunos');
-    res.render('professor/verAlunos', { alunos });
+    res.render('professor/listaAlunos', { alunos });
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao listar alunos');
@@ -776,4 +779,253 @@ exports.deletarCategoria = async (req, res) => {
   const id = req.params.id;
   await db.query('DELETE FROM categorias WHERE categoria_id = ?', [id]);
   res.redirect('/professor/categorias');
+};
+
+
+
+// controllers/professorController.js
+exports.formNovoPacote = async (req, res) => {
+  const [alunos] = await db.query('SELECT id, nome FROM alunos');
+  const [categorias] = await db.query('SELECT id, nome FROM categorias');
+
+  res.render('professor/novoPacote', {
+    alunos,
+    categorias
+  });
+};
+
+exports.criarNovoPacote = async (req, res) => {
+  const {
+    aluno_id,
+    categoria_id,
+    tipo,
+    quantidade_aulas,
+    data_inicio,
+    passe_livre,
+    pago
+  } = req.body;
+
+  // Define validade automaticamente com base no tipo
+  const validade = new Date(data_inicio);
+  if (tipo === 'mensal') validade.setMonth(validade.getMonth() + 1);
+  if (tipo === 'trimestral') validade.setMonth(validade.getMonth() + 3);
+  if (tipo === 'semestral') validade.setMonth(validade.getMonth() + 6);
+
+  await db.query(`
+    INSERT INTO pacotes_aluno 
+      (aluno_id, categoria_id, tipo, quantidade_aulas, data_inicio, data_validade, passe_livre, pago) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      aluno_id,
+      passe_livre ? null : categoria_id,
+      tipo,
+      quantidade_aulas,
+      data_inicio,
+      validade.toISOString().split('T')[0],
+      passe_livre ? 1 : 0,
+      pago ? 1 : 0
+    ]
+  );
+
+  res.redirect('/professor/pacotes');
+};
+
+exports.verPacotesPorAluno = async (req, res) => {
+  const alunoId = req.params.id;
+
+  try {
+    const [[aluno]] = await db.query('SELECT nome FROM alunos WHERE id = ?', [alunoId]);
+
+    const [pacotes] = await db.query(`
+      SELECT 
+        p.id,
+        p.tipo,
+        p.quantidade_aulas,
+        p.aulas_utilizadas,
+        p.data_inicio,
+        p.data_validade,
+        p.pago,
+        p.passe_livre,
+        c.nome AS categoria_nome
+      FROM pacotes_aluno p
+      LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+      WHERE p.aluno_id = ?
+      ORDER BY p.data_inicio DESC
+    `, [alunoId]);
+
+    // Calcular status de validade e créditos restantes
+    const hoje = new Date();
+
+    pacotes.forEach(p => {
+      const validade = new Date(p.data_validade);
+      const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+      p.status_validade = diasRestantes <= 0
+        ? 'Vencido'
+        : diasRestantes <= 7
+        ? 'Vence em breve'
+        : `Válido (${diasRestantes} dias)`;
+      p.creditos_restantes = p.quantidade_aulas - p.aulas_utilizadas;
+    });
+
+    res.render('professor/pacotesPorAluno', { aluno, pacotes });
+  } catch (err) {
+    console.error('Erro ao buscar pacotes do aluno:', err);
+    res.status(500).send('Erro ao buscar pacotes.');
+  }
+};
+
+exports.listarPacotesPorAluno = async (req, res) => {
+  try {
+    const [pacotes] = await db.query(`
+      SELECT p.id, a.nome AS aluno_nome, p.nome_pacote, p.aulas_total, p.aulas_usadas, p.validade, p.pago, p.passe_livre, c.nome AS modalidade
+      FROM pacotes_aluno p
+      JOIN alunos a ON a.id = p.aluno_id
+      LEFT JOIN categorias c ON c.id = p.modalidade_id
+    `);
+
+    // Lógica para calcular aulas restantes e status de validade
+    const hoje = new Date();
+    pacotes.forEach(pacote => {
+      const validade = new Date(pacote.validade);
+      const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+      pacote.aulas_restantes = pacote.aulas_total - pacote.aulas_usadas;
+      pacote.status_validade = diasRestantes < 0 ? 'Vencido'
+                            : diasRestantes <= 7 ? 'Próximo do vencimento'
+                            : 'Válido';
+    });
+
+    res.render('professor/listaPacotes', { pacotes });
+  } catch (err) {
+    console.error('Erro ao listar pacotes:', err);
+    res.status(500).send('Erro ao listar pacotes');
+  }
+};
+
+exports.verPacotesAluno = async (req, res) => {
+  const alunoId = req.params.id;
+
+  // Buscar dados do aluno
+  const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
+
+  // Buscar pacotes do aluno com nome da categoria
+  const [pacotes] = await db.query(`
+    SELECT p.*, c.nome AS categoria_nome 
+    FROM pacotes p
+    LEFT JOIN categorias c ON p.categoria_id = c.id
+    WHERE p.aluno_id = ?
+  `, [alunoId]);
+
+  // Buscar todas as categorias disponíveis
+  const [categorias] = await db.query('SELECT * FROM categorias');
+
+  // Renderizar view
+  res.render('professor/pacotesAluno', {
+    aluno,
+    pacotes,
+    categorias
+  });
+};
+// Cria novo pacote para um aluno
+exports.criarPacote = async (req, res) => {
+  const { aluno_id, categoria_id, quantidade_aulas, validade_dias, passe_livre, pago } = req.body;
+
+  const hoje = new Date();
+  const validade = new Date(hoje);
+  validade.setDate(validade.getDate() + parseInt(validade_dias));
+
+  await db.query(`
+    INSERT INTO pacotes 
+    (aluno_id, categoria_id, quantidade_aulas, aulas_usadas, validade, passe_livre, pago)
+    VALUES (?, ?, ?, 0, ?, ?, ?)
+  `, [aluno_id, categoria_id, quantidade_aulas, validade, passe_livre, pago]);
+
+  res.redirect(`/professor/pacotes/${aluno_id}`);
+};
+
+exports.pacotesDoAluno = async (req, res) => {
+  const alunoId = req.params.id;
+
+  try {
+    // Buscar dados do aluno
+    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
+
+    // Buscar pacotes do aluno com nome da categoria
+    const [pacotes] = await db.query(`
+      SELECT p.*, c.nome AS categoria_nome 
+      FROM pacotes p
+      LEFT JOIN categorias c ON p.categoria_id = c.id
+      WHERE p.aluno_id = ?
+    `, [alunoId]);
+
+    // Buscar todas as categorias disponíveis
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    // Renderizar view
+    res.render('professor/pacotesAluno', {
+      aluno,
+      pacotes,
+      categorias
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar pacotes do aluno:', error);
+    res.status(500).send('Erro interno ao carregar pacotes do aluno');
+  }
+};
+
+// Função para listar pacotes
+exports.listarPacotes = async (req, res) => {
+  const [pacotes] = await db.query('SELECT * FROM pacotes');
+  res.render('professor/pacotes', { pacotes });
+};
+
+
+
+// Função para deletar pacotes
+exports.deletarPacote = async (req, res) => {
+  const id = req.params.id;
+
+  // Deletar pacote do banco de dados
+  await db.query('DELETE FROM pacotes WHERE id = ?', [id]);
+
+  res.redirect('/professor/pacotes'); // Redireciona para a lista de pacotes
+};
+
+// Função para ver os pacotes de um aluno específico
+exports.verPacotesAluno = async (req, res) => {
+  const alunoId = req.params.alunoId;
+
+  // Consultar pacotes associados ao aluno
+  const [pacotes] = await db.query('SELECT * FROM pacotes WHERE aluno_id = ?', [alunoId]);
+
+  res.render('professor/pacotesAluno', { pacotes });
+};
+
+exports.verPacotesPorAluno = async (req, res) => {
+  const alunoId = req.params.id;
+
+  try {
+    const [pacotes] = await db.query(`
+      SELECT 
+        p.id,
+        p.tipo,
+        p.quantidade_aulas,
+        p.aulas_utilizadas,
+        p.data_inicio,
+        p.data_validade,
+        p.pago,
+        p.passe_livre,
+        c.nome AS categoria_nome
+      FROM pacotes_aluno p
+      LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+      WHERE p.aluno_id = ?
+      ORDER BY p.data_inicio DESC
+    `, [alunoId]);
+
+    res.render('professor/pacotesAluno', { pacotes, alunoId });
+
+  } catch (error) {
+    console.error("Erro ao buscar pacotes do aluno:", error);
+    res.status(500).send("Erro ao buscar pacotes");
+  }
 };

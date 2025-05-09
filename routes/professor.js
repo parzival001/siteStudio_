@@ -4,6 +4,9 @@ const multer = require('multer');
 const path = require('path');
 const db = require('../config/db'); // Ajuste conforme sua estrutura
 
+
+
+
 const professorController = require('../controllers/professorController');
 
 
@@ -59,6 +62,24 @@ function authProfessor(req, res, next) {
 
 // Página inicial do professor
 router.get('/home', authProfessor, professorController.home);
+
+
+// PACOTES
+router.get('/pacotes/novo', professorController.formNovoPacote);
+router.post('/pacotes/novo', professorController.criarNovoPacote);
+router.get('/pacotes/aluno/:alunoId', professorController.verPacotesPorAluno);
+router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
+router.get('/alunos/:id/pacotes', professorController.verPacotesAluno);
+router.get('/alunos/:id/pacotes', professorController.pacotesDoAluno);
+router.get('/pacotes', professorController.listarPacotes);
+router.post('/pacotes', professorController.criarPacote);
+router.post('/pacotes/:id/delete', professorController.deletarPacote);
+router.get('/pacotes/:id', professorController.verPacotesPorAluno);
+
+
+
+
+
 
 // Aulas avulsas
 router.get('/aulas', authProfessor, professorController.listarAulas);
@@ -122,7 +143,7 @@ router.get('/alunos', authProfessor, async (req, res) => {
       [`%${busca}%`]
     );
 
-    res.render('professor/verAlunos', { alunos, busca });
+    res.render('professor/listaAlunos', { alunos, busca });
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao listar alunos');

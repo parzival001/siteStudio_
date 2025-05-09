@@ -9,11 +9,10 @@ const app = express();
 
 
 
-
-
 // Configurar handlebars com helpers
 const hbs = handlebars.create({
   defaultLayout: 'main',
+  extname: '.handlebars',
   helpers: {
     ifCond: function (v1, operator, v2, options) {
       switch (operator) {
@@ -44,8 +43,28 @@ const hbs = handlebars.create({
     array: (...args) => args.slice(0, -1),
     replace: (str, find, replace) => str.replaceAll(find, replace),
     capitalize: str => str.charAt(0).toUpperCase() + str.slice(1),
+    formatDate: function (date) {
+      const d = new Date(date);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    },
+    isVencido: function (data) {
+      const validade = new Date(data);
+      const hoje = new Date();
+      return validade < hoje;
+    },
+    venceEm7Dias: function (data) {
+      const validade = new Date(data);
+      const hoje = new Date();
+      const diff = (validade - hoje) / (1000 * 60 * 60 * 24);
+      return diff <= 7 && diff > 0;
+    }
   }
 });
+
+
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
 
