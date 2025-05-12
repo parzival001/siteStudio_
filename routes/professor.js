@@ -66,18 +66,19 @@ router.get('/home', authProfessor, professorController.home);
 
 // PACOTES
 router.get('/pacotes/novo', professorController.formNovoPacote);
-router.post('/pacotes/novo', professorController.criarNovoPacote);
-router.get('/pacotes/aluno/:alunoId', professorController.verPacotesPorAluno);
+router.post('/pacotes/novo', professorController.criarPacote);
 router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
 router.get('/alunos/:id/pacotes', professorController.verPacotesAluno);
-router.get('/alunos/:id/pacotes', professorController.pacotesDoAluno);
-router.get('/pacotes', professorController.listarPacotes);
-router.post('/pacotes', professorController.criarPacote);
-router.post('/pacotes/:id/delete', professorController.deletarPacote);
+router.get('/pacotes', professorController.listarPacotesPorAluno);
+router.post('/pacotes/criar', professorController.criarPacote);
 router.get('/pacotes/:id', professorController.verPacotesPorAluno);
+router.get('/pacotes', authProfessor, professorController.formPacotes);
+router.post('/pacotes', authProfessor, professorController.adicionarPacote);
 
-
-
+// Créditos manuais
+router.get('/creditos/novo', professorController.formAdicionarCredito);
+router.post('/creditos/novo', professorController.adicionarCredito);
+router.get('/creditos', professorController.listarCreditos);
 
 
 
@@ -130,9 +131,7 @@ router.get('/dados-alunos', async (req, res) => {
 
 
 
-// Pacotes
-router.get('/pacotes', authProfessor, professorController.formPacotes);
-router.post('/pacotes', authProfessor, professorController.adicionarPacote);
+
 
 router.get('/alunos', authProfessor, async (req, res) => {
   const busca = req.query.busca || '';

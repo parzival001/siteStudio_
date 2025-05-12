@@ -1,0 +1,35 @@
+<h2 class="mt-3">Aulas Disponíveis</h2>
+
+{{#each aulas}}
+  <div class="card mb-3 p-3">
+    <h5>Professor: {{this.professor_nome}}</h5>
+    <h5>{{this.tipo_nome}}</h5>
+    <p>Data: {{this.data_formatada}}</p>
+    <p>Vagas: {{this.vagas}}</p>
+
+    {{#if this.alunos.length}}
+      <p><strong>Alunos inscritos:</strong></p>
+      <ul>
+        {{#each this.alunos}}
+          <li>{{this.nome}}</li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p><em>Nenhum aluno inscrito ainda.</em></p>
+    {{/if}}
+
+    {{#unless this.ja_inscrito}}
+      <form method="POST" action="/aluno/inscrever/{{this.id}}">
+        <button type="submit" class="btn btn-success">Inscrever-se</button>
+      </form>
+    {{else}}
+      <form method="POST" action="/aluno/desinscrever/{{this.id}}">
+        <button type="submit" class="btn btn-danger">Desinscrever-se</button>
+      </form>
+    {{/unless}}
+
+    {{#if this.pode_desmarcar}}
+      <p>Você pode desmarcar essa aula até {{this.tempo_cancelamento}} horas antes.</p>
+    {{/if}}
+  </div>
+{{/each}}

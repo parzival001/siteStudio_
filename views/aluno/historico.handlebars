@@ -1,13 +1,10 @@
 <h2>Histórico de Aulas</h2>
 
-{{#if aulas.length}}
-  {{#each aulas}}
-    <div class="card mb-3 p-3">
-      <h5>{{this.tipo_nome}} com {{this.professor_nome}}</h5>
-      <p>Data: {{this.data}}</p>
-      <p>Horário: {{this.horario}}</p>
-    </div>
-  {{/each}}
+{{#each historico}}
+  <div class="card p-3 mb-3">
+    <h5>{{this.tipo_nome}} com {{this.professor_nome}}</h5>
+    <p>Data: {{this.data}} às {{this.horario}}</p>
+  </div>
 {{else}}
-  <p>Você ainda não participou de nenhuma aula.</p>
-{{/if}}
+  <p>Você ainda não concluiu nenhuma aula.</p>
+{{/each}}

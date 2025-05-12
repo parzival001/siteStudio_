@@ -4,7 +4,6 @@
   <thead>
     <tr>
       <th>Aluno</th>
-      <th>Pacote</th>
       <th>Modalidade</th>
       <th>Total de Aulas</th>
       <th>Aulas Restantes</th>
@@ -17,7 +16,6 @@
     {{#each pacotes}}
     <tr>
       <td>{{this.aluno_nome}}</td>
-      <td>{{this.nome_pacote}}</td>
       <td>{{#if this.passe_livre}}Passe Livre{{else}}{{this.modalidade}}{{/if}}</td>
       <td>{{this.aulas_total}}</td>
       <td>{{this.aulas_restantes}}</td>

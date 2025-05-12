@@ -1,41 +1,40 @@
 
 
- {{!-- CREATE TABLE pacotes ( 
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nome VARCHAR(100),
-  tipo ENUM('unitario', 'mensal', 'trimestral', 'semestral', 'livre'),
-  quantidade_aulas INT,
-  validade_dias INT,
-  categoria_id INT,
-  passe_livre BOOLEAN DEFAULT FALSE,
-  FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)
-);
+ {{!-- ALTER TABLE pacotes_aluno MODIFY COLUMN categoria_id INT NULL;
 
-CREATE TABLE aluno_pacotes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  aluno_id INT,
-  pacote_id INT,
-  creditos_disponiveis INT,
-  data_inicio DATE,
-  data_fim DATE,
-  pago BOOLEAN DEFAULT FALSE,
-  FOREIGN KEY (aluno_id) REFERENCES alunos(id),
-  FOREIGN KEY (pacote_id) REFERENCES pacotes(id)
-); 
+ ALTER TABLE pacotes_aluno MODIFY COLUMN categoria_id INT NULL;
 
-CREATE TABLE pacotes_aluno (
+DESCRIBE pacotes_aluno;
+
+ALTER TABLE pacotes_aluno
+MODIFY COLUMN data_validade DATE NULL;
+
+
+CREATE TABLE creditos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   aluno_id INT NOT NULL,
-  categoria_id INT, -- pode ser NULL se for passe livre
-  tipo ENUM('mensal', 'trimestral', 'semestral') NOT NULL,
-  quantidade_aulas INT NOT NULL,
-  data_inicio DATE NOT NULL,
-  data_validade DATE NOT NULL,
-  aulas_utilizadas INT DEFAULT 0,
-  passe_livre BOOLEAN DEFAULT FALSE,
-  pago BOOLEAN DEFAULT FALSE,
+  categoria_id INT NOT NULL,
+  data_credito DATE NOT NULL,
+  validade DATE NOT NULL,
+  usado BOOLEAN DEFAULT FALSE,
+  usado_em DATE,
   FOREIGN KEY (aluno_id) REFERENCES alunos(id),
   FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)
 );
 
+CREATE TABLE pacotes_modalidades (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pacote_id INT NOT NULL,
+  categoria_id INT NOT NULL,
+  FOREIGN KEY (pacote_id) REFERENCES pacotes(id) ON DELETE CASCADE,
+  FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)
+);
+
+
+ALTER TABLE pacotes_modalidades
+DROP FOREIGN KEY pacotes_modalidades_ibfk_1;
+
+ALTER TABLE pacotes_modalidades
+ADD CONSTRAINT pacotes_modalidades_ibfk_1
+FOREIGN KEY (pacote_id) REFERENCES pacotes_aluno(id) ON DELETE CASCADE;
 --}}

@@ -1,0 +1,10 @@
+<h2>Meus Pacotes</h2>
+
+{{#each pacotes}}
+  <div class="card p-3 mb-3">
+    <p>Créditos: {{this.creditos}} - Válido até: {{this.data_validade}}</p>
+    <p>Status: {{#if this.pago}}Pago{{else}}Não Pago{{/if}}</p>
+  </div>
+{{else}}
+  <p>Você não tem pacotes ativos.</p>
+{{/each}}

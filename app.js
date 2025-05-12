@@ -14,6 +14,15 @@ const hbs = handlebars.create({
   defaultLayout: 'main',
   extname: '.handlebars',
   helpers: {
+    eq: function (a, b, options) {
+      if (typeof options === 'object' && typeof options.fn === 'function') {
+        // Uso como block helper
+        return a === b ? options.fn(this) : options.inverse(this);
+      } else {
+        // Uso inline: retorna booleano
+        return a === b;
+      }
+    },
     ifCond: function (v1, operator, v2, options) {
       switch (operator) {
         case '==':

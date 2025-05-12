@@ -1,15 +1,24 @@
-<h2>Cadastrar Novo Pacote</h2>
+<h2>Novo Pacote</h2>
 
 <form action="/professor/pacotes/novo" method="POST">
   <div class="mb-2">
     <label>Aluno</label>
     <select name="aluno_id" class="form-control" required>
       {{#each alunos}}
-        <option value="{{this.id}}">{{this.nome}}</option>
+      <option value="{{this.id}}">{{this.nome}}</option>
       {{/each}}
     </select>
   </div>
-
+  <div class="mb-2">
+    <label>Categoria</label>
+    <select name="categoria_id" class="form-control" id="categoria_id">
+      <option value="">-- Selecione uma modalidade --</option>
+      {{#each categorias}}
+      <option value="{{this.categoria_id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+    <small class="form-text text-muted">Se marcar Passe Livre, a categoria será ignorada.</small>
+  </div>
   <div class="mb-2">
     <label>Tipo de Pacote</label>
     <select name="tipo" class="form-control" required>
@@ -28,26 +37,46 @@
     <label>Data de Início</label>
     <input type="date" name="data_inicio" class="form-control" required>
   </div>
-
-  <div class="mb-2">
-    <label>Categoria</label>
-    <select name="categoria_id" class="form-control">
-      {{#each categorias}}
-        <option value="{{this.id}}">{{this.nome}}</option>
-      {{/each}}
-    </select>
-    <small class="form-text text-muted">Se marcar Passe Livre, a categoria será ignorada.</small>
-  </div>
-
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" name="passe_livre" value="1" id="passeLivreCheck">
-    <label class="form-check-label" for="passeLivreCheck">Passe Livre</label>
-  </div>
-
   <div class="form-check">
     <input class="form-check-input" type="checkbox" name="pago" value="1" id="pagoCheck">
     <label class="form-check-label" for="pagoCheck">Pago</label>
   </div>
+
+
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="passe_livre" value="1" id="passeLivreCheck"
+      onchange="toggleModalidadesPasseLivre()">
+    <label class="form-check-label" for="passeLivreCheck">Passe Livre</label>
+  </div>
+
+  <div id="modalidadesPasseLivre" style="display: none;" class="mt-2">
+    <label>Selecione até 7 modalidades permitidas:</label>
+    {{#each categorias}}
+    <div class="form-check">
+      <input class="form-check-input modalidade-passe" type="checkbox" name="modalidades_passe_livre"
+        value="{{this.categoria_id}}" onchange="limitarModalidades()">
+      <label class="form-check-label">{{this.nome}}</label>
+    </div>
+    {{/each}}
+  </div>
+
+  <script>
+    function toggleModalidadesPasseLivre() {
+      const isChecked = document.getElementById('passeLivreCheck').checked;
+      document.getElementById('modalidadesPasseLivre').style.display = isChecked ? 'block' : 'none';
+    }
+
+    function limitarModalidades() {
+      const checkboxes = document.querySelectorAll('.modalidade-passe');
+      const checked = Array.from(checkboxes).filter(cb => cb.checked);
+      if (checked.length > 7) {
+        alert('Você só pode selecionar até 7 modalidades.');
+        checked[checked.length - 1].checked = false;
+      }
+    }
+  </script>
+
+
 
   <button type="submit" class="btn btn-primary mt-3">Salvar Pacote</button>
 </form>

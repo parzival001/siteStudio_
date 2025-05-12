@@ -1,0 +1,33 @@
+<h2>Adicionar Crédito Manual</h2>
+
+<form action="/professor/creditos/novo" method="POST">
+  <div class="mb-2">
+    <label>Aluno</label>
+    <select name="aluno_id" class="form-control" required>
+      {{#each alunos}}
+        <option value="{{this.id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  <div class="mb-2">
+    <label>Modalidade</label>
+    <select name="categoria_id" class="form-control" required>
+      {{#each categorias}}
+        <option value="{{this.categoria_id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  <div class="mb-2">
+    <label>Data de Crédito</label>
+    <input type="date" name="data_credito" class="form-control" required>
+  </div>
+
+  <div class="mb-2">
+    <label>Validade</label>
+    <input type="date" name="validade" class="form-control" required>
+  </div>
+
+  <button type="submit" class="btn btn-primary mt-3">Salvar Crédito</button>
+</form>
