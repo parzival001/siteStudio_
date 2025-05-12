@@ -1,20 +1,32 @@
-<h1>Bem-vindo, {{nome}}</h1>
-<p>Você está na home do professor</p>
+<div class="d-flex justify-content-center align-items-center vh-100">
+  <div class="text-center" style="max-width: 300px; width: 100%;">
+    <h1 class="nomeEntrada">Bem-vindo, {{nome}}</h1>
+    <p>Você está na home do professor</p>
 
-<!-- Painel de Acesso Rápido -->
-<div class="card p-3 mb-4">
-  <h5>Gerenciamento Rápido</h5>
-  <div class="d-flex flex-wrap gap-2 mt-2">
-    <a href="/professor/aulas"              class="btn btn-outline-primary">Criar Aula</a>
-    <a href="/professor/aulas-fixas/nova"        class="btn btn-outline-primary">Aulas Fixas</a>
-    <a href="/professor/alunos"             class="btn btn-outline-primary">Ver Alunos</a>
-    <a href="/professor/alunos/cadastrar"   class="btn btn-outline-primary">Cadastrar Aluno</a>
-    <a href="/professor/pacotes"            class="btn btn-outline-primary">Gerenciar Pacotes</a>
-    <a href="/professor/cadastrar"           class="btn btn-outline-primary">Cadastrar Professor</a>
-    <a href="/professor/tipos-aula"         class="btn btn-outline-primary">Tipos de Aula</a>
-    <a href="/professor/categorias"         class="btn btn-outline-primary">Categoria</a>
-    <a href="/professor/dados-pessoais-alunos" class="btn btn-outline-primary">Dados Pessoais</a>
-    <a href="/logout"                       class="btn btn-outline-danger">Sair</a>
+    <!-- Painel de Acesso Rápido -->
+    <div class="card p-3 mb-3">
+      <h5>Gerenciamento Rápido</h5>
+      <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
+        <a href="/professor/aulas" class="btn btn-outline-custom w-auto"
+          style="color: #5A189A; border-color: #5A189A;">Criar Aula</a>
+        <a href="/professor/aulas-fixas/nova" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Aulas Fixas</a>
+        <a href="/professor/alunos" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Ver
+          Alunos</a>
+        <a href="/professor/alunos/cadastrar" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Cadastrar Aluno</a>
+        <a href="/professor/pacotes" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Gerenciar Pacotes</a>
+        <a href="/professor/cadastrar" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Cadastrar Professor</a>
+        <a href="/professor/tipos-aula" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Tipos de Aula</a>
+        <a href="/professor/categorias" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Categoria</a>
+        <a href="/professor/dados-pessoais-alunos" class="btn btn-outline-custom"
+          style="color: #5A189A; border-color: #5A189A;">Dados Pessoais</a>
+        <a href="/logout" class="btn btn-outline-danger">Sair</a>
+      </div>
+    </div>
   </div>
 </div>
-

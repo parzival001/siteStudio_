@@ -1,0 +1,14 @@
+.btn-outline-custom {
+  color: #5A189A;
+  border-color: #5A189A;
+}
+
+.btn-outline-custom:hover {
+  background-color: #5A189A;
+  color: white !important;
+  border-color: #5A189A;
+}
+
+.nomeEntrada{
+    color: aliceblue;
+}
