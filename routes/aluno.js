@@ -101,27 +101,24 @@ router.get('/aulas', authAluno, async (req, res) => {
   const alunoId = req.session.user.id;
 
   try {
-    // Busca todas as aulas disponíveis
+    // Busca todas as aulas disponíveis e futuras
     const [aulas] = await db.query(`
-  SELECT 
-    a.id, 
-    DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
-    a.horario, 
-    a.vagas, 
-    t.nome AS tipo_nome, 
-    p.nome AS professor_nome, 
-    a.status
-  FROM aulas a
-  JOIN tipos_aula t ON a.tipo_id = t.id
-  JOIN professores p ON a.professor_id = p.id
-  WHERE a.status = 'pendente'
-`);
+      SELECT 
+        a.id, 
+        a.data AS data_raw,
+        DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
+        a.horario, 
+        a.vagas, 
+        t.nome AS tipo_nome, 
+        p.nome AS professor_nome, 
+        a.status
+      FROM aulas a
+      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN professores p ON a.professor_id = p.id
+      WHERE a.status = 'pendente' AND a.data >= CURDATE()
+    `);
 
-console.log('Aulas encontradas:', aulas); // Log para verificar o resultado da consulta
-
-if (aulas.length === 0) {
-  console.log("Nenhuma aula encontrada com status 'pendente'.");
-}
+    console.log('Aulas encontradas:', aulas); // Para depuração
 
     // Aulas que o aluno está inscrito
     const [inscricoes] = await db.query(`
@@ -151,9 +148,8 @@ if (aulas.length === 0) {
 
       const jaInscrito = aulasAgendadas.includes(aula.id);
 
-      // Verifica se pode cancelar com base no horário atual
       const agora = moment();
-      const dataHoraAula = moment(`${aula.data} ${aula.horario}`, 'YYYY-MM-DD HH:mm');
+      const dataHoraAula = moment(`${aula.data_raw} ${aula.horario}`, 'YYYY-MM-DD HH:mm:ss');
       let pode_desmarcar = false;
       let tempo_cancelamento = 12;
 
@@ -167,7 +163,7 @@ if (aulas.length === 0) {
 
       return {
         ...aula,
-        data_formatada: moment(aula.data).format('DD/MM/YYYY'),
+        horario_formatado: moment(aula.horario, 'HH:mm:ss').format('HH:mm'),
         alunos,
         ja_inscrito: jaInscrito,
         pode_desmarcar,
@@ -175,11 +171,12 @@ if (aulas.length === 0) {
       };
     }));
 
-    console.log('Aulas formatadas:', aulasFormatadas); // Adicionei log para depuração
+    console.log('Aulas formatadas:', aulasFormatadas);
 
     res.render('aluno/aulas', {
       aulas: aulasFormatadas
     });
+
   } catch (err) {
     console.error('Erro ao carregar aulas:', err);
     res.render('aluno/aulas', { error: 'Erro ao carregar aulas.' });
@@ -291,5 +288,38 @@ router.post('/aluno/inscrever/:id', authAluno, async (req, res) => {
     res.redirect('/aluno/aulas');
   }
 });
+
+
+router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
+  const aulaId = req.params.aulaId;
+  const alunoId = req.session.user.id;
+
+  try {
+    // Verifica se o aluno já está inscrito
+    const [jaInscrito] = await db.query(`
+      SELECT * FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?
+    `, [aulaId, alunoId]);
+
+    if (jaInscrito.length > 0) {
+      return res.redirect('/aluno/aulas'); // já está inscrito
+    }
+
+    // Insere a inscrição
+    await db.query(`
+      INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)
+    `, [aulaId, alunoId]);
+
+    // Atualiza o número de vagas
+    await db.query(`
+      UPDATE aulas SET vagas = vagas - 1 WHERE id = ?
+    `, [aulaId]);
+
+    res.redirect('/aluno/aulas');
+  } catch (err) {
+    console.error('Erro ao inscrever aluno:', err);
+    res.status(500).send('Erro ao inscrever o aluno na aula.');
+  }
+});
+
 
 module.exports = router;

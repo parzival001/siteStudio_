@@ -46,33 +46,35 @@ exports.login = (req, res) => {
 
 // Função para carregar a home do aluno
 exports.homeAluno = async (req, res) => {
-  const alunoId = req.session.user.id; // Agora pegamos o id da sessão
+  const alunoId = req.session.user.id;
 
   try {
-    // Buscar todas as aulas disponíveis
+    // Buscar apenas aulas pendentes e com data igual ou posterior a hoje
     const [aulas] = await db.query(`
       SELECT 
-        a.id, 
-        DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
-        a.horario, 
-        a.vagas, 
-        t.nome AS tipo_nome, 
-        p.nome AS professor_nome, 
-        a.status
-      FROM aulas a
-      JOIN tipos_aula t ON a.tipo_id = t.id
-      JOIN professores p ON a.professor_id = p.id
-      WHERE a.status = 'pendente'
+  a.id, 
+  DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
+  a.horario, 
+  a.vagas, 
+  IFNULL(t.nome, 'Sem tipo definido') AS tipo_nome,  -- Caso tipo_id seja NULL
+  p.nome AS professor_nome, 
+  a.status
+FROM aulas a
+JOIN tipos_aula t ON a.tipo_id = t.id
+JOIN professores p ON a.professor_id = p.id
+WHERE a.status = 'pendente'
     `);
 
-    // Aulas que o aluno está inscrito
+    console.log('Aulas encontradas:', aulas);
+
+    // Buscar aulas que o aluno já está inscrito
     const [inscricoes] = await db.query(`
       SELECT aula_id FROM aulas_alunos WHERE aluno_id = ?
     `, [alunoId]);
 
     const aulasAgendadas = inscricoes.map(i => i.aula_id);
 
-    // Primeira aula agendada pelo aluno
+    // Buscar a primeira aula agendada do aluno
     const [primeiraAula] = await db.query(`
       SELECT a.id, a.data, a.horario 
       FROM aulas a
@@ -82,6 +84,7 @@ exports.homeAluno = async (req, res) => {
       LIMIT 1
     `, [alunoId]);
 
+    // Montar e formatar os dados das aulas
     const aulasFormatadas = await Promise.all(aulas.map(async (aula) => {
       const [alunos] = await db.query(`
         SELECT alunos.id, alunos.nome 
@@ -93,12 +96,12 @@ exports.homeAluno = async (req, res) => {
       const jaInscrito = aulasAgendadas.includes(aula.id);
 
       const agora = moment();
-      const dataHoraAula = moment(`${aula.data} ${aula.horario}`, 'YYYY-MM-DD HH:mm');
+      const dataHoraAula = moment(`${aula.data_raw} ${aula.horario}`, 'YYYY-MM-DD HH:mm:ss');
       let pode_desmarcar = false;
       let tempo_cancelamento = 12;
 
       if (primeiraAula.length && primeiraAula[0].id === aula.id) {
-        tempo_cancelamento = 2; // Para a primeira aula, cancelamento até 2 horas antes
+        tempo_cancelamento = 2;
       }
 
       if (dataHoraAula.diff(agora, 'hours', true) >= tempo_cancelamento) {
@@ -107,12 +110,15 @@ exports.homeAluno = async (req, res) => {
 
       return {
         ...aula,
+        horario_formatado: moment(aula.horario, 'HH:mm:ss').format('HH:mm'),
         alunos,
         ja_inscrito: jaInscrito,
         pode_desmarcar,
         tempo_cancelamento,
       };
     }));
+
+    console.log('Aulas formatadas:', aulasFormatadas);
 
     res.render('aluno/aulas', {
       aulas: aulasFormatadas
@@ -123,3 +129,7 @@ exports.homeAluno = async (req, res) => {
     res.render('aluno/aulas', { error: 'Erro ao carregar as aulas. Tente novamente.' });
   }
 };
+
+
+
+

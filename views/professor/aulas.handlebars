@@ -9,12 +9,12 @@
         </select>
     </div>
     <div class="mb-2">
-        <label for="categoria_id">Categoria:</label>
-        <select name="categoria_id" id="categoria_id" class="form-select" required>
-            {{#each categorias}}
-            <option value="{{this.id}}">{{this.nome}}</option>
-            {{/each}}
-        </select>
+        <label for="tipo_id">Tipo de Aula</label>
+<select name="tipo_id" class="form-control" required>
+  {{#each tipos}}
+    <option value="{{this.id}}">{{this.nome}}</option>
+  {{/each}}
+</select>
     </div>
     <div class="mb-2">
         <label for="data">Data:</label>

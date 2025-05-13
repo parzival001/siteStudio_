@@ -19,11 +19,12 @@ exports.home = (req, res) => {
 
 
 exports.criarAula = async (req, res) => {
-  const { professor_id, categoria_id, data, horario, vagas } = req.body;
+  const { professor_id, categoria_id, data, horario, vagas, tipo_id } = req.body;
+
   try {
     await db.query(
-      'INSERT INTO aulas (categoria_id, professor_id, data, horario, vagas) VALUES (?, ?, ?, ?, ?)',
-      [categoria_id, professor_id, data, horario, vagas]
+      'INSERT INTO aulas (categoria_id, professor_id, data, horario, vagas, tipo_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [categoria_id, professor_id, data, horario, vagas, tipo_id]
     );
     res.redirect('/professor/aulas');
   } catch (err) {
@@ -36,11 +37,16 @@ exports.listarAulas = async (req, res) => {
   const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
   try {
-    // Buscar aulas com professor e categoria
+    // Buscar aulas com professor e nomes das categorias/tipos
     const [aulas] = await db.query(`
-      SELECT a.*, ta.nome AS categoria, p.nome AS professor_nome
+      SELECT 
+        a.*, 
+        c.nome AS categoria_nome, 
+        t.nome AS tipo_nome, 
+        p.nome AS professor_nome
       FROM aulas a
-      JOIN tipos_aula ta ON a.categoria_id = ta.id
+      LEFT JOIN tipos_aula c ON a.categoria_id = c.id
+      LEFT JOIN tipos_aula t ON a.tipo_id = t.id
       JOIN professores p ON a.professor_id = p.id
       ORDER BY a.data DESC
     `);
@@ -48,7 +54,7 @@ exports.listarAulas = async (req, res) => {
     // Buscar alunos associados às aulas
     const [aulaAlunos] = await db.query(`
       SELECT aa.aula_id, al.id AS aluno_id, al.nome AS aluno_nome
-      FROM aula_alunos aa
+      FROM aulas_alunos aa
       JOIN alunos al ON aa.aluno_id = al.id
     `);
 
@@ -83,6 +89,7 @@ exports.listarAulas = async (req, res) => {
 
     // Buscar dados auxiliares
     const [categorias] = await db.query('SELECT id, nome FROM tipos_aula');
+    const [tipos] = await db.query('SELECT id, nome FROM tipos_aula');
     const [professores] = await db.query('SELECT id, nome FROM professores');
     const [alunos] = await db.query('SELECT id, nome FROM alunos');
 
@@ -90,6 +97,7 @@ exports.listarAulas = async (req, res) => {
     res.render('professor/aulas', {
       aulas: aulasFormatadas,
       categorias,
+      tipos,
       professores,
       alunos
     });

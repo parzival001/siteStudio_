@@ -37,4 +37,23 @@ DROP FOREIGN KEY pacotes_modalidades_ibfk_1;
 ALTER TABLE pacotes_modalidades
 ADD CONSTRAINT pacotes_modalidades_ibfk_1
 FOREIGN KEY (pacote_id) REFERENCES pacotes_aluno(id) ON DELETE CASCADE;
+
+
+UPDATE tipos_aula
+SET tipo_id = 1
+WHERE tipo_id IS NULL;
+
+INSERT INTO tipos_aula (nome) VALUES ('Dança'), ('Pilates'), ('Funcional');
+
+INSERT INTO aulas (professor_id, categoria_id, tipo_id, data, horario, vagas, status)
+VALUES (1, 3, 1, '2025-05-20', '12:00:00', 5, 'pendente');
+
+ALTER TABLE tipos_aula MODIFY id INT AUTO_INCREMENT;
+
+UPDATE aulas SET tipo_id = 3 WHERE tipo_id IS NULL;
+
+INSERT INTO aulas (tipo_id, professor_id, data, horario, vagas, status)
+VALUES (3, 1, '2025-05-13', '12:00:00', 5, 'pendente');
+
+
 --}}
