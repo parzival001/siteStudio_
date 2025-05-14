@@ -4,11 +4,15 @@
 }
 
 .btn-outline-custom:hover {
-  background-color: #5A189A;
+  background-image: linear-gradient(to right, #B395C0, #5A189A); /* roxo para preto */
   color: white !important;
   border-color: #5A189A;
 }
 
 .nomeEntrada{
     color: aliceblue;
+}
+
+h1, h2{
+  color: white;
 }

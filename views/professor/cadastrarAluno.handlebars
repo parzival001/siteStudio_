@@ -1,32 +1,41 @@
-<h1>Cadastrar Aluno</h1>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
 
-<form action="/professor/alunos/cadastrar" method="POST">
-  <div class="mb-3">
-    <label for="nome" class="form-label">Nome:</label>
-    <input type="text" class="form-control" id="nome" name="nome" required>
+      <h1 class="text-center mb-4">Cadastrar Aluno</h1>
+
+      <form action="/professor/alunos/cadastrar" method="POST" class="mb-4">
+
+        <div class="mb-3">
+          <label for="nome" class="form-label">Nome:</label>
+          <input type="text" class="form-control" id="nome" name="nome" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">E-mail:</label>
+          <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="senha" class="form-label">Senha:</label>
+          <input type="password" class="form-control" id="senha" name="senha" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="telefone" class="form-label">Telefone:</label>
+          <input type="text" class="form-control" id="telefone" name="telefone" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="data_nascimento" class="form-label">Data de Nascimento:</label>
+          <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required>
+        </div>
+
+        <button type="submit" class="btn btn-outline-custom w-100 mb-2">Cadastrar</button>
+        <a href="/professor/alunos" class="btn btn-outline-custom w-100 mb-2">Home</a>
+
+      </form>
+
+    </div>
   </div>
-
-  <div class="mb-3">
-    <label for="email" class="form-label">E-mail:</label>
-    <input type="email" class="form-control" id="email" name="email" required>
-  </div>
-
-  <div class="mb-3">
-    <label for="senha" class="form-label">Senha:</label>
-    <input type="password" class="form-control" id="senha" name="senha" required>
-  </div>
-
-
-  <div class="mb-3">
-    <label for="telefone" class="form-label">Telefone:</label>
-    <input type="text" class="form-control" id="telefone" name="telefone" required>
-  </div>
-
-  <div class="mb-3">
-    <label for="data_nascimento" class="form-label">Data de Nascimento:</label>
-    <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required>
-  </div>
-
-  <button type="submit" class="btn btn-primary">Cadastrar</button>
-  <a href="/professor/alunos" class="btn btn-secondary">Voltar</a>
-</form>
+</div>

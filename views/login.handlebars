@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <title>Login</title>
 </head>
-<form method="POST" action="/login" class="bg-white p-4 rounded shadow"
-  style="min-width: 300px; max-width: 400px; width: 100%;">
+<form method="POST" action="/login" class="p-4 rounded shadow"
+  style="min-width: 300px; max-width: 400px; width: 100%; background-color: #B395C0; ">
   {{#if error}}
   <div class="alert alert-danger">{{error}}</div>
   {{/if}}
@@ -20,7 +20,8 @@
     <label class="form-label">Senha</label>
     <input type="password" class="form-control" name="senha" placeholder="Senha" required>
   </div>
-  <button type="submit" class="btn w-100 text-white" style="background-color: #5A189A; border-color: #5A189A;">
+  <button type="submit" class="btn btn-outline-custom w-auto"
+            style="color: #5A189A; border-color: #5A189A;">
     Entrar
   </button>
 </form>

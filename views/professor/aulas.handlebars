@@ -1,77 +1,92 @@
-<h2>Nova Aula</h2>
-<form method="POST" action="/professor/aulas/criar" class="mb-4">
-    <div class="mb-2">
-        <label for="professor_id">Professor:</label>
-        <select name="professor_id" class="form-select">
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+
+      <h2 class="text-center mb-4">Nova Aula</h2>
+
+      <form method="POST" action="/professor/aulas/criar" class="mb-5">
+        <div class="mb-3">
+          <label for="professor_id" class="form-label">Professor:</label>
+          <select name="professor_id" class="form-select" required>
             {{#each professores}}
-            <option value="{{this.id}}">{{this.nome}}</option>
+              <option value="{{this.id}}">{{this.nome}}</option>
             {{/each}}
-        </select>
-    </div>
-    <div class="mb-2">
-        <label for="tipo_id">Tipo de Aula</label>
-<select name="tipo_id" class="form-control" required>
-  {{#each tipos}}
-    <option value="{{this.id}}">{{this.nome}}</option>
-  {{/each}}
-</select>
-    </div>
-    <div class="mb-2">
-        <label for="data">Data:</label>
-        <input type="date" name="data" id="data" class="form-control" required>
-    </div>
-    <div class="mb-2">
-        <label for="horario">Horário:</label>
-        <input type="time" name="horario" id="horario" class="form-control" required>
-    </div>
-    <div class="mb-2">
-        <label for="vagas">Vagas:</label>
-        <input type="number" name="vagas" id="vagas" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Criar Aula</button>
-</form>
+          </select>
+        </div>
 
-{{#each aulas}}
-<div class="card mb-3 p-3">
-    <h5>Professor: {{this.professor_nome}}</h5>
-    <h5>{{this.categoria}}</h5>
-    <p>Data: {{data_formatada}}</p>
-    <p>Vagas: {{this.vagas}}</p>
-
-    <!-- Alunos já adicionados -->
-    {{#if this.alunos.length}}
-    <p><strong>Alunos inscritos:</strong></p>
-    <ul>
-        {{#each this.alunos}}
-        <li>
-            {{this.nome}}
-            <form method="POST" action="/professor/remover-aluno/{{../id}}/{{this.id}}" style="display:inline">
-                <button class="btn btn-sm btn-outline-danger">Remover</button>
-            </form>
-        </li>
-        {{/each}}
-    </ul>
-    {{else}}
-    <p><em>Nenhum aluno inscrito ainda.</em></p>
-    {{/if}}
-
-    <!-- Adicionar aluno -->
-    <form method="POST" action="/professor/adicionar-aluno/{{this.id}}">
-        <label for="aluno_id">Escolha o Aluno:</label>
-        <select name="aluno_id" class="form-select" {{#unless this.vagas}}disabled{{/unless}} required>
-            <option value="" disabled selected>Selecione um aluno</option>
-            {{#each ../alunos}}
-            <option value="{{this.id}}">{{this.nome}}</option>
+        <div class="mb-3">
+          <label for="tipo_id" class="form-label">Tipo de Aula:</label>
+          <select name="tipo_id" class="form-select" required>
+            {{#each tipos}}
+              <option value="{{this.id}}">{{this.nome}}</option>
             {{/each}}
-        </select>
-        <button type="submit" class="btn btn-info" {{#unless this.vagas}}disabled{{/unless}}>Adicionar Aluno</button>
-    </form>
+          </select>
+        </div>
 
-    <form method="POST" action="/professor/aulas/deletar/{{this.id}}" style="display:inline">
-        <button class="btn btn-danger mt-2">Deletar</button>
-    </form>
+        <div class="mb-3">
+          <label for="data" class="form-label">Data:</label>
+          <input type="date" name="data" id="data" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="horario" class="form-label">Horário:</label>
+          <input type="time" name="horario" id="horario" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="vagas" class="form-label">Vagas:</label>
+          <input type="number" name="vagas" id="vagas" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-outline-custom w-100">Criar Aula</button>
+      </form>
+
+      {{#each aulas}}
+        <div class="border rounded p-4 mb-4">
+          <h5>Professor: {{this.professor_nome}}</h5>
+          <h6>{{this.categoria}}</h6>
+          <p><strong>Data:</strong> {{data_formatada}}</p>
+          <p><strong>Vagas:</strong> {{this.vagas}}</p>
+
+          {{#if this.alunos.length}}
+            <p><strong>Alunos inscritos:</strong></p>
+            <ul>
+              {{#each this.alunos}}
+                <li>
+                  {{this.nome}}
+                  <form method="POST" action="/professor/remover-aluno/{{../id}}/{{this.id}}" class="d-inline">
+                    <button class="btn btn-sm btn-outline-danger">Remover</button>
+                  </form>
+                </li>
+              {{/each}}
+            </ul>
+          {{else}}
+            <p><em>Nenhum aluno inscrito ainda.</em></p>
+          {{/if}}
+
+          <form method="POST" action="/professor/adicionar-aluno/{{this.id}}" class="mt-3">
+            <label for="aluno_id">Escolha o Aluno:</label>
+            <select name="aluno_id" class="form-select" {{#unless this.vagas}}disabled{{/unless}} required>
+              <option value="" disabled selected>Selecione um aluno</option>
+              {{#each ../alunos}}
+                <option value="{{this.id}}">{{this.nome}}</option>
+              {{/each}}
+            </select>
+            <button type="submit" class="btn btn-outline-custom mt-2" {{#unless this.vagas}}disabled{{/unless}}>
+              Adicionar Aluno
+            </button>
+          </form>
+
+          <form method="POST" action="/professor/aulas/deletar/{{this.id}}" class="mt-3">
+            <button class="btn btn-outline-danger w-100">Deletar Aula</button>
+          </form>
+        </div>
+      {{/each}}
+
+      <div class="text-center mt-4">
+        <a href="/professor/home" class="btn btn-outline-custom">Home</a>
+      </div>
+
+    </div>
+  </div>
 </div>
-{{/each}}
-
-<!-- Botão para voltar para a home -->
-    <a href="../professor/home" class="btn btn-primary mt-3">Voltar</a>

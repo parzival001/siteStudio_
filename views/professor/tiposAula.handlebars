@@ -1,25 +1,36 @@
 <!-- views/professor/tiposAula.handlebars -->
 
-<h1>Tipos de Aula</h1>
+<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5">
+  <div class="w-100" style="max-width: 600px;">
+    <h1 class="text-center mb-4">Tipos de Aula</h1>
 
-<form action="/professor/tipos-aula/adicionar" method="POST" class="mb-3">
-  <div class="form-group">
-    <label for="nome">Nome do Tipo de Aula:</label>
-    <input type="text" name="nome" id="nome" class="form-control" required>
+    <form action="/professor/tipos-aula/adicionar" method="POST" class="bg-white p-4 rounded shadow mb-4">
+      <div class="form-group mb-3">
+        <label for="nome" class="form-label">Nome do Tipo de Aula:</label>
+        <input type="text" name="nome" id="nome" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">
+        Adicionar Tipo
+      </button>
+    </form>
+
+    <hr class="my-4">
+
+    <h2 class="text-center mb-3">Tipos Cadastrados</h2>
+    <ul class="list-group">
+      {{#each tipos}}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        {{this.nome}}
+        <form action="/professor/tipos-aula/deletar/{{this.id}}" method="POST" onsubmit="return confirm('Deseja realmente deletar este tipo?')">
+          <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+        </form>
+      </li>
+      {{/each}}
+    </ul>
+
+    <!-- Botão Home -->
+    <div class="text-center mt-4">
+      <a href="/professor/home" class="btn btn-secondary">Home</a>
+    </div>
   </div>
-  <button type="submit" class="btn btn-primary mt-2">Adicionar Tipo</button>
-</form>
-
-<hr>
-
-<h2>Tipos Cadastrados</h2>
-<ul class="list-group">
-  {{#each tipos}}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-      {{this.nome}}
-      <form action="/professor/tipos-aula/deletar/{{this.id}}" method="POST" onsubmit="return confirm('Deseja realmente deletar este tipo?')">
-        <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
-      </form>
-    </li>
-  {{/each}}
-</ul>
+</div>

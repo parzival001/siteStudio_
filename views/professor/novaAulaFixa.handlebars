@@ -1,89 +1,98 @@
-<h2>Cadastrar Aula Fixa</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
 
-<form method="POST" action="/professor/aulas-fixas/nova">
-  <div class="mb-3">
-    <label for="tipo_id">Tipo de Aula:</label>
-    <select class="form-select" name="tipo_id" required>
-      {{#each tipos}}
-      <option value="{{this.id}}">{{this.nome}}</option>
-      {{/each}}
-    </select>
-  </div>
+      <h2 class="text-center mb-4">Cadastrar Aula Fixa</h2>
 
-  <div class="mb-3">
-    <label for="professor_id">Professor:</label>
-    <select class="form-select" name="professor_id" required>
-      {{#each professores}}
-      <option value="{{this.id}}">{{this.nome}}</option>
-      {{/each}}
-    </select>
-  </div>
+      <form method="POST" action="/professor/aulas-fixas/nova" class="mb-5">
+        <div class="mb-3">
+          <label for="tipo_id" class="form-label">Tipo de Aula:</label>
+          <select class="form-select" name="tipo_id" required>
+            {{#each tipos}}
+              <option value="{{this.id}}">{{this.nome}}</option>
+            {{/each}}
+          </select>
+        </div>
 
-  <div class="mb-3">
-    <label for="dia_semana">Dia da semana:</label>
-    <select class="form-select" name="dia_semana" required>
-      <option value="segunda">Segunda</option>
-      <option value="terça">Terça</option>
-      <option value="quarta">Quarta</option>
-      <option value="quinta">Quinta</option>
-      <option value="sexta">Sexta</option>
-      <option value="sábado">Sábado</option>
-      <option value="domingo">Domingo</option>
-    </select>
-  </div>
+        <div class="mb-3">
+          <label for="professor_id" class="form-label">Professor:</label>
+          <select class="form-select" name="professor_id" required>
+            {{#each professores}}
+              <option value="{{this.id}}">{{this.nome}}</option>
+            {{/each}}
+          </select>
+        </div>
 
-  <div class="mb-3">
-    <label for="horario">Horário:</label>
-    <input type="time" name="horario" class="form-control" required>
-  </div>
+        <div class="mb-3">
+          <label for="dia_semana" class="form-label">Dia da semana:</label>
+          <select class="form-select" name="dia_semana" required>
+            <option value="segunda">Segunda</option>
+            <option value="terça">Terça</option>
+            <option value="quarta">Quarta</option>
+            <option value="quinta">Quinta</option>
+            <option value="sexta">Sexta</option>
+            <option value="sábado">Sábado</option>
+            <option value="domingo">Domingo</option>
+          </select>
+        </div>
 
-  <div class="mb-3">
-    <label for="vagas">Vagas:</label>
-    <input type="number" name="vagas" class="form-control" required>
-  </div>
+        <div class="mb-3">
+          <label for="horario" class="form-label">Horário:</label>
+          <input type="time" name="horario" class="form-control" required>
+        </div>
 
-  <button type="submit" class="btn btn-primary">Cadastrar</button>
-</form>
+        <div class="mb-3">
+          <label for="vagas" class="form-label">Vagas:</label>
+          <input type="number" name="vagas" class="form-control" required>
+        </div>
 
-<hr class="my-4">
-
-{{#each aulasFixas}}
-<div class="card mb-3 p-3">
-  <h5>{{this.tipo_nome}}</h5>
-  <h5>{{this.professor_nome}}</h5>
-  <p>{{this.dia_semana}} - {{this.horario}}</p>
-  <p>Vagas: {{this.vagas}}</p>
-
-  {{#if this.alunos.length}}
-  <h6 class="mt-3">Alunos cadastrados:</h6>
-  <ul class="list-group mb-3">
-    {{#each this.alunos}}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-      {{this.nome}}
-      <form method="POST" action="/professor/aulas-fixas/{{../id}}/remover-aluno/{{this.id}}" style="display:inline;">
-        <button class="btn btn-sm btn-danger">Remover</button>
+        <button type="submit" class="btn btn-outline-custom w-100">Cadastrar</button>
       </form>
-    </li>
-    {{/each}}
-  </ul>
-  {{else}}
-  <p class="text-muted">Nenhum aluno cadastrado.</p>
-  {{/if}}
 
-  <form method="POST" action="/professor/aulas-fixas/{{this.id}}/adicionar-aluno" class="mb-2 d-flex gap-2">
-    <select name="aluno_id" class="form-select" required>
-      {{#each ../alunos}}
-      <option value="{{this.id}}">{{this.nome}}</option>
+      <hr class="my-4">
+
+      {{#each aulasFixas}}
+        <div class="border rounded p-4 mb-4">
+          <h5>{{this.tipo_nome}}</h5>
+          <h6>{{this.professor_nome}}</h6>
+          <p><strong>{{this.dia_semana}} - {{this.horario}}</strong></p>
+          <p><strong>Vagas:</strong> {{this.vagas}}</p>
+
+          {{#if this.alunos.length}}
+            <h6 class="mt-3">Alunos cadastrados:</h6>
+            <ul class="list-group mb-3">
+              {{#each this.alunos}}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  {{this.nome}}
+                  <form method="POST" action="/professor/aulas-fixas/{{../id}}/remover-aluno/{{this.id}}" class="d-inline">
+                    <button class="btn btn-sm btn-outline-danger">Remover</button>
+                  </form>
+                </li>
+              {{/each}}
+            </ul>
+          {{else}}
+            <p class="text-muted">Nenhum aluno cadastrado.</p>
+          {{/if}}
+
+          <form method="POST" action="/professor/aulas-fixas/{{this.id}}/adicionar-aluno" class="mb-3 d-flex gap-2">
+            <select name="aluno_id" class="form-select" required>
+              {{#each ../alunos}}
+                <option value="{{this.id}}">{{this.nome}}</option>
+              {{/each}}
+            </select>
+            <button type="submit" class="btn btn-outline-custom">Adicionar Aluno</button>
+          </form>
+
+          <form method="POST" action="/professor/aulas-fixas/deletar/{{this.id}}">
+            <button class="btn btn-outline-danger w-100">Deletar Aula</button>
+          </form>
+        </div>
       {{/each}}
-    </select>
-    <button type="submit" class="btn btn-success">Adicionar Aluno</button>
-  </form>
 
-  <form method="POST" action="/professor/aulas-fixas/deletar/{{this.id}}" style="display:inline;">
-    <button class="btn btn-danger">Deletar</button>
-  </form>
+      <div class="text-center mt-4">
+        <a href="../home" class="btn btn-outline-custom">Voltar para Home</a>
+      </div>
+
+    </div>
+  </div>
 </div>
-{{/each}}
-
-<!-- Botão para voltar para a home -->
-    <a href="../home" class="btn btn-primary mt-3">Voltar</a>

@@ -1,29 +1,38 @@
-<h2>Alunos Cadastrados</h2>
+<div class="container my-5 d-flex flex-column align-items-center">
+  <h2 class="mb-4 text-center">Alunos Cadastrados</h2>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each alunos}}
-    <tr>
-      <td>{{this.nome}}</td>
-      <td>{{this.telefone}}</td>
-      <td>
-        <a href="/professor/alunos/{{this.id}}/editar" class="btn btn-sm btn-warning">Editar</a>
-        <a href="/professor/anamnese/{{this.id}}" class="btn btn-sm btn-info">Anamnese</a>
-        <a href="/professor/pacotes/aluno/{{this.id}}" class="btn btn-sm btn-primary">Ver Pacotes</a>
-        <form action="/professor/alunos/{{this.id}}/delete" method="POST" style="display:inline;">
-          <button class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja deletar?')">Deletar</button>
-        </form>
-      </td>
-    </tr>
-    {{/each}}
-  </tbody>
-</table>
+  <div class="table-responsive" style="max-width: 900px; width: 100%;">
+    <table class="table table-bordered text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Nome</th>
+          <th>Telefone</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each alunos}}
+        <tr>
+          <td>{{this.nome}}</td>
+          <td>{{this.telefone}}</td>
+          <td>
+            <a href="/professor/alunos/{{this.id}}/editar" class="btn btn-outline-custom w-auto"
+          style="color: #5A189A; border-color: #5A189A;">Editar</a>
+            <a href="/professor/anamnese/{{this.id}}" class="btn btn-outline-custom w-auto"
+          style="color: #5A189A; border-color: #5A189A;">Anamnese</a>
+            <a href="/professor/pacotes/aluno/{{this.id}}" class="btn btn-outline-custom w-auto"
+          style="color: #5A189A; border-color: #5A189A;">Ver Pacotes</a>
+            <form action="/professor/alunos/{{this.id}}/delete" method="POST" style="display:inline;">
+              <button class="btn btn-outline-custom w-auto"
+          style="color: red; border-color: red;" onclick="return confirm('Tem certeza que deseja deletar?')">Deletar</button>
+            </form>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
 
-<a href="/professor/home" class="btn btn-secondary mb-3">Home</a>
+  <a href="/professor/home" class="btn btn-outline-custom w-auto"
+          style="color: #B19CD9; border-color: #B19CD9;">Home</a>
+</div>

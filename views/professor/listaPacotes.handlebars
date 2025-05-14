@@ -1,35 +1,49 @@
-<h2>Pacotes por Aluno</h2>
+<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5">
+  <h2 class="mb-4 text-center">Pacotes por Aluno</h2>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Aluno</th>
-      <th>Modalidade</th>
-      <th>Total de Aulas</th>
-      <th>Aulas Restantes</th>
-      <th>Validade</th>
-      <th>Status</th>
-      <th>Pagamento</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each pacotes}}
-    <tr>
-      <td>{{this.aluno_nome}}</td>
-      <td>{{#if this.passe_livre}}Passe Livre{{else}}{{this.modalidade}}{{/if}}</td>
-      <td>{{this.aulas_total}}</td>
-      <td>{{this.aulas_restantes}}</td>
-      <td>{{this.validade}}</td>
-      <td>
-        {{#if (eq this.status_validade "Vencido")}}<span class="text-danger">{{this.status_validade}}</span>
-        {{else if (eq this.status_validade "Próximo do vencimento")}}<span class="text-warning">{{this.status_validade}}</span>
-        {{else}}<span class="text-success">{{this.status_validade}}</span>{{/if}}
-      </td>
-      <td>
-        {{#if this.pago}}<span class="text-success">Pago</span>
-        {{else}}<span class="text-danger">Não Pago</span>{{/if}}
-      </td>
-    </tr>
-    {{/each}}
-  </tbody>
-</table>
+  <div class="table-responsive" style="max-width: 1000px; width: 100%;">
+    <table class="table table-bordered text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Aluno</th>
+          <th>Modalidade</th>
+          <th>Total de Aulas</th>
+          <th>Aulas Restantes</th>
+          <th>Validade</th>
+          <th>Status</th>
+          <th>Pagamento</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each pacotes}}
+        <tr>
+          <td>{{this.aluno_nome}}</td>
+          <td>{{#if this.passe_livre}}Passe Livre{{else}}{{this.modalidade}}{{/if}}</td>
+          <td>{{this.aulas_total}}</td>
+          <td>{{this.aulas_restantes}}</td>
+          <td>{{this.validade}}</td>
+          <td>
+            {{#if (eq this.status_validade "Vencido")}}
+              <span class="text-danger">{{this.status_validade}}</span>
+            {{else if (eq this.status_validade "Próximo do vencimento")}}
+              <span class="text-warning">{{this.status_validade}}</span>
+            {{else}}
+              <span class="text-success">{{this.status_validade}}</span>
+            {{/if}}
+          </td>
+          <td>
+            {{#if this.pago}}
+              <span class="text-success">Pago</span>
+            {{else}}
+              <span class="text-danger">Não Pago</span>
+            {{/if}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <a href="/professor/home" class="btn btn-outline-custom w-auto"
+          style="color: #B19CD9; border-color: #B19CD9">Voltar</a>
+</div>

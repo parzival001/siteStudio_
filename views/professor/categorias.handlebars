@@ -1,29 +1,43 @@
-<h2>Categorias</h2>
+<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5">
+  <div class="w-100" style="max-width: 600px;">
+    <h2 class="text-center mb-4">Categorias</h2>
 
-<!-- Formulário de criação -->
-<form action="/professor/categorias" method="POST" class="mb-4 d-flex gap-2">
-  <input type="text" name="nome" class="form-control" placeholder="Nome da categoria" required>
-  <button type="submit" class="btn btn-primary">Adicionar</button>
-</form>
+    <!-- Formulário de criação -->
+    <form action="/professor/categorias" method="POST" class="d-flex gap-2 mb-4">
+      <input type="text" name="nome" class="form-control" placeholder="Nome da categoria" required>
+      <button type="submit" class="btn btn-outline-custom" style="color: white; border-color: white;">
+        Adicionar
+      </button>
+    </form>
 
-<!-- Lista de categorias -->
-<table class="table">
-  <thead>
-    <tr>
-      <th>Nome</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each categorias}}
-    <tr>
-      <td>{{this.nome}}</td>
-      <td>
-        <form action="/professor/categorias/{{this.categoria_id}}/delete" method="POST" class="d-inline">
-          <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
-        </form>
-      </td>
-    </tr>
-    {{/each}}
-  </tbody>
-</table>
+    <!-- Lista de categorias -->
+    <div class="table-responsive">
+      <table class="table table-striped text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Nome</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each categorias}}
+          <tr>
+            <td>{{this.nome}}</td>
+            <td>
+              <form action="/professor/categorias/{{this.categoria_id}}/delete" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+              </form>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Botão Home -->
+    <div class="text-center mt-4">
+      <a href="/professor/home" class="btn btn-outline-custom w-auto"
+          style="color: #B19CD9; border-color: #B19CD9;">Home</a>
+    </div>
+  </div>
+</div>

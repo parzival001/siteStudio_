@@ -1,18 +1,25 @@
-<h2>Dados do Aluno</h2>
-<ul>
-  <li><strong>Nome:</strong> {{aluno.nome}}</li>
-  <li><strong>Data de nascimento:</strong> {{aluno.data_nascimento}}</li>
-  <li><strong>Endereço:</strong> {{aluno.endereco}}, {{aluno.complemento}} - {{aluno.cep}}</li>
-  <li><strong>Cidade/UF:</strong> {{aluno.cidade}} - {{aluno.uf}}</li>
-  <li><strong>Telefone:</strong> {{aluno.telefone}}</li>
-  <li><strong>RG:</strong> {{aluno.rg}}</li>
-  <li><strong>CPF:</strong> {{aluno.cpf}}</li>
-  <h3>Contrato do Aluno</h3>
-{{#if aluno.contrato_pdf}}
-  <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank">Ver Contrato em PDF</a>
-{{else}}
-  <p>Nenhum contrato enviado.</p>
-{{/if}}
-</ul>
+<div class="container d-flex flex-column align-items-center justify-content-center py-5">
+  <div class="w-100 bg-dark text-white p-4 rounded shadow" style="max-width: 600px;">
+    <h2 class="text-center mb-4">Dados do Aluno</h2>
+    <ul class="list-unstyled">
+      <li><strong>Nome:</strong> {{aluno.nome}}</li>
+      <li><strong>Data de nascimento:</strong> {{aluno.data_nascimento}}</li>
+      <li><strong>Endereço:</strong> {{aluno.endereco}}, {{aluno.complemento}} - {{aluno.cep}}</li>
+      <li><strong>Cidade/UF:</strong> {{aluno.cidade}} - {{aluno.uf}}</li>
+      <li><strong>Telefone:</strong> {{aluno.telefone}}</li>
+      <li><strong>RG:</strong> {{aluno.rg}}</li>
+      <li><strong>CPF:</strong> {{aluno.cpf}}</li>
+    </ul>
 
-<a href="/professor/dadosPessoaisAlunos" class="btn btn-secondary">Voltar</a>
+    <h4 class="mt-4">Contrato do Aluno</h4>
+    {{#if aluno.contrato_pdf}}
+      <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank" class="btn btn-outline-custom" style="color: white; border-color: #5A189A;">Ver Contrato em PDF</a>
+    {{else}}
+      <p class="text-warning">Nenhum contrato enviado.</p>
+    {{/if}}
+
+    <div class="text-center mt-4">
+      <a href="/professor/dadosPessoaisAlunos" class="btn btn-outline-custom" style="color: white; border-color: #5A189A;">Voltar</a>
+    </div>
+  </div>
+</div>
