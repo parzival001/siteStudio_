@@ -126,7 +126,7 @@ exports.adicionarAlunoNaAula = async (req, res) => {
 
     // Verifica se o aluno já está na aula
     const [verificarAluno] = await db.query(
-      'SELECT * FROM aula_alunos WHERE aula_id = ? AND aluno_id = ?',
+      'SELECT * FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?',
       [aulaId, aluno_id]
     );
 
@@ -135,7 +135,7 @@ exports.adicionarAlunoNaAula = async (req, res) => {
     }
 
     // Adiciona o aluno e reduz a vaga
-    await db.query('INSERT INTO aula_alunos (aula_id, aluno_id) VALUES (?, ?)', [aulaId, aluno_id]);
+    await db.query('INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)', [aulaId, aluno_id]);
     await db.query('UPDATE aulas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
 
     res.redirect('/professor/aulas');
@@ -236,7 +236,7 @@ exports.removerAlunoDaAula = async (req, res) => {
 
   try {
     await db.query(
-      'DELETE FROM aula_alunos WHERE aula_id = ? AND aluno_id = ?',
+      'DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?',
       [aulaId, alunoId]
     );
     res.redirect('/professor/aulas');
@@ -246,7 +246,7 @@ exports.removerAlunoDaAula = async (req, res) => {
   }
 
   try {
-    await db.query('DELETE FROM aula_alunos WHERE aula_id = ? AND aluno_id = ?', [aulaId, alunoId]);
+    await db.query('DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?', [aulaId, alunoId]);
 
     // Aumenta uma vaga
     await db.query('UPDATE aulas SET vagas = vagas + 1 WHERE id = ?', [aulaId]);

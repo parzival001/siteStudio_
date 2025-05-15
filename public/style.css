@@ -1,18 +1,51 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: linear-gradient(to bottom right, #5A189A, #B395C0);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+/* Botão customizado */
 .btn-outline-custom {
   color: #5A189A;
   border-color: #5A189A;
 }
 
 .btn-outline-custom:hover {
-  background-image: linear-gradient(to right, #B395C0, #5A189A); /* roxo para preto */
+  background-image: linear-gradient(to right, #B395C0, #5A189A);
   color: white !important;
   border-color: #5A189A;
 }
 
-.nomeEntrada{
-    color: aliceblue;
+/* Títulos */
+.nomeEntrada {
+  color: aliceblue;
 }
 
-h1, h2{
+h1, h2 {
   color: white;
+}
+
+/* Wrapper para centralizar e ocupar toda a tela */
+.full-height-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to bottom right, #5A189A, #B395C0);
+  z-index: -1;
 }

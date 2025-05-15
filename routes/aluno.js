@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db'); // Supondo que você tenha um arquivo de conexão com o banco de dados
 const moment = require('moment');
+const alunoController = require('../controllers/alunoController');
 
 // Middleware de autenticação
 function authAluno(req, res, next) {
@@ -320,6 +321,10 @@ router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
     res.status(500).send('Erro ao inscrever o aluno na aula.');
   }
 });
+
+router.post('/desinscrever/:aulaId', alunoController.desinscreverAula);
+
+
 
 
 module.exports = router;

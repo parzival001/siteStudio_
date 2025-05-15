@@ -49,32 +49,28 @@ exports.homeAluno = async (req, res) => {
   const alunoId = req.session.user.id;
 
   try {
-    // Buscar apenas aulas pendentes e com data igual ou posterior a hoje
     const [aulas] = await db.query(`
       SELECT 
-  a.id, 
-  DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
-  a.horario, 
-  a.vagas, 
-  IFNULL(t.nome, 'Sem tipo definido') AS tipo_nome,  -- Caso tipo_id seja NULL
-  p.nome AS professor_nome, 
-  a.status
-FROM aulas a
-JOIN tipos_aula t ON a.tipo_id = t.id
-JOIN professores p ON a.professor_id = p.id
-WHERE a.status = 'pendente'
+        a.id, 
+        a.data AS data_raw, 
+        DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
+        a.horario, 
+        a.vagas, 
+        IFNULL(t.nome, 'Sem tipo definido') AS tipo_nome,
+        p.nome AS professor_nome, 
+        a.status
+      FROM aulas a
+      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN professores p ON a.professor_id = p.id
+      WHERE a.status = 'pendente'
     `);
 
-    console.log('Aulas encontradas:', aulas);
-
-    // Buscar aulas que o aluno já está inscrito
     const [inscricoes] = await db.query(`
       SELECT aula_id FROM aulas_alunos WHERE aluno_id = ?
     `, [alunoId]);
 
     const aulasAgendadas = inscricoes.map(i => i.aula_id);
 
-    // Buscar a primeira aula agendada do aluno
     const [primeiraAula] = await db.query(`
       SELECT a.id, a.data, a.horario 
       FROM aulas a
@@ -84,7 +80,6 @@ WHERE a.status = 'pendente'
       LIMIT 1
     `, [alunoId]);
 
-    // Montar e formatar os dados das aulas
     const aulasFormatadas = await Promise.all(aulas.map(async (aula) => {
       const [alunos] = await db.query(`
         SELECT alunos.id, alunos.nome 
@@ -94,19 +89,22 @@ WHERE a.status = 'pendente'
       `, [aula.id]);
 
       const jaInscrito = aulasAgendadas.includes(aula.id);
-
       const agora = moment();
-      const dataHoraAula = moment(`${aula.data_raw} ${aula.horario}`, 'YYYY-MM-DD HH:mm:ss');
-      let pode_desmarcar = false;
-      let tempo_cancelamento = 12;
 
+      const horarioSplit = aula.horario.split(':');
+      const dataHoraAula = moment(aula.data_raw).set({
+        hour: parseInt(horarioSplit[0], 10),
+        minute: parseInt(horarioSplit[1], 10),
+        second: 0
+      });
+
+      let tempo_cancelamento = 12;
       if (primeiraAula.length && primeiraAula[0].id === aula.id) {
         tempo_cancelamento = 2;
       }
 
-      if (dataHoraAula.diff(agora, 'hours', true) >= tempo_cancelamento) {
-        pode_desmarcar = true;
-      }
+      const diffHoras = dataHoraAula.diff(agora, 'hours', true);
+      const pode_desmarcar = diffHoras >= tempo_cancelamento;
 
       return {
         ...aula,
@@ -118,8 +116,6 @@ WHERE a.status = 'pendente'
       };
     }));
 
-    console.log('Aulas formatadas:', aulasFormatadas);
-
     res.render('aluno/aulas', {
       aulas: aulasFormatadas
     });
@@ -130,6 +126,62 @@ WHERE a.status = 'pendente'
   }
 };
 
+
+exports.desinscreverAula = async (req, res) => {
+  if (!req.session.user || !req.session.user.id) {
+    return res.status(401).send('Não autorizado');
+  }
+
+  const alunoId = req.session.user.id;
+  const aulaId = req.params.aulaId;
+
+  try {
+    // Buscar data e horário da aula
+    const [[aula]] = await db.query('SELECT data, horario FROM aulas WHERE id = ?', [aulaId]);
+    if (!aula) return res.status(404).send('Aula não encontrada');
+
+    const aulaDateStr = aula.data.toISOString().split('T')[0];
+    const aulaDateTime = new Date(`${aulaDateStr}T${aula.horario}`);
+    const agora = new Date();
+
+    const diffHoras = (aulaDateTime - agora) / (1000 * 60 * 60);
+
+    // Verificar se já participou de outras aulas
+    const [registros] = await db.query(
+      `SELECT COUNT(*) AS total FROM aulas_alunos WHERE aluno_id = ? AND aula_id != ?`,
+      [alunoId, aulaId]
+    );
+
+    const jaParticipouAntes = registros[0].total > 0;
+    const horasMinimas = jaParticipouAntes ? 12 : 2;
+
+    if (diffHoras < horasMinimas) {
+      return res.status(403).send(`Você só pode se desinscrever com pelo menos ${horasMinimas} horas de antecedência.`);
+    }
+
+    // Remover inscrição do aluno na aula
+    await db.query('DELETE FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?', [alunoId, aulaId]);
+
+    // Atualizar número de vagas
+    await db.query('UPDATE aulas SET vagas = vagas + 1 WHERE id = ?', [aulaId]);
+
+    res.redirect('/aluno/aulas');
+  } catch (err) {
+    console.error('Erro ao desinscrever aluno da aula:', err);
+    res.status(500).send('Erro ao desinscrever da aula');
+  }
+};
+
+exports.getAlunosDaAula = async (aulaId) => {
+  const [alunos] = await db.query(
+    `SELECT al.id, al.nome
+     FROM aulas_alunos aa
+     JOIN alunos al ON al.id = aa.aluno_id
+     WHERE aa.aula_id = ?`,
+    [aulaId]
+  );
+  return alunos;
+};
 
 
 

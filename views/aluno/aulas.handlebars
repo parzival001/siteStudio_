@@ -24,14 +24,13 @@
           <button type="submit" class="btn btn-success">Inscrever-se</button>
         </form>
       {{else}}
-        <form method="POST" action="/aluno/desinscrever/{{this.id}}">
-          <button type="submit" class="btn btn-danger">Desinscrever-se</button>
-        </form>
-
         {{#if this.pode_desmarcar}}
+          <form method="POST" action="/aluno/desinscrever/{{this.id}}">
+            <button type="submit" class="btn btn-danger">Desinscrever-se</button>
+          </form>
           <p class="mt-2 text-muted">Você pode desmarcar essa aula até {{this.tempo_cancelamento}} horas antes.</p>
         {{else}}
-          <p class="mt-2 text-warning">Prazo para desmarcar encerrado.</p>
+          <p class="mt-2 text-warning">Prazo para desmarcar encerrado. Você não pode mais desmarcar esta aula.</p>
         {{/if}}
       {{/unless}}
     </div>
