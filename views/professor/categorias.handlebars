@@ -1,14 +1,17 @@
-<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5">
+<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5 text-white">
   <div class="w-100" style="max-width: 600px;">
+
     <h2 class="text-center mb-4">Categorias</h2>
 
     <!-- Formulário de criação -->
-    <form action="/professor/categorias" method="POST" class="d-flex gap-2 mb-4">
-      <input type="text" name="nome" class="form-control" placeholder="Nome da categoria" required>
-      <button type="submit" class="btn btn-outline-custom" style="color: white; border-color: white;">
-        Adicionar
-      </button>
-    </form>
+    <div class="card p-4 rounded shadow mb-4" style="background-color: #B395C0;">
+      <form action="/professor/categorias" method="POST" class="d-flex gap-2">
+        <input type="text" name="nome" class="form-control" placeholder="Nome da categoria" required>
+        <button type="submit" class="btn btn-outline-custom">
+          Adicionar
+        </button>
+      </form>
+    </div>
 
     <!-- Lista de categorias -->
     <div class="table-responsive">
@@ -24,7 +27,8 @@
           <tr>
             <td>{{this.nome}}</td>
             <td>
-              <form action="/professor/categorias/{{this.categoria_id}}/delete" method="POST" class="d-inline">
+              <form action="/professor/categorias/{{this.categoria_id}}/delete" method="POST" class="d-inline"
+                onsubmit="return confirm('Deseja realmente excluir esta categoria?')">
                 <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
               </form>
             </td>
@@ -36,8 +40,8 @@
 
     <!-- Botão Home -->
     <div class="text-center mt-4">
-      <a href="/professor/home" class="btn btn-outline-custom w-auto"
-          style="color: #B19CD9; border-color: #B19CD9;">Home</a>
+      <a href="/professor/home" class="btn btn-outline-custom w-auto">Home</a>
     </div>
+
   </div>
 </div>

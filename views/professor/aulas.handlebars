@@ -4,47 +4,49 @@
 
       <h2 class="text-center mb-4">Nova Aula</h2>
 
-      <form method="POST" action="/professor/aulas/criar" class="mb-5">
-        <div class="mb-3">
-          <label for="professor_id" class="form-label">Professor:</label>
-          <select name="professor_id" class="form-select" required>
-            {{#each professores}}
-              <option value="{{this.id}}">{{this.nome}}</option>
-            {{/each}}
-          </select>
-        </div>
+      <div class="card text-dark p-4 mb-5" style="background-color: #B395C0;">
+        <form method="POST" action="/professor/aulas/criar">
+          <div class="mb-3">
+            <label for="professor_id" class="form-label">Professor:</label>
+            <select name="professor_id" class="form-select" required>
+              {{#each professores}}
+                <option value="{{this.id}}">{{this.nome}}</option>
+              {{/each}}
+            </select>
+          </div>
 
-        <div class="mb-3">
-          <label for="tipo_id" class="form-label">Tipo de Aula:</label>
-          <select name="tipo_id" class="form-select" required>
-            {{#each tipos}}
-              <option value="{{this.id}}">{{this.nome}}</option>
-            {{/each}}
-          </select>
-        </div>
+          <div class="mb-3">
+            <label for="tipo_id" class="form-label">Tipo de Aula:</label>
+            <select name="tipo_id" class="form-select" required>
+              {{#each tipos}}
+                <option value="{{this.id}}">{{this.nome}}</option>
+              {{/each}}
+            </select>
+          </div>
 
-        <div class="mb-3">
-          <label for="data" class="form-label">Data:</label>
-          <input type="date" name="data" id="data" class="form-control" required>
-        </div>
+          <div class="mb-3">
+            <label for="data" class="form-label">Data:</label>
+            <input type="date" name="data" id="data" class="form-control" required>
+          </div>
 
-        <div class="mb-3">
-          <label for="horario" class="form-label">Horário:</label>
-          <input type="time" name="horario" id="horario" class="form-control" required>
-        </div>
+          <div class="mb-3">
+            <label for="horario" class="form-label">Horário:</label>
+            <input type="time" name="horario" id="horario" class="form-control" required>
+          </div>
 
-        <div class="mb-3">
-          <label for="vagas" class="form-label">Vagas:</label>
-          <input type="number" name="vagas" id="vagas" class="form-control" required>
-        </div>
+          <div class="mb-3">
+            <label for="vagas" class="form-label">Vagas:</label>
+            <input type="number" name="vagas" id="vagas" class="form-control" required>
+          </div>
 
-        <button type="submit" class="btn btn-outline-custom w-100">Criar Aula</button>
-      </form>
+          <button type="submit" class="btn btn-outline-custom w-100">Criar Aula</button>
+        </form>
+      </div>
 
       {{#each aulas}}
-        <div class="border rounded p-4 mb-4">
-          <h5>Professor: {{this.professor_nome}}</h5>
-          <h6>{{this.categoria}}</h6>
+        <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
+          <h5 class="text-white">Professor: {{this.professor_nome}}</h5>
+          <h6 class="text-white">{{this.categoria}}</h6>
           <p><strong>Data:</strong> {{data_formatada}}</p>
           <p><strong>Vagas:</strong> {{this.vagas}}</p>
 

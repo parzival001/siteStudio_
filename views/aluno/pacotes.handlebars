@@ -1,10 +1,22 @@
-<h2>Meus Pacotes</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6 text-center">
 
-{{#each pacotes}}
-  <div class="card p-3 mb-3">
-    <p>Créditos: {{this.creditos}} - Válido até: {{this.data_validade}}</p>
-    <p>Status: {{#if this.pago}}Pago{{else}}Não Pago{{/if}}</p>
+      <h2 class="mb-4">Meus Pacotes</h2>
+
+      {{#each pacotes}}
+        <div class="card text-dark p-3 mb-3" style="background-color: #B395C0; text-align: left;">
+          <p>Créditos: {{this.creditos}} - Válido até: {{this.data_validade}}</p>
+          <p>Status: {{#if this.pago}}Pago{{else}}Não Pago{{/if}}</p>
+        </div>
+      {{else}}
+        <p>Você não tem pacotes ativos.</p>
+      {{/each}}
+
+      <div class="text-center mt-4">
+        <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Home</a>
+      </div>
+
+    </div>
   </div>
-{{else}}
-  <p>Você não tem pacotes ativos.</p>
-{{/each}}
+</div>

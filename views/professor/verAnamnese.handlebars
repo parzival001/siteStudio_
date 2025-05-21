@@ -1,34 +1,46 @@
-<h1>Anamnese</h1>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
 
-{{#if anamnese}}
-  <ul>
-    <li><strong>Peso:</strong> {{anamnese.peso}}</li>
-    <li><strong>Estatura:</strong> {{anamnese.estatura}}</li>
-    <li><strong>Contato de emergência:</strong> {{anamnese.contato_emergencia_nome}} ({{anamnese.contato_emergencia_telefone}})</li>
-    <li><strong>Tempo sentado:</strong> {{anamnese.tempo_sentado}}</li>
-    <li><strong>Pratica atividade física:</strong> {{anamnese.atividade_fisica}}</li>
-    <li><strong>Fumante:</strong> {{anamnese.fumante}}</li>
-    <li><strong>Álcool:</strong> {{anamnese.alcool}}</li>
-    <li><strong>Alimentação:</strong> {{anamnese.alimentacao}}</li>
-    <li><strong>Gestante:</strong> {{anamnese.gestante}}</li>
-    <li><strong>Tratamento médico:</strong> {{anamnese.tratamento_medico}}</li>
-    <li><strong>Lesões:</strong> {{anamnese.lesoes}}</li>
-    <li><strong>Marcapasso:</strong> {{anamnese.marcapasso}}</li>
-    <li><strong>Metais:</strong> {{anamnese.metais}}</li>
-    <li><strong>Problema cervical:</strong> {{anamnese.problema_cervical}}</li>
-    <li><strong>Procedimento cirúrgico:</strong> {{anamnese.procedimento_cirurgico}}</li>
-    <li><strong>Alergia medicamentosa:</strong> {{anamnese.alergia_medicamentosa}}</li>
-    <li><strong>Hipertensão:</strong> {{anamnese.hipertensao}}</li>
-    <li><strong>Hipotensão:</strong> {{anamnese.hipotensao}}</li>
-    <li><strong>Diabetes:</strong> {{anamnese.diabetes}}</li>
-    <li><strong>Epilepsia:</strong> {{anamnese.epilepsia}}</li>
-    <li><strong>Labirintite:</strong> {{anamnese.labirintite}}</li>
-    <li><strong>Observações:</strong> {{anamnese.observacoes}}</li>
-    <li><strong>Aceite do termo:</strong> {{#if anamnese.aceite_termo}}Sim{{else}}Não{{/if}}</li>
-    <li><strong>Data:</strong> {{anamnese.criado_em}}</li>
-  </ul>
-{{else}}
-  <p>Este aluno ainda não possui anamnese cadastrada.</p>
-{{/if}}
+      <h1 class="text-center mb-4">Anamnese</h1>
 
-<a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
+      <div class="card p-4" style="background-color: #B395C0;">
+        {{#if anamnese}}
+          <ul class="list-unstyled">
+            <li><strong>Peso:</strong> {{anamnese.peso}}</li>
+            <li><strong>Estatura:</strong> {{anamnese.estatura}}</li>
+            <li><strong>Contato de emergência:</strong> {{anamnese.contato_emergencia_nome}} ({{anamnese.contato_emergencia_telefone}})</li>
+            <li><strong>Tempo sentado:</strong> {{anamnese.tempo_sentado}}</li>
+            <li><strong>Pratica atividade física:</strong> {{anamnese.atividade_fisica}}</li>
+            <li><strong>Fumante:</strong> {{anamnese.fumante}}</li>
+            <li><strong>Álcool:</strong> {{anamnese.alcool}}</li>
+            <li><strong>Alimentação:</strong> {{anamnese.alimentacao}}</li>
+            <li><strong>Gestante:</strong> {{anamnese.gestante}}</li>
+            <li><strong>Tratamento médico:</strong> {{anamnese.tratamento_medico}}</li>
+            <li><strong>Lesões:</strong> {{anamnese.lesoes}}</li>
+            <li><strong>Marcapasso:</strong> {{anamnese.marcapasso}}</li>
+            <li><strong>Metais:</strong> {{anamnese.metais}}</li>
+            <li><strong>Problema cervical:</strong> {{anamnese.problema_cervical}}</li>
+            <li><strong>Procedimento cirúrgico:</strong> {{anamnese.procedimento_cirurgico}}</li>
+            <li><strong>Alergia medicamentosa:</strong> {{anamnese.alergia_medicamentosa}}</li>
+            <li><strong>Hipertensão:</strong> {{anamnese.hipertensao}}</li>
+            <li><strong>Hipotensão:</strong> {{anamnese.hipotensao}}</li>
+            <li><strong>Diabetes:</strong> {{anamnese.diabetes}}</li>
+            <li><strong>Epilepsia:</strong> {{anamnese.epilepsia}}</li>
+            <li><strong>Labirintite:</strong> {{anamnese.labirintite}}</li>
+            <li><strong>Observações:</strong> {{anamnese.observacoes}}</li>
+            <li><strong>Aceite do termo:</strong> {{#if anamnese.aceite_termo}}Sim{{else}}Não{{/if}}</li>
+            <li><strong>Data:</strong> {{anamnese.criado_em}}</li>
+          </ul>
+        {{else}}
+          <p>Este aluno ainda não possui anamnese cadastrada.</p>
+        {{/if}}
+      </div>
+
+      <div class="mt-4 text-center">
+        <a href="javascript:history.back()" class="btn btn-outline-custom">Voltar</a>
+      </div>
+
+    </div>
+  </div>
+</div>

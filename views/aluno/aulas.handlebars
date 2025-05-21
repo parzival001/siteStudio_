@@ -1,40 +1,56 @@
-<h2 class="mt-3">Aulas Disponíveis</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
 
-{{#if aulas.length}}
-  {{#each aulas}}
-    <div class="card mb-3 p-3">
-      <h5>Professor: {{this.professor_nome}}</h5>
-      <h5>Modalidade: {{this.tipo_nome}}</h5>
-      <p>Data: {{this.data_formatada}} - {{this.horario_formatado}}</p>
-      <p>Vagas: {{this.vagas}}</p>
+      <h2 class="mt-3 mb-4 text-center">Aulas Disponíveis</h2>
 
-      {{#if this.alunos.length}}
-        <p><strong>Alunos inscritos:</strong></p>
-        <ul>
-          {{#each this.alunos}}
-            <li>{{this.nome}}</li>
-          {{/each}}
-        </ul>
+      {{#if aulas.length}}
+        {{#each aulas}}
+          <div class="card text-dark p-3 mb-3" style="background-color: #B395C0;">
+            <h5>Professor: {{this.professor_nome}}</h5>
+            <h5>Modalidade: {{this.tipo_nome}}</h5>
+            <p>Data: {{this.data_formatada}} - {{this.horario_formatado}}</p>
+            <p>Vagas: {{this.vagas}}</p>
+
+            {{#if this.alunos.length}}
+              <p><strong>Alunos inscritos:</strong></p>
+              <ul>
+                {{#each this.alunos}}
+                  <li>{{this.nome}}</li>
+                {{/each}}
+              </ul>
+            {{else}}
+              <p><em>Nenhum aluno inscrito ainda.</em></p>
+            {{/if}}
+
+            {{#unless this.ja_inscrito}}
+              <form method="POST" action="/aluno/inscrever/{{this.id}}">
+                <button type="submit" class="btn btn-outline-success w-auto" style="border-color: #5A189A; color: #5A189A;">
+                  Inscrever-se
+                </button>
+              </form>
+            {{else}}
+              {{#if this.pode_desmarcar}}
+                <form method="POST" action="/aluno/desinscrever/{{this.id}}">
+                  <button type="submit" class="btn btn-outline-danger w-auto" style="border-color: #5A189A; color: #5A189A;">
+                    Desinscrever-se
+                  </button>
+                </form>
+                <p class="mt-2 text-muted">Você pode desmarcar essa aula até {{this.tempo_cancelamento}} horas antes.</p>
+              {{else}}
+                <p class="mt-2 text-warning">Prazo para desmarcar encerrado. Você não pode mais desmarcar esta aula.</p>
+              {{/if}}
+            {{/unless}}
+          </div>
+        {{/each}}
       {{else}}
-        <p><em>Nenhum aluno inscrito ainda.</em></p>
+        <p class="mt-4 text-center">Nenhuma aula disponível no momento.</p>
       {{/if}}
 
-      {{#unless this.ja_inscrito}}
-        <form method="POST" action="/aluno/inscrever/{{this.id}}">
-          <button type="submit" class="btn btn-success">Inscrever-se</button>
-        </form>
-      {{else}}
-        {{#if this.pode_desmarcar}}
-          <form method="POST" action="/aluno/desinscrever/{{this.id}}">
-            <button type="submit" class="btn btn-danger">Desinscrever-se</button>
-          </form>
-          <p class="mt-2 text-muted">Você pode desmarcar essa aula até {{this.tempo_cancelamento}} horas antes.</p>
-        {{else}}
-          <p class="mt-2 text-warning">Prazo para desmarcar encerrado. Você não pode mais desmarcar esta aula.</p>
-        {{/if}}
-      {{/unless}}
+      <div class="text-center mt-4">
+        <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Home</a>
+      </div>
+
     </div>
-  {{/each}}
-{{else}}
-  <p class="mt-4">Nenhuma aula disponível no momento.</p>
-{{/if}}
+  </div>
+</div>

@@ -1,37 +1,52 @@
-<h2 class="mb-4">Pacotes de {{aluno.nome}}</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
 
-<a href="/professor/alunos" class="btn btn-secondary mb-3">← Voltar</a>
+      <h2 class="mb-4">Pacotes de {{aluno.nome}}</h2>
 
-<table class="table table-hover">
-  <thead>
-    <tr>
-      <th>Tipo</th>
-      <th>Categoria</th>
-      <th>Qtd Aulas</th>
-      <th>Usadas</th>
-      <th>Início</th>
-      <th>Validade</th>
-      <th>Status</th>
-      <th>Pago</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each pacotes}}
-    <tr>
-      <td>{{this.tipo}}</td>
-      <td>{{this.categoria_nome}}</td>
-      <td>{{this.quantidade_aulas}}</td>
-      <td>{{this.aulas_utilizadas}}</td>
-      <td>{{formatDate this.data_inicio}}</td>
-      <td>{{formatDate this.data_validade}}</td>
-      <td>
-        {{#if this.expirado}}<span class="badge bg-danger">Vencido</span>
-        {{else}}<span class="badge bg-success">Válido</span>{{/if}}
-      </td>
-      <td>
-        {{#if this.pago}}Sim{{else}}Não{{/if}}
-      </td>
-    </tr>
-    {{/each}}
-  </tbody>
-</table>
+      <a href="/professor/alunos" class="btn btn-outline-custom mb-3">← Voltar</a>
+
+      <div class="card p-4" style="background-color: #B395C0;">
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered text-white align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Categoria</th>
+                <th>Qtd Aulas</th>
+                <th>Usadas</th>
+                <th>Início</th>
+                <th>Validade</th>
+                <th>Status</th>
+                <th>Pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each pacotes}}
+              <tr>
+                <td>{{this.tipo}}</td>
+                <td>{{this.categoria_nome}}</td>
+                <td>{{this.quantidade_aulas}}</td>
+                <td>{{this.aulas_utilizadas}}</td>
+                <td>{{formatDate this.data_inicio}}</td>
+                <td>{{formatDate this.data_validade}}</td>
+                <td>
+                  {{#if this.expirado}}
+                    <span class="badge bg-danger">Vencido</span>
+                  {{else}}
+                    <span class="badge bg-success">Válido</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.pago}}Sim{{else}}Não{{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

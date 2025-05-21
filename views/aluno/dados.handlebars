@@ -1,18 +1,20 @@
-<div class="container py-5">
+<div class="container py-5 text-white">
   <div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-6">
+    <div class="col-12 col-md-8 col-lg-6 text-center">
 
-      <h2 class="text-center mb-4">Meus Dados</h2>
+      <h2 class="mb-4">Meus Dados</h2>
 
-      <ul class="list-group mb-4">
-        <li class="list-group-item"><strong>Nome:</strong> {{aluno.nome}}</li>
-        <li class="list-group-item"><strong>Data de Nascimento:</strong> {{aluno.data_nascimento}}</li>
-        <li class="list-group-item"><strong>Endereço:</strong> {{aluno.endereco}}</li>
-        <li class="list-group-item"><strong>Cidade/UF:</strong> {{aluno.cidade}} / {{aluno.uf}}</li>
-        <li class="list-group-item"><strong>Telefone:</strong> {{aluno.telefone}}</li>
-        <li class="list-group-item"><strong>RG:</strong> {{aluno.rg}}</li>
-        <li class="list-group-item"><strong>CPF:</strong> {{aluno.cpf}}</li>
-      </ul>
+      <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
+        <ul class="list-unstyled text-start mb-0">
+          <li><strong>Nome:</strong> {{aluno.nome}}</li>
+          <li><strong>Data de Nascimento:</strong> {{aluno.data_nascimento}}</li>
+          <li><strong>Endereço:</strong> {{aluno.endereco}}</li>
+          <li><strong>Cidade/UF:</strong> {{aluno.cidade}} / {{aluno.uf}}</li>
+          <li><strong>Telefone:</strong> {{aluno.telefone}}</li>
+          <li><strong>RG:</strong> {{aluno.rg}}</li>
+          <li><strong>CPF:</strong> {{aluno.cpf}}</li>
+        </ul>
+      </div>
 
       <div class="text-center">
         <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">

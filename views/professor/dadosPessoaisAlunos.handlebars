@@ -1,58 +1,60 @@
-<div class="container d-flex flex-column align-items-center justify-content-center py-5">
+<div class="container d-flex flex-column align-items-center justify-content-center py-5 text-white">
   <div class="w-100" style="max-width: 1200px;">
     <h2 class="text-center mb-4">Dados Pessoais dos Alunos</h2>
 
-    <div class="table-responsive">
-      <table class="table table-bordered text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>Nome</th>
-            <th>Data de Nascimento</th>
-            <th>Endereço</th>
-            <th>Cidade/UF</th>
-            <th>Telefone</th>
-            <th>RG</th>
-            <th>CPF</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each alunos}}
-          <tr>
-            <!-- Formulário de atualização -->
-            <form action="/professor/atualizar-dados-aluno/{{this.id}}" method="POST">
-              <td><input type="text" name="nome" value="{{this.nome}}" class="form-control" required></td>
-              <td><input type="date" name="data_nascimento" value="{{this.data_nascimento}}" class="form-control" required></td>
-              <td><input type="text" name="endereco" value="{{this.endereco}}, {{this.complemento}}, {{this.cep}}" class="form-control"></td>
-              <td><input type="text" name="cidade_uf" value="{{this.cidade}} - {{this.uf}}" class="form-control"></td>
-              <td><input type="text" name="telefone" value="{{this.telefone}}" class="form-control"></td>
-              <td><input type="text" name="rg" value="{{this.rg}}" class="form-control"></td>
-              <td><input type="text" name="cpf" value="{{this.cpf}}" class="form-control"></td>
-              <td class="d-flex flex-column gap-2">
-                <button type="submit" class="btn btn-outline-custom btn-sm" style="color: #5A189A; border-color: #5A189A;">Salvar</button>
-                <a href="/professor/ver-dados-aluno/{{this.id}}" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Dados</a>
-              </td>
-            </form>
-          </tr>
-          <tr>
-            <!-- Upload do contrato -->
-            <td colspan="8">
-              <form action="/professor/upload-contrato/{{this.id}}" method="POST" enctype="multipart/form-data">
-                {{#if this.contrato_pdf}}
-                  <strong>Contrato:</strong>
-                  <a href="/uploads/contratos/{{this.contrato_pdf}}" target="_blank" class="btn btn-outline-success btn-sm">Ver Contrato</a>
-                {{else}}
-                  <div class="d-flex justify-content-center align-items-center gap-2">
-                    <input type="file" name="contrato" accept="application/pdf" class="form-control" required>
-                    <button type="submit" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Enviar</button>
-                  </div>
-                {{/if}}
+    <div class="card p-4 rounded shadow mb-4" style="background-color: #B395C0;">
+      <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle bg-white text-dark">
+          <thead class="table-dark">
+            <tr>
+              <th>Nome</th>
+              <th>Data de Nascimento</th>
+              <th>Endereço</th>
+              <th>Cidade/UF</th>
+              <th>Telefone</th>
+              <th>RG</th>
+              <th>CPF</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each alunos}}
+            <tr>
+              <!-- Formulário de atualização -->
+              <form action="/professor/atualizar-dados-aluno/{{this.id}}" method="POST">
+                <td><input type="text" name="nome" value="{{this.nome}}" class="form-control" required></td>
+                <td><input type="date" name="data_nascimento" value="{{this.data_nascimento}}" class="form-control" required></td>
+                <td><input type="text" name="endereco" value="{{this.endereco}}, {{this.complemento}}, {{this.cep}}" class="form-control"></td>
+                <td><input type="text" name="cidade_uf" value="{{this.cidade}} - {{this.uf}}" class="form-control"></td>
+                <td><input type="text" name="telefone" value="{{this.telefone}}" class="form-control"></td>
+                <td><input type="text" name="rg" value="{{this.rg}}" class="form-control"></td>
+                <td><input type="text" name="cpf" value="{{this.cpf}}" class="form-control"></td>
+                <td class="d-flex flex-column gap-2">
+                  <button type="submit" class="btn btn-outline-custom btn-sm">Salvar</button>
+                  <a href="/professor/ver-dados-aluno/{{this.id}}" class="btn btn-outline-custom btn-sm">Dados</a>
+                </td>
               </form>
-            </td>
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
+            </tr>
+            <tr>
+              <!-- Upload do contrato -->
+              <td colspan="8">
+                <form action="/professor/upload-contrato/{{this.id}}" method="POST" enctype="multipart/form-data">
+                  {{#if this.contrato_pdf}}
+                    <strong>Contrato:</strong>
+                    <a href="/uploads/contratos/{{this.contrato_pdf}}" target="_blank" class="btn btn-outline-success btn-sm">Ver Contrato</a>
+                  {{else}}
+                    <div class="d-flex justify-content-center align-items-center gap-2">
+                      <input type="file" name="contrato" accept="application/pdf" class="form-control" required>
+                      <button type="submit" class="btn btn-outline-custom btn-sm">Enviar</button>
+                    </div>
+                  {{/if}}
+                </form>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="text-center mt-4">

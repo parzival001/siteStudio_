@@ -1,20 +1,23 @@
-<!-- views/professor/tiposAula.handlebars -->
-
-<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5">
+<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5 text-white">
   <div class="w-100" style="max-width: 600px;">
+
+  
+
     <h1 class="text-center mb-4">Tipos de Aula</h1>
 
-    <form action="/professor/tipos-aula/adicionar" method="POST" class="bg-white p-4 rounded shadow mb-4">
-      <div class="form-group mb-3">
-        <label for="nome" class="form-label">Nome do Tipo de Aula:</label>
-        <input type="text" name="nome" id="nome" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">
-        Adicionar Tipo
-      </button>
-    </form>
+    <div class="card p-4 rounded shadow mb-4" style="background-color: #B395C0;">
+      <form action="/professor/tipos-aula/adicionar" method="POST">
+        <div class="form-group mb-3">
+          <label for="nome" class="form-label">Nome do Tipo de Aula:</label>
+          <input type="text" name="nome" id="nome" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-outline-custom w-100">
+          Adicionar Tipo
+        </button>
+      </form>
+    </div>
 
-    <hr class="my-4">
+    <hr class="my-4" style="border-color: white;">
 
     <h2 class="text-center mb-3">Tipos Cadastrados</h2>
     <ul class="list-group">
@@ -28,9 +31,9 @@
       {{/each}}
     </ul>
 
-    <!-- Botão Home -->
     <div class="text-center mt-4">
-      <a href="/professor/home" class="btn btn-secondary">Home</a>
+      <a href="/professor/home" class="btn btn-outline-custom">Home</a>
     </div>
+
   </div>
 </div>

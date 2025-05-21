@@ -1,6 +1,7 @@
 <div class="container d-flex flex-column align-items-center justify-content-center py-5">
-  <div class="w-100 bg-dark text-white p-4 rounded shadow" style="max-width: 600px;">
+  <div class="w-100 p-4 rounded shadow text-white" style="max-width: 600px; background-color: #B395C0;">
     <h2 class="text-center mb-4">Dados do Aluno</h2>
+
     <ul class="list-unstyled">
       <li><strong>Nome:</strong> {{aluno.nome}}</li>
       <li><strong>Data de nascimento:</strong> {{aluno.data_nascimento}}</li>
@@ -13,13 +14,13 @@
 
     <h4 class="mt-4">Contrato do Aluno</h4>
     {{#if aluno.contrato_pdf}}
-      <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank" class="btn btn-outline-custom" style="color: white; border-color: #5A189A;">Ver Contrato em PDF</a>
+      <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank" class="btn btn-outline-custom">Ver Contrato em PDF</a>
     {{else}}
       <p class="text-warning">Nenhum contrato enviado.</p>
     {{/if}}
 
     <div class="text-center mt-4">
-      <a href="/professor/dadosPessoaisAlunos" class="btn btn-outline-custom" style="color: white; border-color: #5A189A;">Voltar</a>
+      <a href="/professor/home" class="btn btn-outline-custom">Home</a>
     </div>
   </div>
 </div>

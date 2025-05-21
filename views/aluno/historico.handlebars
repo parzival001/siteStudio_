@@ -1,10 +1,24 @@
-<h2>Histórico de Aulas</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6 text-center">
 
-{{#each historico}}
-  <div class="card p-3 mb-3">
-    <h5>{{this.tipo_nome}} com {{this.professor_nome}}</h5>
-    <p>Data: {{this.data}} às {{this.horario}}</p>
+      <h2 class="mb-4">Histórico de Aulas</h2>
+
+      {{#each historico}}
+        <div class="card text-dark p-3 mb-3" style="background-color: #B395C0; text-align: left;">
+          <h5>{{this.tipo_nome}} com {{this.professor_nome}}</h5>
+          <p>Data: {{this.data}} às {{this.horario}}</p>
+        </div>
+      {{else}}
+        <p>Você ainda não concluiu nenhuma aula.</p>
+      {{/each}}
+
+
+
+      
+      <div class="text-center mt-4">
+        <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Home</a>
+      </div>
+    </div>
   </div>
-{{else}}
-  <p>Você ainda não concluiu nenhuma aula.</p>
-{{/each}}
+</div>
