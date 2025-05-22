@@ -163,7 +163,7 @@ exports.desinscreverAula = async (req, res) => {
     await db.query('DELETE FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?', [alunoId, aulaId]);
 
     // Atualizar número de vagas
-    await db.query('UPDATE aulas SET vagas = vagas + 1 WHERE id = ?', [aulaId]);
+    await db.query('UPDATE pacotes SET aulas_disponiveis = aulas_disponiveis - 1, aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?', [pacoteId]);
 
     res.redirect('/aluno/aulas');
   } catch (err) {
@@ -171,6 +171,63 @@ exports.desinscreverAula = async (req, res) => {
     res.status(500).send('Erro ao desinscrever da aula');
   }
 };
+
+exports.inscreverAlunoEmAula = async (req, res) => {
+  const { alunoId, aulaId } = req.body;
+
+  try {
+    // Buscar dados da aula
+    const [[aula]] = await db.query('SELECT id, categoria_id FROM aulas WHERE id = ?', [aulaId]);
+    if (!aula) return res.status(404).send('Aula não encontrada');
+
+    // Buscar pacote válido do aluno (com aulas disponíveis e dentro da validade)
+    const [[pacote]] = await db.query(`
+      SELECT id, aulas_disponiveis, aulas_usadas
+      FROM pacotes
+      WHERE aluno_id = ?
+        AND (modalidade_id = ? OR passe_livre = 1)
+        AND validade >= CURDATE()
+        AND aulas_disponiveis > 0
+      ORDER BY validade ASC
+      LIMIT 1
+    `, [alunoId, aula.categoria_id]);
+
+    if (!pacote) {
+      return res.status(400).send('Nenhum pacote válido disponível para esta modalidade.');
+    }
+
+    // Verificar se o aluno já está inscrito
+    const [[jaInscrito]] = await db.query(`
+      SELECT * FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?
+    `, [alunoId, aulaId]);
+
+    if (jaInscrito) {
+      return res.status(400).send('Aluno já está inscrito nesta aula.');
+    }
+
+    // Inscrever aluno na aula
+    await db.query('INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)', [aulaId, alunoId]);
+
+    // Atualizar pacote: diminuir disponíveis e aumentar usadas
+    await db.query(`
+      UPDATE pacotes
+      SET aulas_disponiveis = aulas_disponiveis - 1,
+          aulas_usadas = aulas_usadas + 1
+      WHERE id = ?
+    `, [pacote.id]);
+
+    // Atualizar vagas da aula
+    await db.query(`
+      UPDATE aulas SET vagas = vagas - 1 WHERE id = ?
+    `, [aulaId]);
+
+    res.redirect('/professor/aulas'); // ou outro caminho
+  } catch (err) {
+    console.error('Erro ao inscrever aluno na aula:', err);
+    res.status(500).send('Erro ao inscrever aluno na aula');
+  }
+};
+
 
 exports.getAlunosDaAula = async (aulaId) => {
   const [alunos] = await db.query(

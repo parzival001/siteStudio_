@@ -9,6 +9,22 @@ const app = express();
 
 
 
+
+cron.schedule('*/1 * * * *', async () => {
+  console.log('Executando limpeza de aulas expiradas...');
+
+  try {
+    const [result] = await db.query(`
+      DELETE FROM aulas 
+      WHERE STR_TO_DATE(CONCAT(data, ' ', horario), '%Y-%m-%d %H:%i:%s') < NOW()
+    `);
+    
+    console.log(`Aulas deletadas: ${result.affectedRows}`);
+  } catch (err) {
+    console.error('Erro ao deletar aulas expiradas:', err);
+  }
+});
+
 // Configurar handlebars com helpers
 const hbs = handlebars.create({
   defaultLayout: 'main',

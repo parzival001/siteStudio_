@@ -8,6 +8,7 @@
       <a href="/professor/pacotes/novo/{{aluno.id}}" class="btn btn-outline-custom mb-3 ms-2">+ Novo Pacote</a>
 
       <div class="card p-4" style="background-color: #B395C0;">
+        {{#if pacotes.length}}
         <div class="table-responsive">
           <table class="table table-bordered table-hover align-middle mb-0 text-dark">
             <thead class="table-dark">
@@ -20,6 +21,7 @@
                 <th>Validade</th>
                 <th>Status</th>
                 <th>Pago</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -32,20 +34,34 @@
                 <td>{{formatDate this.data_inicio}}</td>
                 <td>{{formatDate this.data_validade}}</td>
                 <td>
-                  {{#if this.expirado}}
+                  {{#if (eq this.status_validade "Vencido")}}
                     <span class="badge bg-danger">Vencido</span>
+                  {{else if (eq this.status_validade "Vence em breve")}}
+                    <span class="badge bg-warning text-dark">Vence em breve</span>
                   {{else}}
-                    <span class="badge bg-success">Válido</span>
+                    <span class="badge bg-success">{{this.status_validade}}</span>
                   {{/if}}
                 </td>
                 <td>
-                  {{#if this.pago}}Sim{{else}}Não{{/if}}
+                  {{#if this.pago}}
+                    <span class="badge bg-success">Sim</span>
+                  {{else}}
+                    <span class="badge bg-danger">Não</span>
+                  {{/if}}
+                </td>
+                <td>
+                  <form method="POST" action="/professor/pacotes/deletar/{{this.id}}" onsubmit="return confirm('Deseja excluir este pacote?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                  </form>
                 </td>
               </tr>
               {{/each}}
             </tbody>
           </table>
         </div>
+        {{else}}
+        <p class="text-center">Nenhum pacote encontrado para este aluno.</p>
+        {{/if}}
       </div>
 
     </div>

@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcrypt');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
@@ -68,12 +69,28 @@ router.get('/home', authProfessor, professorController.home);
 router.get('/pacotes/novo', professorController.formNovoPacote);
 router.post('/pacotes/novo', professorController.criarPacote);
 router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
+router.post('/pacotes/deletar/:id', professorController.deletarPacote);
+
 router.get('/alunos/:id/pacotes', professorController.verPacotesAluno);
-router.get('/pacotes', professorController.listarPacotesPorAluno);
 router.post('/pacotes/criar', professorController.criarPacote);
 router.get('/pacotes/:id', professorController.verPacotesPorAluno);
 router.get('/pacotes', authProfessor, professorController.formPacotes);
 router.post('/pacotes', authProfessor, professorController.adicionarPacote);
+router.get('/pacotes', async (req, res) => {
+  try {
+    const [pacotes] = await db.query(`
+  SELECT p.*, a.nome AS aluno_nome, c.nome AS modalidade
+  FROM pacotes p
+  JOIN alunos a ON p.aluno_id = a.id
+  LEFT JOIN categorias c ON p.modalidade_id = c.id
+`);
+
+    res.render('professor/pacotes', { pacotes });
+  } catch (err) {
+    console.error('Erro ao buscar pacotes:', err);
+    res.status(500).send('Erro ao buscar pacotes');
+  }
+});
 
 // Créditos manuais
 router.get('/creditos/novo', professorController.formAdicionarCredito);
@@ -482,10 +499,17 @@ router.post('/cadastrar', async (req, res) => {
   const { nome, email, senha } = req.body;
   try {
     const hash = await bcrypt.hash(senha, 10);
-    await db.query('INSERT INTO professores (nome, email, senha) VALUES (?, ?, ?)', [nome, email, hash]);
+
+    await db.query(`
+      INSERT INTO professores 
+      (nome, email, senha, dados_pessoais, telefone, especialidade, bio)
+      VALUES (?, ?, ?, '', '', '', '')
+    `, [nome, email, hash]);
+
     res.redirect('/professor/cadastrar');
   } catch (err) {
-    res.status(500).send('Erro ao cadastrar professor');
+    console.error('Erro ao cadastrar professor:', err.message);  // aparece no terminal
+    res.status(500).send(`Erro ao cadastrar professor: ${err.message}`);  // aparece no navegador
   }
 });
 
@@ -524,6 +548,24 @@ router.get('/atualizar-dados-aluno/:id', async (req, res) => {
     res.status(500).send('Erro ao carregar dados do aluno');
   }
 });
+
+//deletar pacote
+router.post('/deletar-pacote/:id', (req, res) => {
+  const pacoteId = req.params.id;
+  console.log('Tentando deletar pacote:', pacoteId);
+
+  db.query('DELETE FROM pacotes WHERE id = ?', [pacoteId], (err, results) => {
+    if (err) {
+      console.error('Erro ao deletar pacote:', err);
+      return res.status(500).send('Erro ao deletar pacote');
+    }
+    console.log('Pacote deletado:', results);
+    res.redirect('/professor/pacotes');
+  });
+});
+
+
+
 
 
 

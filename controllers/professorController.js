@@ -159,19 +159,29 @@ exports.deletarAluno = async (req, res) => {
 
 //professor
 exports.cadastrarProfessor = async (req, res) => {
-  const { nome, email, senha, telefone } = req.body;
-  const senhaHash = bcrypt.hashSync(senha, 10);
+  const { nome, email, senha } = req.body;
+
+  if (!nome || !email || !senha) {
+    return res.status(400).send('Todos os campos são obrigatórios.');
+  }
 
   try {
+    // Verifica se já existe
+    const [existente] = await db.query('SELECT id FROM professores WHERE email = ?', [email]);
+    if (existente.length > 0) {
+      return res.status(409).send('Já existe um professor com esse e-mail.');
+    }
+
     await db.query(
-      'INSERT INTO professores (nome, email, senha, telefone) VALUES (?, ?, ?, ?)',
-      [nome, email, senhaHash, telefone]
+      'INSERT INTO professores (nome, email, senha) VALUES (?, ?, ?)',
+      [nome, email, senha]
     );
-    res.redirect('/professor/login');
+
+    res.redirect('/login-professor'); // ou para onde quiser redirecionar
   } catch (err) {
-    console.error('Erro ao cadastrar professor:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
+  console.error('Erro ao cadastrar professor:', err); // <- aqui
+  res.status(500).send('Erro interno ao cadastrar professor');
+}
 };
 
 exports.listarProfessores = async (req, res) => {
@@ -1004,6 +1014,29 @@ exports.criarPacote = async (req, res) => {
     res.render('professor/pacotes', { error: 'Erro ao criar o pacote. Tente novamente.' });
   }
 };
+
+exports.deletarPacote = async (req, res) => {
+  const pacoteId = req.params.id;
+
+  try {
+    // Primeiro busca o aluno_id antes de deletar
+    const [[pacote]] = await db.query('SELECT aluno_id FROM pacotes_aluno WHERE id = ?', [pacoteId]);
+
+    if (!pacote) {
+      console.log(`Pacote com ID ${pacoteId} não encontrado.`);
+      return res.redirect('/professor/alunos'); // ou outra página padrão
+    }
+
+    await db.query('DELETE FROM pacotes_aluno WHERE id = ?', [pacoteId]);
+
+    // Redireciona de volta para os pacotes do aluno específico
+    res.redirect(`/professor/pacotes/aluno/${pacote.aluno_id}`);
+  } catch (err) {
+    console.error('Erro ao deletar pacote:', err);
+    res.status(500).send('Erro ao deletar pacote.');
+  }
+};
+
 exports.verPacotesPorAluno = async (req, res) => {
   const alunoId = req.params.id;
 
@@ -1080,6 +1113,8 @@ exports.listarCreditos = async (req, res) => {
   });
   res.render('professor/listarCreditos', { creditos });
 };
+
+
 
 
 

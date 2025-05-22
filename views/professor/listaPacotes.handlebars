@@ -12,6 +12,7 @@
           <th>Validade</th>
           <th>Status</th>
           <th>Pagamento</th>
+          <th>Ação</th>
         </tr>
       </thead>
       <tbody>
@@ -24,19 +25,25 @@
           <td>{{this.validade}}</td>
           <td>
             {{#if (eq this.status_validade "Vencido")}}
-              <span class="text-danger">{{this.status_validade}}</span>
+            <span class="text-danger">{{this.status_validade}}</span>
             {{else if (eq this.status_validade "Próximo do vencimento")}}
-              <span class="text-warning">{{this.status_validade}}</span>
+            <span class="text-warning">{{this.status_validade}}</span>
             {{else}}
-              <span class="text-success">{{this.status_validade}}</span>
+            <span class="text-success">{{this.status_validade}}</span>
             {{/if}}
           </td>
           <td>
             {{#if this.pago}}
-              <span class="text-success">Pago</span>
+            <span class="text-success">Pago</span>
             {{else}}
-              <span class="text-danger">Não Pago</span>
+            <span class="text-danger">Não Pago</span>
             {{/if}}
+          </td>
+          <td>
+            <form method="POST" action="/professor/deletar-pacote/{{this.id}}"
+              onsubmit="return confirm('Tem certeza que deseja excluir este pacote?');">
+              <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+            </form>
           </td>
         </tr>
         {{/each}}
@@ -45,5 +52,5 @@
   </div>
 
   <a href="/professor/home" class="btn btn-outline-custom w-auto"
-          style="color: #B19CD9; border-color: #B19CD9">Voltar</a>
+    style="color: #B19CD9; border-color: #B19CD9">Voltar</a>
 </div>
