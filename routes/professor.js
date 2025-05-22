@@ -92,7 +92,7 @@ router.get('/pacotes', async (req, res) => {
   SELECT p.*, a.nome AS aluno_nome, c.nome AS modalidade
   FROM pacotes p
   JOIN alunos a ON p.aluno_id = a.id
-  LEFT JOIN categorias c ON p.modalidade_id = c.id
+  LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
 `);
 
     res.render('professor/pacotes', { pacotes });
