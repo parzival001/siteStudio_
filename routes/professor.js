@@ -9,7 +9,7 @@ const db = require('../config/db'); // Ajuste conforme sua estrutura
 
 
 const professorController = require('../controllers/professorController');
-
+console.log('Editar função:', professorController.editarPacoteForm);
 
 // Configuração do armazenamento dos arquivos PDF
 const storage = multer.diskStorage({
@@ -63,6 +63,15 @@ function authProfessor(req, res, next) {
 
 // Página inicial do professor
 router.get('/home', authProfessor, professorController.home);
+router.post('/pacotes/editar/:id', professorController.atualizarPacote);
+
+
+
+router.get('/pacotes/:id/editar', professorController.editarPacoteForm);
+
+
+router.get('/pacotes/mover-aula/:id', professorController.selecionarAulaParaMover);
+router.post('/pacotes/mover-aula/:id', professorController.moverAulaParaPacote);
 
 
 // PACOTES
@@ -74,7 +83,7 @@ router.post('/pacotes/deletar/:id', professorController.deletarPacote);
 router.get('/alunos/:id/pacotes', professorController.verPacotesAluno);
 router.post('/pacotes/criar', professorController.criarPacote);
 router.get('/pacotes/:id', professorController.verPacotesPorAluno);
-router.get('/pacotes', authProfessor, professorController.formPacotes);
+
 router.post('/pacotes', authProfessor, professorController.adicionarPacote);
 router.get('/pacotes', async (req, res) => {
   try {

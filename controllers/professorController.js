@@ -1115,6 +1115,130 @@ exports.listarCreditos = async (req, res) => {
 };
 
 
+exports.editarPacoteForm = async (req, res) => {
+  const pacoteId = req.params.id;
+
+  try {
+    const [[pacote]] = await db.query(`
+      SELECT * FROM pacotes_aluno WHERE id = ?
+    `, [pacoteId]);
+
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    if (!pacote) return res.status(404).send('Pacote não encontrado.');
+
+    res.render('professor/editarPacote', { pacote, categorias });
+  } catch (err) {
+    console.error('Erro ao carregar formulário de edição:', err);
+    res.status(500).send('Erro ao carregar pacote.');
+  }
+};
 
 
+exports.atualizarPacote = async (req, res) => {
+  const pacoteId = req.params.id;
+  const {
+    tipo,
+    categoria_id,
+    quantidade_aulas,
+    data_inicio,
+    data_validade,
+    pago,
+    passe_livre
+  } = req.body;
 
+  try {
+    await db.query(`
+      UPDATE pacotes_aluno
+      SET tipo = ?, categoria_id = ?, quantidade_aulas = ?, data_inicio = ?, data_validade = ?, pago = ?, passe_livre = ?
+      WHERE id = ?
+    `, [tipo, categoria_id || null, quantidade_aulas, data_inicio, data_validade, pago ? 1 : 0, passe_livre ? 1 : 0, pacoteId]);
+
+    res.redirect(`/professor/pacotes/${pacoteId}`);
+  } catch (err) {
+    console.error('Erro ao atualizar pacote:', err);
+    res.status(500).send('Erro ao atualizar pacote.');
+  }
+};
+
+exports.editarPacoteForm = async (req, res) => {
+  const pacoteId = req.params.id;
+
+  try {
+    const [[pacote]] = await db.query('SELECT * FROM pacotes_aluno WHERE id = ?', [pacoteId]);
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    if (!pacote) {
+      return res.status(404).send('Pacote não encontrado.');
+    }
+
+    res.render('professor/editarPacote', { pacote, categorias });
+  } catch (err) {
+    console.error('Erro ao carregar formulário de edição:', err);
+    res.status(500).send('Erro ao carregar o formulário.');
+  }
+};
+
+
+exports.selecionarAulaParaMover = async (req, res) => {
+  try {
+    const pacoteId = req.params.id;
+
+    // Buscar o pacote e o aluno correspondente
+    const [pacote] = await db.query(`
+      SELECT pacotes.*, alunos.nome AS nomeAluno
+      FROM pacotes
+      JOIN alunos ON pacotes.aluno_id = alunos.id
+      WHERE pacotes.id = ?
+    `, [pacoteId]);
+
+    if (pacote.length === 0) {
+      return res.status(404).send('Pacote não encontrado');
+    }
+
+    const alunoId = pacote[0].aluno_id;
+
+    // Buscar aulas avulsas do aluno que ainda não foram vinculadas a pacotes
+    const [aulasAvulsas] = await db.query(`
+      SELECT aulas.id, aulas.titulo, aulas.data, aulas.horario, categorias.nome AS modalidade
+      FROM aulas
+      JOIN categorias ON aulas.categoria_id = categorias.id
+      WHERE aulas.aluno_id = ? AND aulas.pacote_id IS NULL
+      ORDER BY aulas.data DESC
+    `, [alunoId]);
+
+    res.render('professor/selecionarAulaParaMover', {
+      pacote: pacote[0],
+      aulasAvulsas,
+    });
+  } catch (error) {
+    console.error('Erro ao buscar aulas avulsas para mover:', error);
+    res.status(500).send('Erro no servidor');
+  }
+};
+
+exports.moverAulaParaPacote = async (req, res) => {
+  try {
+    const { aulaId, pacoteId } = req.body;
+
+    // Atualiza a aula para associá-la ao pacote
+    await db.query(`
+      UPDATE aulas
+      SET pacote_id = ?
+      WHERE id = ?
+    `, [pacoteId, aulaId]);
+
+    // Atualiza créditos usados
+    await db.query(`
+      UPDATE pacotes
+      SET aulas_usadas = aulas_usadas + 1,
+          aulas_disponiveis = aulas_disponiveis - 1
+      WHERE id = ?
+    `, [pacoteId]);
+
+    res.redirect('/professor/pacotes');
+  } catch (error) {
+    console.error('Erro ao mover aula para pacote:', error);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
