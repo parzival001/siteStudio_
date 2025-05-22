@@ -72,6 +72,7 @@ router.get('/pacotes/:id/editar', professorController.editarPacoteForm);
 
 router.get('/pacotes/mover-aula/:id', professorController.selecionarAulaParaMover);
 router.post('/pacotes/mover-aula/:id', professorController.moverAulaParaPacote);
+router.get('/pacotes/editar/:id', professorController.editarPacote);
 
 
 // PACOTES

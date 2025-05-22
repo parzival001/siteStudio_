@@ -1115,26 +1115,6 @@ exports.listarCreditos = async (req, res) => {
 };
 
 
-exports.editarPacoteForm = async (req, res) => {
-  const pacoteId = req.params.id;
-
-  try {
-    const [[pacote]] = await db.query(`
-      SELECT * FROM pacotes_aluno WHERE id = ?
-    `, [pacoteId]);
-
-    const [categorias] = await db.query('SELECT * FROM categorias');
-
-    if (!pacote) return res.status(404).send('Pacote não encontrado.');
-
-    res.render('professor/editarPacote', { pacote, categorias });
-  } catch (err) {
-    console.error('Erro ao carregar formulário de edição:', err);
-    res.status(500).send('Erro ao carregar pacote.');
-  }
-};
-
-
 exports.atualizarPacote = async (req, res) => {
   const pacoteId = req.params.id;
   const {
@@ -1239,6 +1219,29 @@ exports.moverAulaParaPacote = async (req, res) => {
     res.redirect('/professor/pacotes');
   } catch (error) {
     console.error('Erro ao mover aula para pacote:', error);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+
+exports.editarPacote = async (req, res) => {
+  const pacoteId = req.params.id;
+
+  try {
+    const [pacote] = await db.query('SELECT * FROM pacotes WHERE id = ?', [pacoteId]);
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    if (!pacote.length) {
+      return res.status(404).send('Pacote não encontrado');
+    }
+
+    res.render('professor/editarPacote', {
+      pacote: pacote[0],
+      categorias
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar edição de pacote:', error);
     res.status(500).send('Erro interno no servidor');
   }
 };

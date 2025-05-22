@@ -1,46 +1,24 @@
-<div class="container py-5 text-white">
-  <h2 class="mb-4">Editar Pacote</h2>
-  <form action="/professor/pacotes/{{pacote.id}}/editar" method="POST" class="card p-4" style="background-color: #B395C0;">
-    <div class="mb-3">
-      <label class="form-label">Tipo</label>
-      <input type="text" name="tipo" value="{{pacote.tipo}}" class="form-control" required>
-    </div>
+<h2>Editar Pacote</h2>
+<form action="/professor/pacotes/editar/{{pacote.id}}" method="POST">
+  <label>Aluno ID: {{pacote.aluno_id}}</label><br>
 
-    <div class="mb-3">
-      <label class="form-label">Categoria</label>
-      <select name="categoria_id" class="form-select">
-        {{#each categorias}}
-          <option value="{{this.categoria_id}}" {{#ifEquals this.categoria_id ../pacote.categoria_id}}selected{{/ifEquals}}>{{this.nome}}</option>
-        {{/each}}
-      </select>
-    </div>
+  <label>Categoria</label>
+  <select name="categoria_id">
+    {{#each categorias}}
+      <option value="{{id}}" {{#ifCond this.id '==' ../pacote.categoria_id}}selected{{/ifCond}}>
+        {{nome}}
+      </option>
+    {{/each}}
+  </select><br>
 
-    <div class="mb-3">
-      <label class="form-label">Quantidade de Aulas</label>
-      <input type="number" name="quantidade_aulas" value="{{pacote.quantidade_aulas}}" class="form-control" required>
-    </div>
+  <label>Quantidade de Aulas</label>
+  <input type="number" name="quantidade" value="{{pacote.quantidade}}"><br>
 
-    <div class="mb-3">
-      <label class="form-label">Data Início</label>
-      <input type="date" name="data_inicio" value="{{formatInputDate pacote.data_inicio}}" class="form-control" required>
-    </div>
+  <label>Validade</label>
+  <input type="date" name="validade" value="{{formatDate pacote.validade}}"><br>
 
-    <div class="mb-3">
-      <label class="form-label">Validade</label>
-      <input type="date" name="data_validade" value="{{formatInputDate pacote.data_validade}}" class="form-control" required>
-    </div>
+  <label>Pago?</label>
+  <input type="checkbox" name="pago" {{#if pacote.pago}}checked{{/if}}><br>
 
-    <div class="mb-3 form-check">
-      <input type="checkbox" name="pago" class="form-check-input" {{#if pacote.pago}}checked{{/if}}>
-      <label class="form-check-label">Pago</label>
-    </div>
-
-    <div class="mb-3 form-check">
-      <input type="checkbox" name="passe_livre" class="form-check-input" {{#if pacote.passe_livre}}checked{{/if}}>
-      <label class="form-check-label">Passe Livre</label>
-    </div>
-
-    <button type="submit" class="btn btn-outline-custom">Salvar Alterações</button>
-    <a href="/professor/pacotes/aluno/{{pacote.aluno_id}}" class="btn btn-outline-custom ms-2">Cancelar</a>
-  </form>
-</div>
+  <button type="submit">Salvar</button>
+</form>
