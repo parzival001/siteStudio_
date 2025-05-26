@@ -56,4 +56,45 @@ INSERT INTO aulas (tipo_id, professor_id, data, horario, vagas, status)
 VALUES (3, 1, '2025-05-13', '12:00:00', 5, 'pendente');
 
 
+
+**********************************
+
+SELECT id, data, horario, STR_TO_DATE(CONCAT(data, ' ', horario), '%Y-%m-%d %H:%i:%s') AS data_hora
+FROM aulas
+ORDER BY data_hora;
+
+SELECT * FROM pacotes WHERE id = 16;
+
+ALTER TABLE pacotes ADD COLUMN aluno_id INT;
+
+SELECT * FROM pacotes WHERE id = 1;
+
+SHOW COLUMNS FROM categorias;
+
+ALTER TABLE aulas_alunos
+ADD COLUMN pacote_id INT NULL;
+
+SELECT * FROM aulas WHERE status = 'pendente' AND vagas > 0
+
+SELECT 
+  a.id, a.data, a.horario, a.vagas, a.status, a.categoria_id, c.nome AS categoria, p.nome AS professor
+FROM aulas a
+LEFT JOIN categorias c ON a.categoria_id = c.id
+JOIN professores p ON a.professor_id = p.id
+WHERE a.status = 'pendente'
+ORDER BY a.data ASC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 --}}

@@ -8,7 +8,7 @@
         {{#each aulas}}
           <div class="card text-dark p-3 mb-3" style="background-color: #B395C0;">
             <h5>Professor: {{this.professor_nome}}</h5>
-            <h5>Modalidade: {{this.tipo_nome}}</h5>
+            <h5>Modalidade: {{this.categoria_nome}}</h5>
             <p>Data: {{this.data_formatada}} - {{this.horario_formatado}}</p>
             <p>Vagas: {{this.vagas}}</p>
 
@@ -24,11 +24,15 @@
             {{/if}}
 
             {{#unless this.ja_inscrito}}
-              <form method="POST" action="/aluno/inscrever/{{this.id}}">
-                <button type="submit" class="btn btn-outline-success w-auto" style="border-color: #5A189A; color: #5A189A;">
-                  Inscrever-se
-                </button>
-              </form>
+              {{#if this.vagas}}
+                <form method="POST" action="/aluno/inscrever/{{this.id}}">
+                  <button type="submit" class="btn btn-outline-success w-auto" style="border-color: #5A189A; color: #5A189A;">
+                    Inscrever-se
+                  </button>
+                </form>
+              {{else}}
+                <p class="text-danger mt-2"><strong>Não há mais vagas disponíveis.</strong></p>
+              {{/if}}
             {{else}}
               {{#if this.pode_desmarcar}}
                 <form method="POST" action="/aluno/desinscrever/{{this.id}}">
@@ -38,7 +42,7 @@
                 </form>
                 <p class="mt-2 text-muted">Você pode desmarcar essa aula até {{this.tempo_cancelamento}} horas antes.</p>
               {{else}}
-                <p class="mt-2 text-warning">Prazo para desmarcar encerrado. Você não pode mais desmarcar esta aula.</p>
+                <p class="mt-2 text-danger"><strong>Você só pode se desinscrever com pelo menos 12 horas de antecedência.</strong></p>
               {{/if}}
             {{/unless}}
           </div>

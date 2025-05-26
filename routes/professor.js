@@ -76,6 +76,7 @@ router.get('/pacotes/editar/:id', professorController.editarPacote);
 
 
 // PACOTES
+
 router.get('/pacotes/novo', professorController.formNovoPacote);
 router.post('/pacotes/novo', professorController.criarPacote);
 router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
@@ -116,7 +117,7 @@ router.post('/aulas/deletar/:id', authProfessor, professorController.deletarAula
 router.post('/aulas/concluir/:id', authProfessor, professorController.concluirAula);
 router.get('/adicionar-aluno/:id', authProfessor, professorController.formAdicionarAluno);
 router.post('/adicionar-aluno/:id', authProfessor, professorController.adicionarAlunoNaAula);
-router.post('/remover-aluno/:aulaId/:alunoId', authProfessor, professorController.removerAlunoDaAula);
+
 
 // Formulário de edição de aula fixa
 router.get('/aulas-fixas/editar/:id', authProfessor, professorController.formEditarAulaFixa);
@@ -126,6 +127,10 @@ router.post('/aulas-fixas/editar/:id', authProfessor, professorController.editar
 router.post('/aulas-fixas/deletar/:id', authProfessor, professorController.deletarAulaFixa);
 //router.post('/aulas-fixas/remover-aluno', authProfessor, professorController.removerAlunoAulaFixa);
 router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, professorController.removerAlunoAulaFixa);
+router.post('/remover-aluno/:aulaId/:alunoId', authProfessor, professorController.removerAlunoDaAula);
+router.post('/pacotes/atualizar-utilizadas/:id', professorController.atualizarAulasUtilizadas);
+
+
 
 //categorias
 router.get('/categorias', professorController.listarCategorias);
@@ -211,17 +216,17 @@ router.get('/aluno/:id/anamnese', professorController.exibirFormularioAnamnese);
 
 router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
   try {
-    // Busca tipos de aula
-    const [tipos] = await db.query('SELECT id, nome FROM tipos_aula');
+    // Busca categorias de aula
+    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
 
     // Busca professores
     const [professores] = await db.query('SELECT id, nome FROM professores');
 
-    // Busca todas as aulas fixas com nome do tipo e professor
+    // Busca todas as aulas fixas com nome da categoria e do professor
     const [aulasFixas] = await db.query(`
-      SELECT af.*, t.nome AS tipo_nome, p.nome AS professor_nome
+      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
-      JOIN tipos_aula t ON af.tipo_id = t.id
+      JOIN categorias c ON af.categoria_id = c.categoria_id
       JOIN professores p ON af.professor_id = p.id
     `);
 
@@ -244,7 +249,7 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
 
     // Renderiza tudo
     res.render('professor/novaAulaFixa', {
-      tipos,
+      categorias,
       professores,
       aulasFixas,
       alunos
@@ -261,9 +266,9 @@ router.get('/aulas-fixas/:id', authProfessor, async (req, res) => {
 
   try {
     const [aula] = await db.query(`
-      SELECT af.*, t.nome AS tipo_nome, p.nome AS professor_nome
+      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
-      JOIN tipos_aula t ON af.tipo_id = t.id
+      JOIN categorias c ON af.categoria_id = c.categoria_id
       JOIN professores p ON af.professor_id = p.id
       WHERE af.id = ?`, [aulaId]);
 
@@ -277,7 +282,7 @@ router.get('/aulas-fixas/:id', authProfessor, async (req, res) => {
       JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
       WHERE aaf.aula_fixa_id = ?`, [aulaId]);
 
-    // Ao invés de renderizar, apenas redireciona de volta à página principal
+    // Redireciona de volta à página principal de aulas fixas
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
     console.error(err);
@@ -286,15 +291,16 @@ router.get('/aulas-fixas/:id', authProfessor, async (req, res) => {
 });
 
 router.post('/aulas-fixas/nova', authProfessor, async (req, res) => {
-  const { tipo_id, professor_id, dia_semana, horario, vagas } = req.body;
+  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
   try {
     await db.query(`
-      INSERT INTO aulas_fixas (tipo_id, professor_id, dia_semana, horario, vagas)
+      INSERT INTO aulas_fixas (categoria_id, professor_id, dia_semana, horario, vagas)
       VALUES (?, ?, ?, ?, ?)`,
-      [tipo_id, professor_id, dia_semana, horario, vagas]
+      [categoria_id, professor_id, dia_semana, horario, vagas]
     );
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
+    console.error(err);
     res.status(500).send('Erro ao salvar aula fixa');
   }
 });
@@ -303,24 +309,24 @@ router.get('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
   const id = req.params.id;
   try {
     const [aula] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
-    const [tipos] = await db.query('SELECT * FROM tipos_aula');
+    const [categorias] = await db.query('SELECT * FROM categorias');
     const [professores] = await db.query('SELECT * FROM professores');
-    res.render('professor/editarAulaFixa', { aula: aula[0], tipos, professores });
+    res.render('professor/editarAulaFixa', { aula: aula[0], categorias, professores });
   } catch (err) {
     res.status(500).send('Erro ao carregar aula fixa');
   }
 });
 
 router.post('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
-  const { tipo_id, professor_id, dia_semana, horario, vagas } = req.body;
+  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
   const id = req.params.id;
 
   try {
     await db.query(`
       UPDATE aulas_fixas
-      SET tipo_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
+      SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
       WHERE id = ?`,
-      [tipo_id, professor_id, dia_semana, horario, vagas, id]
+      [categoria_id, professor_id, dia_semana, horario, vagas, id]
     );
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
@@ -418,37 +424,6 @@ router.post('/aluno/:id/pacote', authProfessor, async (req, res) => {
     res.status(500).send('Erro ao adicionar pacote');
   }
 });
-
-// Tipos de aula
-router.get('/tipos-aula', authProfessor, async (req, res) => {
-  try {
-    const [tipos] = await db.query('SELECT * FROM tipos_aula');
-    res.render('professor/tiposAula', { tipos });
-  } catch (err) {
-    res.status(500).send('Erro ao listar tipos de aula');
-  }
-});
-
-router.post('/tipos-aula/adicionar', authProfessor, async (req, res) => {
-  const { nome } = req.body;
-  try {
-    await db.query('INSERT INTO tipos_aula (nome) VALUES (?)', [nome]);
-    res.redirect('/professor/tipos-aula');
-  } catch (err) {
-    res.status(500).send('Erro ao adicionar tipo de aula');
-  }
-});
-
-router.post('/tipos-aula/deletar/:id', authProfessor, async (req, res) => {
-  const id = req.params.id;
-  try {
-    await db.query('DELETE FROM tipos_aula WHERE id = ?', [id]);
-    res.redirect('/professor/tipos-aula');
-  } catch (err) {
-    res.status(500).send('Erro ao deletar tipo de aula');
-  }
-});
-
 
 
 // Anamnese

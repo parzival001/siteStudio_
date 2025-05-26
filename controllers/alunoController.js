@@ -56,11 +56,11 @@ exports.homeAluno = async (req, res) => {
         DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
         a.horario, 
         a.vagas, 
-        IFNULL(t.nome, 'Sem tipo definido') AS tipo_nome,
+        IFNULL(c.nome, 'Sem categoria definida') AS categoria_nome,
         p.nome AS professor_nome, 
         a.status
       FROM aulas a
-      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN categorias c ON a.categoria_id = c.categoria_id
       JOIN professores p ON a.professor_id = p.id
       WHERE a.status = 'pendente'
     `);
@@ -140,18 +140,35 @@ exports.desinscreverAula = async (req, res) => {
     const [[aula]] = await db.query('SELECT data, horario FROM aulas WHERE id = ?', [aulaId]);
     if (!aula) return res.status(404).send('Aula não encontrada');
 
-    const aulaDateStr = aula.data.toISOString().split('T')[0];
-    const aulaDateTime = new Date(`${aulaDateStr}T${aula.horario}`);
-    const agora = new Date();
+    // Garantir que a data seja interpretada corretamente como string
+    const dataBruta = aula.data instanceof Date ? aula.data.toISOString().split('T')[0] : aula.data;
+    const horarioBruto = aula.horario || '00:00:00';
 
-    const diffHoras = (aulaDateTime - agora) / (1000 * 60 * 60);
+    let [hora, minuto, segundo] = horarioBruto.split(':');
+    hora = parseInt(hora || '0');
+    minuto = parseInt(minuto || '0');
+    segundo = parseInt(segundo || '0');
 
-    // Verificar se já participou de outras aulas
+    const dataHora = moment(dataBruta).set({
+      hour: hora,
+      minute: minuto,
+      second: segundo,
+      millisecond: 0
+    });
+
+    if (!dataHora.isValid()) {
+      console.error('Data/hora inválida da aula:', { dataBruta, horarioBruto });
+      return res.status(400).send('Data/hora inválida da aula');
+    }
+
+    const agora = moment().utcOffset('-03:00');
+    const diffHoras = dataHora.diff(agora, 'hours', true);
+
+    // Verificar se já participou de outras aulas (sem contar essa)
     const [registros] = await db.query(
-      `SELECT COUNT(*) AS total FROM aulas_alunos WHERE aluno_id = ? AND aula_id != ?`,
+      'SELECT COUNT(*) AS total FROM aulas_alunos WHERE aluno_id = ? AND aula_id != ?',
       [alunoId, aulaId]
     );
-
     const jaParticipouAntes = registros[0].total > 0;
     const horasMinimas = jaParticipouAntes ? 12 : 2;
 
@@ -159,11 +176,30 @@ exports.desinscreverAula = async (req, res) => {
       return res.status(403).send(`Você só pode se desinscrever com pelo menos ${horasMinimas} horas de antecedência.`);
     }
 
-    // Remover inscrição do aluno na aula
+    console.log({
+      dataBruta,
+      horarioBruto,
+      dataHora: dataHora.format(),
+      agora: agora.format(),
+      diffHoras,
+      jaParticipouAntes,
+      horasMinimas
+    });
+
+    // Verifica se está inscrito
+    const [[inscrito]] = await db.query(
+      'SELECT * FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?',
+      [alunoId, aulaId]
+    );
+    if (!inscrito) {
+      return res.status(400).send('Você não está inscrito nesta aula.');
+    }
+
+    // Remover inscrição
     await db.query('DELETE FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?', [alunoId, aulaId]);
 
     // Atualizar número de vagas
-    await db.query('UPDATE pacotes SET aulas_disponiveis = aulas_disponiveis - 1, aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?', [pacoteId]);
+    await db.query('UPDATE aulas SET vagas = vagas + 1 WHERE id = ?', [aulaId]);
 
     res.redirect('/aluno/aulas');
   } catch (err) {
@@ -172,43 +208,58 @@ exports.desinscreverAula = async (req, res) => {
   }
 };
 
+
+
 exports.inscreverAlunoEmAula = async (req, res) => {
   const { alunoId, aulaId } = req.body;
 
   try {
-    // Buscar dados da aula
-    const [[aula]] = await db.query('SELECT id, categoria_id FROM aulas WHERE id = ?', [aulaId]);
-    if (!aula) return res.status(404).send('Aula não encontrada');
+    // Verificar se o aluno já está inscrito
+    const [[jaInscrito]] = await db.query(
+      'SELECT 1 FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?',
+      [alunoId, aulaId]
+    );
+    if (jaInscrito) {
+      return res.status(400).send('Aluno já está inscrito nesta aula.');
+    }
 
-    // Buscar pacote válido do aluno (com aulas disponíveis e dentro da validade)
+    // Buscar pacote válido
     const [[pacote]] = await db.query(`
       SELECT id, aulas_disponiveis, aulas_usadas
       FROM pacotes
       WHERE aluno_id = ?
-        AND (modalidade_id = ? OR passe_livre = 1)
+        AND (modalidade_id = (SELECT categoria_id FROM aulas WHERE id = ?) OR passe_livre = 1)
         AND validade >= CURDATE()
         AND aulas_disponiveis > 0
       ORDER BY validade ASC
       LIMIT 1
-    `, [alunoId, aula.categoria_id]);
+    `, [alunoId, aulaId]);
 
     if (!pacote) {
       return res.status(400).send('Nenhum pacote válido disponível para esta modalidade.');
     }
 
-    // Verificar se o aluno já está inscrito
-    const [[jaInscrito]] = await db.query(`
-      SELECT * FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?
-    `, [alunoId, aulaId]);
+    // Iniciar transação
+    await db.query('START TRANSACTION');
 
-    if (jaInscrito) {
-      return res.status(400).send('Aluno já está inscrito nesta aula.');
+    // Verificar se ainda há vagas dentro da transação
+    const [[aula]] = await db.query(
+      'SELECT vagas FROM aulas WHERE id = ? FOR UPDATE',
+      [aulaId]
+    );
+
+    if (!aula || aula.vagas <= 0) {
+      await db.query('ROLLBACK');
+      return res.status(400).send('Não há vagas disponíveis nesta aula.');
     }
 
-    // Inscrever aluno na aula
-    await db.query('INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)', [aulaId, alunoId]);
+    // Inscrever aluno
+    await db.query(
+      'INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)',
+      [aulaId, alunoId]
+    );
 
-    // Atualizar pacote: diminuir disponíveis e aumentar usadas
+    // Atualizar pacote
     await db.query(`
       UPDATE pacotes
       SET aulas_disponiveis = aulas_disponiveis - 1,
@@ -217,17 +268,18 @@ exports.inscreverAlunoEmAula = async (req, res) => {
     `, [pacote.id]);
 
     // Atualizar vagas da aula
-    await db.query(`
-      UPDATE aulas SET vagas = vagas - 1 WHERE id = ?
-    `, [aulaId]);
+    await db.query('UPDATE aulas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
+      aula.temVaga = aula.vagas > 0;
+    // Confirmar transação
+    await db.query('COMMIT');
 
-    res.redirect('/professor/aulas'); // ou outro caminho
+    res.redirect('/professor/aulas');
   } catch (err) {
+    await db.query('ROLLBACK');
     console.error('Erro ao inscrever aluno na aula:', err);
     res.status(500).send('Erro ao inscrever aluno na aula');
   }
 };
-
 
 exports.getAlunosDaAula = async (aulaId) => {
   const [alunos] = await db.query(

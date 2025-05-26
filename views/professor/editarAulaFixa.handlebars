@@ -1,10 +1,10 @@
 <h2>Editar Aula Fixa</h2>
 
 <form method="POST" action="/professor/aulas-fixas/editar/{{aula.id}}">
-  <label>Tipo de Aula:</label>
-  <select class="form-select" name="tipo_id">
-    {{#each tipos}}
-      <option value="{{this.id}}" {{#if (eq this.id ../aula.tipo_id)}}selected{{/if}}>{{this.nome}}</option>
+  <label>Categoria:</label>
+  <select class="form-select" name="categoria_id">
+    {{#each categorias}}
+      <option value="{{this.id}}" {{#if (eq this.id ../aula.categoria_id)}}selected{{/if}}>{{this.nome}}</option>
     {{/each}}
   </select>
 

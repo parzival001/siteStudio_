@@ -15,7 +15,7 @@ function authAluno(req, res, next) {
 
 // Rota de home do aluno
 router.get('/home', authAluno, async (req, res) => {
-  const alunoId = req.session.user.id; // Mudança aqui: agora usamos req.session.user
+  const alunoId = req.session.user.id;
 
   try {
     // Carregar os dados do aluno
@@ -23,9 +23,9 @@ router.get('/home', authAluno, async (req, res) => {
 
     // Carregar as aulas pendentes
     const [aulas] = await db.query(`
-      SELECT a.id, a.data, a.horario, a.vagas, t.nome AS tipo_nome, p.nome AS professor_nome, a.status
+      SELECT a.id, a.data, a.horario, a.vagas, c.nome AS categoria_nome, p.nome AS professor_nome, a.status
       FROM aulas a
-      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN categorias c ON a.categoria_id = c.categoria_id
       JOIN professores p ON a.professor_id = p.id
       WHERE a.status = 'pendente'
     `);
@@ -36,8 +36,8 @@ router.get('/home', authAluno, async (req, res) => {
 
     // Verificar se o aluno já está inscrito nas aulas pendentes
     const aulasFormatadas = aulas.map(aula => {
-      const jaInscrito = aulasAgendadas.includes(aula.id); // Verifica se o aluno já está inscrito
-      const podeDesmarcar = podeDesmarcarAula(aula.data); // Lógica para verificar cancelamento
+      const jaInscrito = aulasAgendadas.includes(aula.id);
+      const podeDesmarcar = podeDesmarcarAula(aula.data); // função definida em outro lugar
       return {
         ...aula,
         ja_inscrito: jaInscrito,
@@ -47,10 +47,10 @@ router.get('/home', authAluno, async (req, res) => {
 
     // Carregar o histórico de aulas concluídas
     const [historico] = await db.query(`
-      SELECT a.data, a.horario, t.nome AS tipo_nome, p.nome AS professor_nome
+      SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_alunos aa
       JOIN aulas a ON aa.aula_id = a.id
-      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN categorias c ON a.categoria_id = c.categoria_id
       JOIN professores p ON a.professor_id = p.id
       WHERE aa.aluno_id = ? AND a.status = 'concluida'
       ORDER BY a.data DESC
@@ -102,7 +102,7 @@ router.get('/aulas', authAluno, async (req, res) => {
   const alunoId = req.session.user.id;
 
   try {
-    // Busca todas as aulas disponíveis e futuras
+    // Buscar todas as aulas pendentes e futuras
     const [aulas] = await db.query(`
       SELECT 
         a.id, 
@@ -110,35 +110,34 @@ router.get('/aulas', authAluno, async (req, res) => {
         DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
         a.horario, 
         a.vagas, 
-        t.nome AS tipo_nome, 
+        c.nome AS categoria_nome, 
         p.nome AS professor_nome, 
         a.status
       FROM aulas a
-      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN categorias c ON a.categoria_id = c.categoria_id
       JOIN professores p ON a.professor_id = p.id
       WHERE a.status = 'pendente' AND a.data >= CURDATE()
     `);
 
-    console.log('Aulas encontradas:', aulas); // Para depuração
-
-    // Aulas que o aluno está inscrito
+    // Buscar IDs das aulas em que o aluno está inscrito
     const [inscricoes] = await db.query(`
       SELECT aula_id FROM aulas_alunos WHERE aluno_id = ?
     `, [alunoId]);
-
     const aulasAgendadas = inscricoes.map(i => i.aula_id);
 
-    // A primeira aula do aluno (por data mais próxima)
-    const [primeiraAula] = await db.query(`
+    // Buscar a primeira aula do aluno (por data e horário mais próximos)
+    const [primeira] = await db.query(`
       SELECT a.id, a.data, a.horario 
       FROM aulas a
       JOIN aulas_alunos aa ON aa.aula_id = a.id
       WHERE aa.aluno_id = ?
-      ORDER BY a.data, a.horario
+      ORDER BY a.data ASC, a.horario ASC
       LIMIT 1
     `, [alunoId]);
 
-    // Montar dados para a view
+    const primeiraAulaId = primeira.length ? primeira[0].id : null;
+
+    // Formatar os dados das aulas
     const aulasFormatadas = await Promise.all(aulas.map(async (aula) => {
       const [alunos] = await db.query(`
         SELECT alunos.id, alunos.nome 
@@ -149,18 +148,32 @@ router.get('/aulas', authAluno, async (req, res) => {
 
       const jaInscrito = aulasAgendadas.includes(aula.id);
 
-      const agora = moment();
-      const dataHoraAula = moment(`${aula.data_raw} ${aula.horario}`, 'YYYY-MM-DD HH:mm:ss');
-      let pode_desmarcar = false;
-      let tempo_cancelamento = 12;
+      const agora = moment().utcOffset('-03:00'); // Fuso do Brasil
+      const [hora, minuto] = aula.horario.split(':');
+      const dataHoraAula = moment(aula.data_raw).set({
+        hour: parseInt(hora),
+        minute: parseInt(minuto),
+        second: 0
+      });
 
-      if (primeiraAula.length && primeiraAula[0].id === aula.id) {
+      const horasParaAula = dataHoraAula.diff(agora, 'hours', true); // diferença em horas com fração
+
+      let tempo_cancelamento = 12;
+      if (primeiraAulaId && aula.id === primeiraAulaId) {
         tempo_cancelamento = 2;
       }
 
-      if (dataHoraAula.diff(agora, 'hours', true) >= tempo_cancelamento) {
-        pode_desmarcar = true;
-      }
+      const pode_desmarcar = horasParaAula >= tempo_cancelamento;
+
+      // Debug (opcional)
+      // console.log({
+      //   aulaId: aula.id,
+      //   agora: agora.format(),
+      //   dataHoraAula: dataHoraAula.format(),
+      //   horasParaAula,
+      //   tempo_cancelamento,
+      //   pode_desmarcar
+      // });
 
       return {
         ...aula,
@@ -168,11 +181,9 @@ router.get('/aulas', authAluno, async (req, res) => {
         alunos,
         ja_inscrito: jaInscrito,
         pode_desmarcar,
-        tempo_cancelamento,
+        tempo_cancelamento
       };
     }));
-
-    console.log('Aulas formatadas:', aulasFormatadas);
 
     res.render('aluno/aulas', {
       aulas: aulasFormatadas
@@ -202,14 +213,14 @@ router.get('/pacotes', authAluno, async (req, res) => {
 
 // Exibir histórico
 router.get('/historico', authAluno, async (req, res) => {
-  const alunoId = req.session.user.id; // Mudança aqui: agora usamos req.session.user
+  const alunoId = req.session.user.id;
 
   try {
     const [historico] = await db.query(`
-      SELECT a.data, a.horario, t.nome AS tipo_nome, p.nome AS professor_nome
+      SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_alunos aa
       JOIN aulas a ON aa.aula_id = a.id
-      JOIN tipos_aula t ON a.tipo_id = t.id
+      JOIN categorias c ON a.categoria_id = c.categoria_id
       JOIN professores p ON a.professor_id = p.id
       WHERE aa.aluno_id = ? AND a.status = 'concluida'
       ORDER BY a.data DESC

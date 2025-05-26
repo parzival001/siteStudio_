@@ -10,16 +10,16 @@
             <label for="professor_id" class="form-label">Professor:</label>
             <select name="professor_id" class="form-select" required>
               {{#each professores}}
-                <option value="{{this.id}}">{{this.nome}}</option>
+              <option value="{{this.id}}">{{this.nome}}</option>
               {{/each}}
             </select>
           </div>
 
           <div class="mb-3">
-            <label for="tipo_id" class="form-label">Tipo de Aula:</label>
-            <select name="tipo_id" class="form-select" required>
-              {{#each tipos}}
-                <option value="{{this.id}}">{{this.nome}}</option>
+            <label for="categoria_id" class="form-label">Categoria:</label>
+            <select name="categoria_id" class="form-select" required>
+              {{#each categorias}}
+              <option value="{{this.categoria_id}}">{{this.nome}}</option>
               {{/each}}
             </select>
           </div>
@@ -44,45 +44,54 @@
       </div>
 
       {{#each aulas}}
-        <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
-          <h5 class="text-white">Professor: {{this.professor_nome}}</h5>
-          <h6 class="text-white">{{this.categoria}}</h6>
-          <p><strong>Data:</strong> {{data_formatada}}</p>
-          <p><strong>Vagas:</strong> {{this.vagas}}</p>
+      <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
+        <h5 class="text-white">Professor: {{this.professor_nome}}</h5>
+        <h6 class="text-white">{{this.categoria}}</h6>
 
-          {{#if this.alunos.length}}
-            <p><strong>Alunos inscritos:</strong></p>
-            <ul>
-              {{#each this.alunos}}
-                <li>
-                  {{this.nome}}
-                  <form method="POST" action="/professor/remover-aluno/{{../id}}/{{this.id}}" class="d-inline">
-                    <button class="btn btn-sm btn-outline-danger">Remover</button>
-                  </form>
-                </li>
-              {{/each}}
-            </ul>
-          {{else}}
-            <p><em>Nenhum aluno inscrito ainda.</em></p>
-          {{/if}}
+        {{#if erroAula}}
+          {{#ifCond erroAula.aula_id id}}
+            <div class="alert alert-danger p-2 mt-2">
+              {{erroAula.mensagem}}
+            </div>
+          {{/ifCond}}
+        {{/if}}
 
-          <form method="POST" action="/professor/adicionar-aluno/{{this.id}}" class="mt-3">
-            <label for="aluno_id">Escolha o Aluno:</label>
-            <select name="aluno_id" class="form-select" {{#unless this.vagas}}disabled{{/unless}} required>
-              <option value="" disabled selected>Selecione um aluno</option>
-              {{#each ../alunos}}
-                <option value="{{this.id}}">{{this.nome}}</option>
-              {{/each}}
-            </select>
-            <button type="submit" class="btn btn-outline-custom mt-2" {{#unless this.vagas}}disabled{{/unless}}>
-              Adicionar Aluno
-            </button>
-          </form>
+        <p><strong>Data:</strong> {{data_formatada}}</p>
+        <p><strong>Vagas:</strong> {{this.vagas}}</p>
 
-          <form method="POST" action="/professor/aulas/deletar/{{this.id}}" class="mt-3">
-            <button class="btn btn-outline-danger w-100">Deletar Aula</button>
-          </form>
-        </div>
+        {{#if this.alunos.length}}
+        <p><strong>Alunos inscritos:</strong></p>
+        <ul>
+          {{#each this.alunos}}
+          <li>
+            {{this.nome}}
+            <form method="POST" action="/professor/remover-aluno/{{../id}}/{{this.id}}" class="d-inline">
+              <button class="btn btn-sm btn-outline-danger">Remover</button>
+            </form>
+          </li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p><em>Nenhum aluno inscrito ainda.</em></p>
+        {{/if}}
+
+        <form method="POST" action="/professor/adicionar-aluno/{{this.id}}" class="mt-3">
+          <label for="aluno_id">Escolha o Aluno:</label>
+          <select name="aluno_id" class="form-select" {{#unless this.vagas}}disabled{{/unless}} required>
+            <option value="" disabled selected>Selecione um aluno</option>
+            {{#each ../alunos}}
+            <option value="{{this.id}}">{{this.nome}}</option>
+            {{/each}}
+          </select>
+          <button type="submit" class="btn btn-outline-custom mt-2" {{#unless this.vagas}}disabled{{/unless}}>
+            Adicionar Aluno
+          </button>
+        </form>
+
+        <form method="POST" action="/professor/aulas/deletar/{{this.id}}" class="mt-3">
+          <button class="btn btn-outline-danger w-100">Deletar Aula</button>
+        </form>
+      </div>
       {{/each}}
 
       <div class="text-center mt-4">

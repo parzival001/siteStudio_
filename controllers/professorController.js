@@ -12,19 +12,13 @@ exports.home = (req, res) => {
   res.render('professor/home', { nome: req.session.user.nome });
 };
 
-
-
-
-
-
-
 exports.criarAula = async (req, res) => {
-  const { professor_id, categoria_id, data, horario, vagas, tipo_id } = req.body;
+  const { professor_id, categoria_id, data, horario, vagas } = req.body;
 
   try {
     await db.query(
-      'INSERT INTO aulas (categoria_id, professor_id, data, horario, vagas, tipo_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [categoria_id, professor_id, data, horario, vagas, tipo_id]
+      'INSERT INTO aulas (categoria_id, professor_id, data, horario, vagas) VALUES (?, ?, ?, ?, ?)',
+      [categoria_id, professor_id, data, horario, vagas]
     );
     res.redirect('/professor/aulas');
   } catch (err) {
@@ -37,19 +31,21 @@ exports.listarAulas = async (req, res) => {
   const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
   try {
-    // Buscar aulas com professor e nomes das categorias/tipos
+    // Buscar aulas com professor e nome da categoria
     const [aulas] = await db.query(`
-      SELECT 
-        a.*, 
-        c.nome AS categoria_nome, 
-        t.nome AS tipo_nome, 
-        p.nome AS professor_nome
-      FROM aulas a
-      LEFT JOIN tipos_aula c ON a.categoria_id = c.id
-      LEFT JOIN tipos_aula t ON a.tipo_id = t.id
-      JOIN professores p ON a.professor_id = p.id
-      ORDER BY a.data DESC
-    `);
+  SELECT 
+    a.id,
+    a.data,
+    a.horario,
+    a.vagas,
+    p.nome AS professor_nome,
+    c.nome AS categoria
+  FROM aulas a
+  JOIN professores p ON a.professor_id = p.id
+  JOIN categorias c ON a.categoria_id = c.categoria_id
+  WHERE p.id = ?
+  ORDER BY a.data, a.horario
+`, [req.session.user.id]);
 
     // Buscar alunos associados às aulas
     const [aulaAlunos] = await db.query(`
@@ -88,8 +84,7 @@ exports.listarAulas = async (req, res) => {
     });
 
     // Buscar dados auxiliares
-    const [categorias] = await db.query('SELECT id, nome FROM tipos_aula');
-    const [tipos] = await db.query('SELECT id, nome FROM tipos_aula');
+    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
     const [professores] = await db.query('SELECT id, nome FROM professores');
     const [alunos] = await db.query('SELECT id, nome FROM alunos');
 
@@ -97,7 +92,6 @@ exports.listarAulas = async (req, res) => {
     res.render('professor/aulas', {
       aulas: aulasFormatadas,
       categorias,
-      tipos,
       professores,
       alunos
     });
@@ -107,41 +101,79 @@ exports.listarAulas = async (req, res) => {
   }
 };
 
-// Método para adicionar aluno a uma aula
 exports.adicionarAlunoNaAula = async (req, res) => {
-  const aulaId = parseInt(req.params.id, 10);
+  const { id: aula_id } = req.params;
   const { aluno_id } = req.body;
 
-  if (isNaN(aulaId) || !aluno_id) {
-    return res.status(400).send('ID inválido ou aluno não especificado');
-  }
-
   try {
-    // Verifica se ainda há vagas
-    const [[aula]] = await db.query('SELECT vagas FROM aulas WHERE id = ?', [aulaId]);
-
-    if (!aula || aula.vagas <= 0) {
-      return res.status(400).send('Sem vagas disponíveis para esta aula.');
-    }
-
-    // Verifica se o aluno já está na aula
-    const [verificarAluno] = await db.query(
-      'SELECT * FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?',
-      [aulaId, aluno_id]
+    const [[aula]] = await db.query(
+      `SELECT categoria_id FROM aulas WHERE id = ?`,
+      [aula_id]
     );
 
-    if (verificarAluno.length > 0) {
-      return res.status(400).send('Aluno já está inscrito nesta aula');
+    if (!aula) throw new Error("Aula não encontrada");
+
+    const categoria_id = aula.categoria_id;
+
+    const [pacotes] = await db.query(
+      `
+      SELECT * FROM pacotes_aluno
+      WHERE aluno_id = ?
+        AND data_validade >= CURDATE()
+        AND (passe_livre = 1 OR categoria_id = ?)
+        AND quantidade_aulas > aulas_utilizadas
+      ORDER BY data_validade ASC
+      LIMIT 1
+      `,
+      [aluno_id, categoria_id]
+    );
+
+    if (pacotes.length === 0) {
+      req.session.erroAula = {
+        aula_id: parseInt(aula_id, 10),
+        mensagem: "Aluno não tem pacote válido para essa categoria."
+      };
+      return res.redirect("/professor/aulas");
     }
 
-    // Adiciona o aluno e reduz a vaga
-    await db.query('INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)', [aulaId, aluno_id]);
-    await db.query('UPDATE aulas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
+    const pacote = pacotes[0];
+
+    const [inscrito] = await db.query(
+      `SELECT * FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
+      [aula_id, aluno_id]
+    );
+
+    if (inscrito.length > 0) {
+      req.session.erroAula = {
+        aula_id: parseInt(aula_id, 10),
+        mensagem: "Aluno já inscrito nessa aula."
+      };
+      return res.redirect("/professor/aulas");
+    }
+
+    await db.query(
+      `INSERT INTO aulas_alunos (aula_id, aluno_id, pacote_id) VALUES (?, ?, ?)`,
+      [aula_id, aluno_id, pacote.id]
+    );
+
+    await db.query(
+      `UPDATE aulas SET vagas = vagas - 1 WHERE id = ?`,
+      [aula_id]
+    );
+
+    await db.query(
+      `UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?`,
+      [pacote.id]
+    );
 
     res.redirect('/professor/aulas');
   } catch (err) {
     console.error('Erro ao adicionar aluno na aula:', err);
-    res.status(500).send('Erro interno ao adicionar aluno');
+    req.session.erroAula = {
+      aula_id: parseInt(aula_id, 10),
+      mensagem: "Erro interno ao adicionar aluno na aula."
+    };
+    res.redirect("/professor/aulas");
   }
 };
 
@@ -244,32 +276,48 @@ exports.formAdicionarAluno = async (req, res) => {
 exports.removerAlunoDaAula = async (req, res) => {
   const { aulaId, alunoId } = req.params;
 
+  console.log("Requisição para remover aluno da aula recebida.");
+  console.log("aulaId:", aulaId);
+  console.log("alunoId:", alunoId);
+
   try {
-    await db.query(
-      'DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?',
+    const [[registro]] = await db.query(
+      `SELECT pacote_id FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
       [aulaId, alunoId]
     );
+
+    if (!registro) {
+      console.log("Nenhum vínculo encontrado entre o aluno e a aula.");
+    }
+
+    // Remover o aluno da aula
+    await db.query(
+      `DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
+      [aulaId, alunoId]
+    );
+
+    // Devolver vaga na aula (incrementar vagas)
+    await db.query(
+      `UPDATE aulas SET vagas = vagas + 1 WHERE id = ?`,
+      [aulaId]
+    );
+
+    // Repor crédito, se havia pacote
+    if (registro && registro.pacote_id) {
+      await db.query(
+        `UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas - 1
+         WHERE id = ? AND aulas_utilizadas > 0`,
+        [registro.pacote_id]
+      );
+      console.log("Crédito devolvido para o pacote:", registro.pacote_id);
+    }
+
     res.redirect('/professor/aulas');
   } catch (err) {
     console.error('Erro ao remover aluno da aula:', err);
-    res.status(500).send('Erro ao remover aluno da aula');
+    res.status(500).send('Erro interno');
   }
-
-  try {
-    await db.query('DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?', [aulaId, alunoId]);
-
-    // Aumenta uma vaga
-    await db.query('UPDATE aulas SET vagas = vagas + 1 WHERE id = ?', [aulaId]);
-
-    res.redirect('/professor/aulas');
-  } catch (err) {
-    console.error('Erro ao remover aluno da aula:', err);
-    res.status(500).send('Erro ao remover aluno');
-  }
-
-
 };
-
 exports.formCadastroAluno = (req, res) => {
   res.render('professor/cadastrarAluno');
 };
@@ -299,35 +347,16 @@ exports.listaAlunos = async (req, res) => {
   }
 };
 
-exports.formPacotes = async (req, res) => {
-  try {
-    const [alunos] = await db.query('SELECT * FROM alunos');
-    res.render('professor/pacotes', { alunos });
-  } catch (err) {
-    console.error('Erro ao buscar alunos para pacotes:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
 
-exports.adicionarPacote = async (req, res) => {
-  const { aluno_id, creditos, validade } = req.body;
-  try {
-    await db.query('INSERT INTO pacotes_aluno (aluno_id, creditos, validade) VALUES (?, ?, ?)', [aluno_id, creditos, validade]);
-    res.redirect('/professor/pacotes');
-  } catch (err) {
-    console.error('Erro ao adicionar pacote:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
 
 // Lista todas as aulas fixas
 exports.listarAulasFixas = async (req, res) => {
   try {
     const [aulasFixas] = await db.query(`
-      SELECT af.*, t.nome AS tipo_nome, p.nome AS professor_nome
+      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
-      JOIN tipos_aula t    ON af.tipo_id      = t.id
-      JOIN professores p   ON af.professor_id = p.id
+      JOIN categorias c     ON af.categoria_id  = c.categoria_id
+      JOIN professores p    ON af.professor_id  = p.id
       ORDER BY af.dia_semana, af.horario
     `);
     res.render('professor/novaAulaFixa', { aulasFixas });
@@ -340,13 +369,13 @@ exports.listarAulasFixas = async (req, res) => {
 // Exibe form para criar nova aula fixa
 exports.formNovaAulaFixa = async (req, res) => {
   try {
-    const [tipos] = await db.query('SELECT id, nome FROM tipos_aula');
+    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
     const [professores] = await db.query('SELECT id, nome FROM professores');
 
-    console.log('Tipos:', tipos); // Verifique os tipos retornados
+    console.log('Categorias:', categorias); // Verifique as categorias retornadas
     console.log('Professores:', professores); // Verifique os professores retornados
 
-    res.render('professor/novaAulaFixa', { tipos, professores });
+    res.render('professor/novaAulaFixa', { categorias, professores });
   } catch (err) {
     console.error('Erro ao buscar dados para aula fixa:', err);
     res.status(500).send('Erro interno no servidor');
@@ -588,13 +617,13 @@ exports.verAnamnese = async (req, res) => {
 
 // Salva nova aula fixa
 exports.salvarAulaFixa = async (req, res) => {
-  const { tipo_id, professor_id, dia_semana, horario, vagas } = req.body;
+  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
   try {
     await db.query(
       `INSERT INTO aulas_fixas 
-        (tipo_id, professor_id, dia_semana, horario, vagas)
+        (categoria_id, professor_id, dia_semana, horario, vagas)
        VALUES (?, ?, ?, ?, ?)`,
-      [tipo_id, professor_id, dia_semana, horario, vagas]
+      [categoria_id, professor_id, dia_semana, horario, vagas]
     );
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
@@ -608,9 +637,9 @@ exports.formEditarAulaFixa = async (req, res) => {
   const id = parseInt(req.params.id, 10);
   try {
     const [[aula]] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
-    const [tipos] = await db.query('SELECT id, nome FROM tipos_aula');
+    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
     const [professores] = await db.query('SELECT id, nome FROM professores');
-    res.render('professor/editarAulaFixa', { aula, tipos, professores });
+    res.render('professor/editarAulaFixa', { aula, categorias, professores });
   } catch (err) {
     console.error('Erro ao buscar aula fixa para editar:', err);
     res.status(500).send('Erro interno no servidor');
@@ -637,13 +666,13 @@ exports.removerAlunoAulaFixa = async (req, res) => {
 // Atualiza a aula fixa editada
 exports.editarAulaFixa = async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { tipo_id, professor_id, dia_semana, horario, vagas } = req.body;
+  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
   try {
     await db.query(
       `UPDATE aulas_fixas
-         SET tipo_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
+         SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
        WHERE id = ?`,
-      [tipo_id, professor_id, dia_semana, horario, vagas, id]
+      [categoria_id, professor_id, dia_semana, horario, vagas, id]
     );
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
@@ -800,7 +829,34 @@ exports.deletarCategoria = async (req, res) => {
   res.redirect('/professor/categorias');
 };
 
+// Função utilitária para adicionar dias a uma data
+function adicionarDias(data, dias) {
+  const novaData = new Date(data);
+  novaData.setDate(novaData.getDate() + dias);
+  return novaData;
+}
 
+// Exports
+exports.formPacotes = async (req, res) => {
+  try {
+    const [alunos] = await db.query('SELECT * FROM alunos');
+    res.render('professor/pacotes', { alunos });
+  } catch (err) {
+    console.error('Erro ao buscar alunos para pacotes:', err);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+exports.adicionarPacote = async (req, res) => {
+  const { aluno_id, creditos, validade } = req.body;
+  try {
+    await db.query('INSERT INTO pacotes_aluno (aluno_id, creditos, validade) VALUES (?, ?, ?)', [aluno_id, creditos, validade]);
+    res.redirect('/professor/pacotes');
+  } catch (err) {
+    console.error('Erro ao adicionar pacote:', err);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
 
 // controllers/professorController.js
 exports.formNovoPacote = async (req, res) => {
@@ -814,45 +870,6 @@ exports.formNovoPacote = async (req, res) => {
   }
 };
 
-exports.criarNovoPacote = async (req, res) => {
-  try {
-    let { aluno_id, tipo, quantidade_aulas, data_inicio, categoria_id, passe_livre, pago } = req.body;
-
-    const passeLivreInt = passe_livre ? 1 : 0;
-    const pagoInt = pago ? 1 : 0;
-
-    let categoriaFinal = null;
-    if (!passe_livre && categoria_id && categoria_id !== '') {
-      categoriaFinal = parseInt(categoria_id, 10);
-    }
-
-    // Validação da data
-    if (!data_inicio || isNaN(new Date(data_inicio))) {
-      throw new Error('Data de início inválida');
-    }
-
-    await db.query(`
-      INSERT INTO pacotes_aluno 
-      (aluno_id, tipo, quantidade_aulas, data_inicio, categoria_id, passe_livre, pago)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [
-      parseInt(aluno_id, 10),
-      tipo,
-      parseInt(quantidade_aulas, 10),
-      data_inicio,
-      categoriaFinal,
-      passeLivreInt,
-      pagoInt
-    ]);
-
-    res.redirect('/professor/pacotes');
-  } catch (err) {
-    console.error('Erro ao criar pacote:', err);
-    res.status(500).send('Erro ao criar pacote.');
-  }
-};
-
-
 
 exports.listarPacotesPorAluno = async (req, res) => {
   try {
@@ -860,7 +877,6 @@ exports.listarPacotesPorAluno = async (req, res) => {
       SELECT 
         p.id, 
         a.nome AS aluno_nome, 
-        p.tipo, 
         p.quantidade_aulas AS aulas_total, 
         p.aulas_utilizadas, 
         p.data_validade AS validade, 
@@ -872,25 +888,25 @@ exports.listarPacotesPorAluno = async (req, res) => {
       LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
     `);
 
-    const hoje = new Date();
-
     pacotes.forEach(pacote => {
       const validade = new Date(pacote.validade);
-      const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+      validade.setHours(0, 0, 0, 0);  // normaliza para meia-noite
 
-      // Evita NaN usando parseInt com fallback 0
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0); // normaliza para meia-noite
+
+      const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+
       const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      // Status da validade
       pacote.status_validade = diasRestantes < 0
         ? 'Vencido'
         : diasRestantes <= 7
           ? 'Próximo do vencimento'
           : 'Válido';
 
-      // Formata data para exibição como DD/MM/AAAA
       const dia = String(validade.getDate()).padStart(2, '0');
       const mes = String(validade.getMonth() + 1).padStart(2, '0');
       const ano = validade.getFullYear();
@@ -914,7 +930,7 @@ exports.verPacotesAluno = async (req, res) => {
   const [pacotes] = await db.query(`
     SELECT p.*, c.nome AS categoria_nome 
     FROM pacotes p
-    LEFT JOIN categorias c ON p.categoria_id = c.id
+    LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
     WHERE p.aluno_id = ?
   `, [alunoId]);
 
@@ -942,16 +958,18 @@ exports.criarPacote = async (req, res) => {
     const data_inicio_formatada = dayjs(dataBruta).format('YYYY-MM-DD');
     console.log("Data formatada:", data_inicio_formatada);
 
-    // Calcular data de validade com base no tipo do pacote
+    // Calcular data de validade com base no tipo do pacote (usando dias fixos)
     let data_validade = null;
     const tipo = req.body.tipo;
 
     if (tipo === 'mensal') {
-      data_validade = dayjs(data_inicio_formatada).add(1, 'month').format('YYYY-MM-DD');
+      data_validade = dayjs(data_inicio_formatada).add(30, 'day').format('YYYY-MM-DD');
     } else if (tipo === 'trimestral') {
-      data_validade = dayjs(data_inicio_formatada).add(3, 'month').format('YYYY-MM-DD');
+      data_validade = dayjs(data_inicio_formatada).add(90, 'day').format('YYYY-MM-DD');
     } else if (tipo === 'semestral') {
-      data_validade = dayjs(data_inicio_formatada).add(6, 'month').format('YYYY-MM-DD');
+      data_validade = dayjs(data_inicio_formatada).add(180, 'day').format('YYYY-MM-DD');
+    } else {
+      throw new Error('Tipo de pacote inválido');
     }
 
     const novoPacote = {
@@ -969,36 +987,37 @@ exports.criarPacote = async (req, res) => {
       novoPacote.categoria_id = null;
     }
 
-    const [result] = await db.query(`
-      INSERT INTO pacotes_aluno (
+    const [result] = await db.query(
+      `INSERT INTO pacotes_aluno (
         aluno_id, categoria_id, tipo, quantidade_aulas, data_inicio, data_validade, pago, passe_livre
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      novoPacote.aluno_id,
-      novoPacote.categoria_id,
-      novoPacote.tipo,
-      novoPacote.quantidade_aulas,
-      novoPacote.data_inicio,
-      novoPacote.data_validade,
-      novoPacote.pago,
-      novoPacote.passe_livre
-    ]);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        novoPacote.aluno_id,
+        novoPacote.categoria_id,
+        novoPacote.tipo,
+        novoPacote.quantidade_aulas,
+        novoPacote.data_inicio,
+        novoPacote.data_validade,
+        novoPacote.pago,
+        novoPacote.passe_livre
+      ]
+    );
 
     if (result.affectedRows > 0) {
       const pacote_id = result.insertId;
 
       if (novoPacote.passe_livre && Array.isArray(req.body.modalidades_passe_livre)) {
         for (const categoria_id of req.body.modalidades_passe_livre) {
-          const [categoriaExistente] = await db.query(`
-            SELECT categoria_id FROM categorias WHERE categoria_id = ?
-          `, [categoria_id]);
+          const [categoriaExistente] = await db.query(
+            `SELECT categoria_id FROM categorias WHERE categoria_id = ?`,
+            [categoria_id]
+          );
 
           if (categoriaExistente.length > 0) {
-            await db.query(`
-              INSERT INTO pacotes_modalidades (pacote_id, categoria_id)
-              VALUES (?, ?)
-            `, [pacote_id, categoria_id]);
+            await db.query(
+              `INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`,
+              [pacote_id, categoria_id]
+            );
           } else {
             console.log(`Categoria com ID ${categoria_id} não encontrada.`);
           }
@@ -1038,15 +1057,14 @@ exports.deletarPacote = async (req, res) => {
 };
 
 exports.verPacotesPorAluno = async (req, res) => {
-  const alunoId = req.params.id;
+  const alunoId = parseInt(req.params.id, 10);
 
   try {
-    const [[aluno]] = await db.query('SELECT nome FROM alunos WHERE id = ?', [alunoId]);
+    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
 
     const [pacotes] = await db.query(`
       SELECT 
         p.id,
-        p.tipo,
         p.quantidade_aulas,
         p.aulas_utilizadas,
         p.data_inicio,
@@ -1060,7 +1078,6 @@ exports.verPacotesPorAluno = async (req, res) => {
       ORDER BY p.data_inicio DESC
     `, [alunoId]);
 
-    // Calcular status de validade e créditos restantes
     const hoje = new Date();
 
     pacotes.forEach(p => {
@@ -1071,7 +1088,7 @@ exports.verPacotesPorAluno = async (req, res) => {
         : diasRestantes <= 7
           ? 'Vence em breve'
           : `Válido (${diasRestantes} dias)`;
-      p.creditos_restantes = p.quantidade_aulas - p.aulas_utilizadas;
+      p.creditos_restantes = (p.quantidade_aulas || 0) - (p.aulas_utilizadas || 0);
     });
 
     res.render('professor/pacotesPorAluno', { aluno, pacotes });
@@ -1080,7 +1097,6 @@ exports.verPacotesPorAluno = async (req, res) => {
     res.status(500).send('Erro ao buscar pacotes.');
   }
 };
-
 //CREDITOS
 
 // Mostrar formulário de crédito manual
@@ -1116,9 +1132,8 @@ exports.listarCreditos = async (req, res) => {
 
 
 exports.atualizarPacote = async (req, res) => {
-  const pacoteId = req.params.id;
+  const pacoteId = parseInt(req.params.id, 10);
   const {
-    tipo,
     categoria_id,
     quantidade_aulas,
     data_inicio,
@@ -1130,9 +1145,17 @@ exports.atualizarPacote = async (req, res) => {
   try {
     await db.query(`
       UPDATE pacotes_aluno
-      SET tipo = ?, categoria_id = ?, quantidade_aulas = ?, data_inicio = ?, data_validade = ?, pago = ?, passe_livre = ?
+      SET categoria_id = ?, quantidade_aulas = ?, data_inicio = ?, data_validade = ?, pago = ?, passe_livre = ?
       WHERE id = ?
-    `, [tipo, categoria_id || null, quantidade_aulas, data_inicio, data_validade, pago ? 1 : 0, passe_livre ? 1 : 0, pacoteId]);
+    `, [
+      categoria_id || null,
+      quantidade_aulas,
+      data_inicio,
+      data_validade,
+      pago ? 1 : 0,
+      passe_livre ? 1 : 0,
+      pacoteId
+    ]);
 
     res.redirect(`/professor/pacotes/${pacoteId}`);
   } catch (err) {
@@ -1198,28 +1221,50 @@ exports.selecionarAulaParaMover = async (req, res) => {
 };
 
 exports.moverAulaParaPacote = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const { aulaId, pacoteId } = req.body;
 
+    // Verifica se a aula já está associada a um pacote
+    const [aulaResult] = await connection.query(`
+      SELECT pacote_id FROM aulas WHERE id = ?
+    `, [aulaId]);
+
+    if (aulaResult.length === 0) {
+      req.flash('error_msg', 'Aula não encontrada.');
+      return res.redirect('/professor/pacotes');
+    }
+
+    if (aulaResult[0].pacote_id) {
+      req.flash('error_msg', 'A aula já está vinculada a um pacote.');
+      return res.redirect('/professor/pacotes');
+    }
+
     // Atualiza a aula para associá-la ao pacote
-    await db.query(`
+    await connection.query(`
       UPDATE aulas
       SET pacote_id = ?
       WHERE id = ?
     `, [pacoteId, aulaId]);
 
-    // Atualiza créditos usados
-    await db.query(`
+    // Atualiza créditos usados e disponíveis
+    await connection.query(`
       UPDATE pacotes
       SET aulas_usadas = aulas_usadas + 1,
           aulas_disponiveis = aulas_disponiveis - 1
       WHERE id = ?
     `, [pacoteId]);
 
-    res.redirect('/professor/pacotes');
+    req.flash('success_msg', 'Aula movida com sucesso para o pacote.');
+    return res.redirect('/professor/pacotes');
+
   } catch (error) {
     console.error('Erro ao mover aula para pacote:', error);
-    res.status(500).send('Erro interno no servidor');
+    req.flash('error_msg', 'Erro ao mover aula para o pacote.');
+    return res.redirect('/professor/pacotes');
+  } finally {
+    connection.release();
   }
 };
 
@@ -1228,7 +1273,7 @@ exports.editarPacote = async (req, res) => {
   const pacoteId = req.params.id;
 
   try {
-    const [pacote] = await db.query('SELECT * FROM pacotes WHERE id = ?', [pacoteId]);
+    const [pacote] = await db.query('SELECT *, aluno_id FROM pacotes WHERE id = ?', [pacoteId]);
     const [categorias] = await db.query('SELECT * FROM categorias');
 
     if (!pacote.length) {
@@ -1245,3 +1290,36 @@ exports.editarPacote = async (req, res) => {
     res.status(500).send('Erro interno no servidor');
   }
 };
+
+exports.atualizarAulasUtilizadas = async (req, res) => {
+  try {
+    const pacoteId = parseInt(req.params.id, 10);
+    const aulasUtilizadas = parseInt(req.body.aulas_utilizadas, 10);
+    const alunoId = parseInt(req.body.aluno_id, 10);
+    console.log('req.body:', req.body);
+
+    if (isNaN(pacoteId) || isNaN(alunoId)) {
+      console.error("ID inválido:", pacoteId, alunoId);
+      return res.status(400).send("Dados inválidos.");
+    }
+    console.log('req.body:', req.body);
+    await db.query(
+      "UPDATE pacotes_aluno SET aulas_utilizadas = ? WHERE id = ?",
+      [aulasUtilizadas, pacoteId]
+    );
+
+    res.redirect(`/professor/pacotes/aluno/${alunoId}`);
+  } catch (error) {
+    console.error("Erro ao atualizar aulas utilizadas:", error);
+    res.status(500).send("Erro interno.");
+  }
+
+  
+};
+
+
+
+
+
+
+module.exports = exports;

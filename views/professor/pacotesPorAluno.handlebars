@@ -30,35 +30,41 @@
                 <td>{{this.tipo}}</td>
                 <td>{{this.categoria_nome}}</td>
                 <td>{{this.quantidade_aulas}}</td>
-                <td>{{this.aulas_utilizadas}}</td>
+                <td>
+
+                  <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="d-flex gap-1">
+                    <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
+                      value="{{this.aulas_utilizadas}}" class="form-control form-control-sm" required>
+                    <input type="hidden" name="aluno_id" value="{{../aluno.id}}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Mover Aula</button>
+                  </form>
+
+
+                </td>
                 <td>{{formatDate this.data_inicio}}</td>
                 <td>{{formatDate this.data_validade}}</td>
                 <td>
                   {{#if (eq this.status_validade "Vencido")}}
-                    <span class="badge bg-danger">Vencido</span>
+                  <span class="badge bg-danger">Vencido</span>
                   {{else if (eq this.status_validade "Vence em breve")}}
-                    <span class="badge bg-warning text-dark">Vence em breve</span>
+                  <span class="badge bg-warning text-dark">Vence em breve</span>
                   {{else}}
-                    <span class="badge bg-success">{{this.status_validade}}</span>
+                  <span class="badge bg-success">{{this.status_validade}}</span>
                   {{/if}}
                 </td>
                 <td>
                   {{#if this.pago}}
-                    <span class="badge bg-success">Sim</span>
+                  <span class="badge bg-success">Sim</span>
                   {{else}}
-                    <span class="badge bg-danger">Não</span>
+                  <span class="badge bg-danger">Não</span>
                   {{/if}}
                 </td>
                 <td>
                   <div class="d-flex flex-column gap-1">
-                    <!-- Botão Editar -->
-                    <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-primary">Editar</a>
-
-                    <!-- Botão Mover Aula -->
-                    <a href="/professor/pacotes/mover-aula/{{this.id}}" class="btn btn-sm btn-outline-warning">Mover Aula</a>
-
-                    <!-- Botão Excluir -->
-                    <form method="POST" action="/professor/pacotes/deletar/{{this.id}}" onsubmit="return confirm('Deseja excluir este pacote?');">
+                    <a href="/professor/pacotes/mover-aula/{{this.id}}" class="btn btn-sm btn-outline-warning">Mover
+                      Aula</a>
+                    <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"
+                      onsubmit="return confirm('Deseja excluir este pacote?');">
                       <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
                     </form>
                   </div>

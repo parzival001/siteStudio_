@@ -6,9 +6,9 @@
 
       <form method="POST" action="/professor/aulas-fixas/nova" class="mb-5">
         <div class="mb-3">
-          <label for="tipo_id" class="form-label">Tipo de Aula:</label>
-          <select class="form-select" name="tipo_id" required>
-            {{#each tipos}}
+          <label for="categoria_id" class="form-label">Categoria:</label>
+          <select class="form-select" name="categoria_id" required>
+            {{#each categorias}}
               <option value="{{this.id}}">{{this.nome}}</option>
             {{/each}}
           </select>
@@ -53,7 +53,7 @@
 
       {{#each aulasFixas}}
         <div class="border rounded p-4 mb-4">
-          <h5>{{this.tipo_nome}}</h5>
+          <h5>{{this.categoria_nome}}</h5>
           <h6>{{this.professor_nome}}</h6>
           <p><strong>{{this.dia_semana}} - {{this.horario}}</strong></p>
           <p><strong>Vagas:</strong> {{this.vagas}}</p>
