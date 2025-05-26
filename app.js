@@ -8,8 +8,6 @@ const upload = require('./utils/upload');
 const app = express();
 
 
-
-
 cron.schedule('*/1 * * * *', async () => {
   console.log('Executando limpeza de aulas expiradas...');
 
@@ -24,6 +22,30 @@ cron.schedule('*/1 * * * *', async () => {
     console.error('Erro ao deletar aulas expiradas:', err);
   }
 });
+
+const { enviarMensagem } = require('./telegramService');
+
+async function verificarAniversarios() {
+  const hoje = new Date();
+  const dia = hoje.getDate();
+  const mes = hoje.getMonth() + 1;
+
+  const [alunos] = await db.query(`
+    SELECT nome, telegram_chat_id FROM alunos
+    WHERE DAY(data_nascimento) = ? AND MONTH(data_nascimento) = ?
+  `, [dia, mes]);
+
+  for (const aluno of alunos) {
+    if (aluno.telegram_chat_id) {
+      await enviarMensagem(aluno.telegram_chat_id, `Feliz aniversário, ${aluno.nome}! Que seu dia seja incrível!`);
+    }
+  }
+}
+
+
+
+
+
 
 // Configurar handlebars com helpers
 const hbs = handlebars.create({

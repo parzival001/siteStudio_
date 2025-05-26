@@ -135,6 +135,16 @@ exports.desinscreverAula = async (req, res) => {
   const alunoId = req.session.user.id;
   const aulaId = req.params.aulaId;
 
+  const { enviarMensagem } = require('../telegramService');
+
+  // Após deletar ou marcar como cancelada:
+  const [[aluno]] = await db.query('SELECT nome, telegram_chat_id FROM alunos WHERE id = ?', [alunoId]);
+  if (aluno.telegram_chat_id) {
+    await enviarMensagem(aluno.telegram_chat_id, `Olá, ${aluno.nome}! Sua aula foi cancelada. Entre em contato para remarcar.`);
+  }
+
+
+
   try {
     // Buscar data e horário da aula
     const [[aula]] = await db.query('SELECT data, horario FROM aulas WHERE id = ?', [aulaId]);
@@ -269,7 +279,7 @@ exports.inscreverAlunoEmAula = async (req, res) => {
 
     // Atualizar vagas da aula
     await db.query('UPDATE aulas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
-      aula.temVaga = aula.vagas > 0;
+    aula.temVaga = aula.vagas > 0;
     // Confirmar transação
     await db.query('COMMIT');
 
