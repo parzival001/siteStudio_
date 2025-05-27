@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const moment = require('moment');
 const axios = require('axios');
 
+
+
 // Exibição do formulário de login
 exports.formLogin = (req, res) => {
   res.render('aluno/login');
@@ -137,12 +139,20 @@ exports.desinscreverAula = async (req, res) => {
 
   const { enviarMensagem } = require('../telegramService');
 
-  // Após deletar ou marcar como cancelada:
-  const [[aluno]] = await db.query('SELECT nome, telegram_chat_id FROM alunos WHERE id = ?', [alunoId]);
-  if (aluno.telegram_chat_id) {
-    await enviarMensagem(aluno.telegram_chat_id, `Olá, ${aluno.nome}! Sua aula foi cancelada. Entre em contato para remarcar.`);
-  }
+  // Buscar dados do aluno para incluir na notificação
+  const [[aluno]] = await db.query('SELECT nome FROM alunos WHERE id = ?', [alunoId]);
 
+  // Buscar dados da aula para incluir na notificação
+  const [[infoAula]] = await db.query(
+    'SELECT data, horario FROM aulas WHERE id = ?',
+    [aulaId]
+  );
+
+  const dataFormatada = moment(infoAula.data).format('DD/MM/YYYY');
+  const horarioFormatado = infoAula.horario?.slice(0, 5) || 'horário não informado';
+
+  // Enviar notificação ao admin/professor via Telegram
+  await enviarMensagem(`O aluno *${aluno.nome}* se desinscreveu da aula no dia *${dataFormatada}* às *${horarioFormatado}*.`);
 
 
   try {

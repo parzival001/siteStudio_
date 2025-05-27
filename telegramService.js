@@ -1,21 +1,21 @@
 const TelegramBot = require('node-telegram-bot-api');
-const token = '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8'; // Substitua pelo seu token real do BotFather
-const bot = new TelegramBot(token, { polling: true }); // polling true para testes
+const token = '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8';
+const bot = new TelegramBot(token, { polling: true });
 
-// Para descobrir seu chat_id ao digitar /start ou outra mensagem
+console.log("Bot do Telegram está rodando...");
+
+// Chat ID do admin (fixo ou salvo de um banco de dados)
+const CHAT_ID_ADMIN = '5535291163'; // substitua pelo seu
+
 bot.on('message', (msg) => {
-  console.log("Mensagem recebida:", msg);
-  // Mostra o chat ID no console:
+  console.log("Mensagem recebida:", msg.text);
   console.log("Chat ID:", msg.chat.id);
 });
 
-// Chat ID do professor (fixo)
-const CHAT_ID = 123456789; // Substitua pelo seu ID real
-
-// Exporta a função para enviar notificação
-function enviarNotificacao(texto) {
-  return bot.sendMessage(CHAT_ID, texto);
+// Função para enviar mensagem ao admin
+function enviarMensagem(texto) {
+  if (!texto || texto.trim() === '') return;
+  return bot.sendMessage(CHAT_ID_ADMIN, texto, { parse_mode: 'Markdown' });
 }
 
-module.exports = { enviarNotificacao };
-
+module.exports = { enviarMensagem };
