@@ -1,8 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db'); // Supondo que você tenha um arquivo de conexão com o banco de dados
+const db = require('../config/db'); 
 const moment = require('moment');
 const alunoController = require('../controllers/alunoController');
+const {autenticarAluno} = require('../middleware/authMiddleware')
+
+
+router.get('/pacotes', autenticarAluno, alunoController.listarPacotes);
+
+console.log('listarPacotes:', alunoController.listarPacotes);
 
 // Middleware de autenticação
 function authAluno(req, res, next) {
@@ -211,6 +217,7 @@ router.get('/pacotes', authAluno, async (req, res) => {
   }
 });
 
+
 // Exibir histórico
 router.get('/historico', authAluno, async (req, res) => {
   const alunoId = req.session.user.id;
@@ -335,6 +342,8 @@ router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
 
 router.post('/desinscrever/:aulaId', alunoController.desinscreverAula);
 
+
+// Rota para listar pacotes do aluno
 
 
 

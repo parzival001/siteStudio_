@@ -313,4 +313,60 @@ exports.getAlunosDaAula = async (aulaId) => {
 };
 
 
+exports.listarPacotes = async (req, res) => {
+  try {
+    const alunoId = req.session.user?.id;
+
+    if (!alunoId) {
+      return res.status(401).send('Usuário não logado.');
+    }
+    console.log('Aluno ID da sessão:', alunoId);
+    const [pacotes] = await db.query(`
+      SELECT 
+        p.id, 
+        a.nome AS aluno_nome, 
+        p.quantidade_aulas AS aulas_total, 
+        p.aulas_utilizadas, 
+        p.data_validade AS validade, 
+        p.pago, 
+        p.passe_livre, 
+        c.nome AS modalidade
+      FROM pacotes_aluno p
+      JOIN alunos a ON a.id = p.aluno_id
+      LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
+      WHERE p.aluno_id = ?
+    `, [alunoId]);
+
+    pacotes.forEach(pacote => {
+      const validade = new Date(pacote.validade);
+      validade.setHours(0, 0, 0, 0);
+
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+
+      const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
+      const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
+      pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
+
+      pacote.status_validade = diasRestantes < 0
+        ? 'Vencido'
+        : diasRestantes <= 7
+          ? 'Próximo do vencimento'
+          : 'Válido';
+
+      const dia = String(validade.getDate()).padStart(2, '0');
+      const mes = String(validade.getMonth() + 1).padStart(2, '0');
+      const ano = validade.getFullYear();
+      pacote.validade = `${dia}/${mes}/${ano}`;
+    });
+    console.log('Pacotes retornados:', pacotes);
+    res.render('aluno/pacotes', { pacotes });
+  } catch (err) {
+    console.error('Erro ao listar pacotes:', err);
+    res.status(500).send('Erro ao listar pacotes');
+  }
+};
+
 

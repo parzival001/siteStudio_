@@ -1,20 +1,58 @@
 <div class="container py-5 text-white">
   <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 text-center">
+    <div class="col-12 col-lg-10">
 
       <h2 class="mb-4">Meus Pacotes</h2>
 
-      {{#each pacotes}}
-        <div class="card text-dark p-3 mb-3" style="background-color: #B395C0; text-align: left;">
-          <p>Créditos: {{this.creditos}} - Válido até: {{this.data_validade}}</p>
-          <p>Status: {{#if this.pago}}Pago{{else}}Não Pago{{/if}}</p>
-        </div>
-      {{else}}
-        <p>Você não tem pacotes ativos.</p>
-      {{/each}}
+      <a href="/aluno/home" class="btn btn-outline-custom mb-3">← Voltar</a>
 
-      <div class="text-center mt-4">
-        <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Home</a>
+      <div class="card p-4" style="background-color: #B395C0;">
+        {{#if pacotes}}
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle mb-0 text-dark">
+            <thead class="table-dark">
+              <tr>
+                <th>Modalidade</th>
+                <th>Créditos (Aulas)</th>
+                <th>Aulas Utilizadas</th>
+                <th>Aulas Restantes</th>
+                <th>Validade</th>
+                <th>Status</th>
+                <th>Pagamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each pacotes}}
+              <tr>
+                <td>{{modalidade}}</td>
+                <td>{{aulas_total}}</td>
+                <td>{{aulas_utilizadas}}</td>
+                <td>{{aulas_restantes}}</td>
+                <td>{{validade}}</td>
+                <td>
+                  {{#if (eq status_validade "Vencido")}}
+                    <span class="badge bg-danger">Vencido</span>
+                  {{else if (eq status_validade "Próximo do vencimento")}}
+                    <span class="badge bg-warning text-dark">Próximo do vencimento</span>
+                  {{else}}
+                    <span class="badge bg-success">{{status_validade}}</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if pago}}
+                    <span class="badge bg-success">Pago</span>
+                  {{else}}
+                    <span class="badge bg-danger">Não Pago</span>
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        {{else}}
+        <p class="text-center">Você não tem pacotes ativos.</p>
+        {{/if}}
       </div>
 
     </div>
