@@ -6,6 +6,9 @@ const cron = require('node-cron');
 const bcrypt = require('bcrypt'); // Incluído para usar no login
 const upload = require('./utils/upload');
 const app = express();
+require('./jobs/aniversario');
+
+
 
 
 cron.schedule('*/1 * * * *', async () => {
