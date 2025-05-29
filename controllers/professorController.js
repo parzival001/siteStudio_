@@ -211,9 +211,9 @@ exports.cadastrarProfessor = async (req, res) => {
 
     res.redirect('/login-professor'); // ou para onde quiser redirecionar
   } catch (err) {
-  console.error('Erro ao cadastrar professor:', err); // <- aqui
-  res.status(500).send('Erro interno ao cadastrar professor');
-}
+    console.error('Erro ao cadastrar professor:', err); // <- aqui
+    res.status(500).send('Erro interno ao cadastrar professor');
+  }
 };
 
 exports.listarProfessores = async (req, res) => {
@@ -871,17 +871,19 @@ exports.formNovoPacote = async (req, res) => {
 };
 
 
+
 exports.listarPacotesPorAluno = async (req, res) => {
   try {
     const [pacotes] = await db.query(`
-      SELECT 
-        p.id, 
-        a.nome AS aluno_nome, 
-        p.quantidade_aulas AS aulas_total, 
-        p.aulas_utilizadas, 
-        p.data_validade AS validade, 
-        p.pago, 
-        p.passe_livre, 
+      SELECT
+        p.id,
+        a.nome AS aluno_nome,
+        p.quantidade_aulas AS aulas_total,
+        p.aulas_utilizadas,
+        p.data_inicio,
+        p.data_validade AS validade,
+        p.pago,
+        p.passe_livre,
         p.tipo,
         c.nome AS modalidade
       FROM pacotes_aluno p
@@ -889,34 +891,56 @@ exports.listarPacotesPorAluno = async (req, res) => {
       LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
     `);
 
+    console.log('Pacotes brutos:', pacotes);
+
+    function isValidDate(d) {
+      return d instanceof Date && !isNaN(d);
+    }
+
     pacotes.forEach(pacote => {
+      console.log(`Pacote ID: ${pacote.id} - validade raw:`, pacote.validade, `tipo: ${pacote.tipo}`);
+
       const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      if (pacote.tipo === 'avulsa') {
+      if (pacote.data_inicio) {
+        const dataInicio = new Date(pacote.data_inicio);
+        pacote.data_inicio = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
+      }
+
+      if (!pacote.validade || pacote.validade === '0000-00-00' || pacote.validade === '' || pacote.tipo === 'avulsa') {
+        pacote.validade = '—';
         pacote.status_validade = 'Sem validade';
-        pacote.validade = 'Indefinida';
       } else {
         const validade = new Date(pacote.validade);
         validade.setHours(0, 0, 0, 0);
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
+        if (!isValidDate(validade)) {
+          console.log(`Data inválida para pacote ID ${pacote.id}:`, pacote.validade);
+          pacote.validade = '—';
+          pacote.status_validade = 'Sem validade';
+        } else {
+          const hoje = new Date();
+          hoje.setHours(0, 0, 0, 0);
 
-        const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+          const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
 
-        pacote.status_validade = diasRestantes < 0
-          ? 'Vencido'
-          : diasRestantes <= 7
-            ? 'Próximo do vencimento'
-            : 'Válido';
+          pacote.status_validade = diasRestantes < 0
+            ? 'Vencido'
+            : diasRestantes <= 7
+              ? 'Próximo do vencimento'
+              : 'Válido';
 
-        const dia = String(validade.getDate()).padStart(2, '0');
-        const mes = String(validade.getMonth() + 1).padStart(2, '0');
-        const ano = validade.getFullYear();
-        pacote.validade = `${dia}/${mes}/${ano}`;
+          pacote.status_validade = pacote.status_validade.trim();
+
+          pacote.validade = `${String(validade.getDate()).padStart(2, '0')}/${String(validade.getMonth() + 1).padStart(2, '0')}/${validade.getFullYear()}`;
+        }
       }
+
+      pacote.pago = pacote.pago ? 'Sim' : 'Não';
+
+      console.log(`Pacote ID ${pacote.id} final: validade formatada = ${pacote.validade}, status = ${pacote.status_validade}, pago = ${pacote.pago}`);
     });
 
     res.render('professor/listaPacotes', { pacotes });
@@ -977,7 +1001,7 @@ exports.criarPacote = async (req, res) => {
     } else if (tipo === 'anual') {
       data_validade = dayjs(data_inicio_formatada).add(365, 'day').format('YYYY-MM-DD');
     } else if (tipo === 'avulsa') {
-      data_validade = null; // Sem validade
+      data_validade = null; // Sem validade real
     } else {
       throw new Error('Tipo de pacote inválido');
     }
@@ -988,11 +1012,12 @@ exports.criarPacote = async (req, res) => {
       tipo,
       quantidade_aulas: req.body.quantidade_aulas,
       data_inicio: data_inicio_formatada,
-      data_validade,
+      data_validade: data_validade ?? null, // garante null real
       pago: req.body.pago ? 1 : 0,
       passe_livre: req.body.passe_livre ? 1 : 0
     };
 
+    // Se for passe livre, ignora a categoria
     if (novoPacote.passe_livre) {
       novoPacote.categoria_id = null;
     }
@@ -1007,7 +1032,7 @@ exports.criarPacote = async (req, res) => {
         novoPacote.tipo,
         novoPacote.quantidade_aulas,
         novoPacote.data_inicio,
-        novoPacote.data_validade,
+        novoPacote.data_validade, // aqui vai null de forma correta
         novoPacote.pago,
         novoPacote.passe_livre
       ]
@@ -1016,6 +1041,7 @@ exports.criarPacote = async (req, res) => {
     if (result.affectedRows > 0) {
       const pacote_id = result.insertId;
 
+      // Inserir modalidades do passe livre, se houver
       if (novoPacote.passe_livre && Array.isArray(req.body.modalidades_passe_livre)) {
         for (const categoria_id of req.body.modalidades_passe_livre) {
           const [categoriaExistente] = await db.query(
@@ -1324,7 +1350,7 @@ exports.atualizarAulasUtilizadas = async (req, res) => {
     res.status(500).send("Erro interno.");
   }
 
-  
+
 };
 
 

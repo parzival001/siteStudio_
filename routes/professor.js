@@ -11,6 +11,9 @@ const db = require('../config/db'); // Ajuste conforme sua estrutura
 const professorController = require('../controllers/professorController');
 console.log('Editar função:', professorController.editarPacoteForm);
 
+
+router.get('/pacotes', professorController.listarPacotesPorAluno);
+
 // Configuração do armazenamento dos arquivos PDF
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
