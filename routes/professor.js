@@ -77,7 +77,7 @@ router.get('/pacotes/editar/:id', professorController.editarPacote);
 
 // PACOTES
 
-router.get('/pacotes/novo', professorController.formNovoPacote);
+router.get('/pacotes/novo/:id', professorController.formNovoPacote);
 router.post('/pacotes/novo', professorController.criarPacote);
 router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
 router.post('/pacotes/deletar/:id', professorController.deletarPacote);
@@ -196,12 +196,27 @@ router.get('/alunos/:id/editar', authProfessor, async (req, res) => {
 
 router.post('/alunos/:id/editar', authProfessor, async (req, res) => {
   const alunoId = req.params.id;
-  const { nome, email } = req.body;
+  const { nome, email, senha } = req.body;
+
   try {
-    await db.query('UPDATE alunos SET nome = ?, email = ? WHERE id = ?', [nome, email, alunoId]);
+    // Se a senha foi enviada, atualiza também a senha
+    if (senha && senha.trim() !== '') {
+      const senhaHash = bcrypt.hashSync(senha, 10);
+      await db.query(
+        'UPDATE alunos SET nome = ?, email = ?, senha = ? WHERE id = ?',
+        [nome, email, senhaHash, alunoId]
+      );
+    } else {
+      // Atualiza apenas nome e email
+      await db.query(
+        'UPDATE alunos SET nome = ?, email = ? WHERE id = ?',
+        [nome, email, alunoId]
+      );
+    }
+
     res.redirect('/professor/alunos');
   } catch (err) {
-    console.error(err);
+    console.error('Erro ao atualizar aluno:', err);
     res.status(500).send('Erro ao atualizar aluno');
   }
 });

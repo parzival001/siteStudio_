@@ -882,6 +882,7 @@ exports.listarPacotesPorAluno = async (req, res) => {
         p.data_validade AS validade, 
         p.pago, 
         p.passe_livre, 
+        p.tipo,
         c.nome AS modalidade
       FROM pacotes_aluno p
       JOIN alunos a ON a.id = p.aluno_id
@@ -889,28 +890,33 @@ exports.listarPacotesPorAluno = async (req, res) => {
     `);
 
     pacotes.forEach(pacote => {
-      const validade = new Date(pacote.validade);
-      validade.setHours(0, 0, 0, 0);  // normaliza para meia-noite
-
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0); // normaliza para meia-noite
-
-      const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
-
       const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      pacote.status_validade = diasRestantes < 0
-        ? 'Vencido'
-        : diasRestantes <= 7
-          ? 'Próximo do vencimento'
-          : 'Válido';
+      if (pacote.tipo === 'avulsa') {
+        pacote.status_validade = 'Sem validade';
+        pacote.validade = 'Indefinida';
+      } else {
+        const validade = new Date(pacote.validade);
+        validade.setHours(0, 0, 0, 0);
 
-      const dia = String(validade.getDate()).padStart(2, '0');
-      const mes = String(validade.getMonth() + 1).padStart(2, '0');
-      const ano = validade.getFullYear();
-      pacote.validade = `${dia}/${mes}/${ano}`;
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+
+        pacote.status_validade = diasRestantes < 0
+          ? 'Vencido'
+          : diasRestantes <= 7
+            ? 'Próximo do vencimento'
+            : 'Válido';
+
+        const dia = String(validade.getDate()).padStart(2, '0');
+        const mes = String(validade.getMonth() + 1).padStart(2, '0');
+        const ano = validade.getFullYear();
+        pacote.validade = `${dia}/${mes}/${ano}`;
+      }
     });
 
     res.render('professor/listaPacotes', { pacotes });
@@ -958,7 +964,7 @@ exports.criarPacote = async (req, res) => {
     const data_inicio_formatada = dayjs(dataBruta).format('YYYY-MM-DD');
     console.log("Data formatada:", data_inicio_formatada);
 
-    // Calcular data de validade com base no tipo do pacote (usando dias fixos)
+    // Calcular data de validade com base no tipo do pacote
     let data_validade = null;
     const tipo = req.body.tipo;
 
@@ -968,6 +974,10 @@ exports.criarPacote = async (req, res) => {
       data_validade = dayjs(data_inicio_formatada).add(90, 'day').format('YYYY-MM-DD');
     } else if (tipo === 'semestral') {
       data_validade = dayjs(data_inicio_formatada).add(180, 'day').format('YYYY-MM-DD');
+    } else if (tipo === 'anual') {
+      data_validade = dayjs(data_inicio_formatada).add(365, 'day').format('YYYY-MM-DD');
+    } else if (tipo === 'avulsa') {
+      data_validade = null; // Sem validade
     } else {
       throw new Error('Tipo de pacote inválido');
     }
