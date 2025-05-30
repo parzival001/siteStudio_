@@ -19,6 +19,14 @@ function authAluno(req, res, next) {
   return res.redirect('/login');
 }
 
+
+
+router.post('/inscrever/:aulaId', alunoController.inscreverAlunoEmAula);
+router.post('/desinscrever/:aulaId', authAluno, alunoController.desinscreverAula);
+
+
+
+
 // Rota de home do aluno
 router.get('/home', authAluno, async (req, res) => {
   const alunoId = req.session.user.id;
