@@ -22,7 +22,7 @@ function authAluno(req, res, next) {
 
 
 router.post('/inscrever/:aulaId', alunoController.inscreverAlunoEmAula);
-router.post('/desinscrever/:aulaId', authAluno, alunoController.desinscreverAula);
+
 
 
 
@@ -303,20 +303,6 @@ router.get('/dados', authAluno, async (req, res) => {
   res.render('aluno/dados', { aluno });
 });
 
-router.post('/aluno/inscrever/:id', authAluno, async (req, res) => {
-  const aulaId = req.params.id;
-  const alunoId = req.session.user.id;
-
-  try {
-    await db.query('INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)', [aulaId, alunoId]);
-    res.redirect('/aluno/aulas');  // Redireciona para a página de aulas
-  } catch (err) {
-    console.error('Erro ao inscrever aluno:', err);
-    res.redirect('/aluno/aulas');
-  }
-});
-
-
 router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
   const aulaId = req.params.aulaId;
   const alunoId = req.session.user.id;
@@ -348,8 +334,8 @@ router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
   }
 });
 
-router.post('/desinscrever/:aulaId', alunoController.desinscreverAula);
 
+router.post('/desinscrever/:aulaId', alunoController.desinscreverAluno);
 
 // Rota para listar pacotes do aluno
 

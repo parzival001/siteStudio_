@@ -129,159 +129,149 @@ exports.homeAluno = async (req, res) => {
 };
 
 
-exports.desinscreverAula = async (req, res) => {  
-  if (!req.session.user || !req.session.user.id) {  
-    return res.status(401).send('Não autorizado');  
-  }  
-  
-  const alunoId = req.session.user.id;  
-  const aulaId = req.params.aulaId;
-
-  try {  
-    const { enviarMensagem } = require('../telegramService'); // agora está dentro do try
-
-    // Buscar dados do aluno e da aula
-    const [[aluno]] = await db.query('SELECT nome FROM alunos WHERE id = ?', [alunoId]);  
-    const [[infoAula]] = await db.query('SELECT data, horario FROM aulas WHERE id = ?', [aulaId]);  
-    if (!infoAula) return res.status(404).send('Aula não encontrada');
-
-    const dataFormatada = moment(infoAula.data).format('DD/MM/YYYY');  
-    const horarioFormatado = infoAula.horario?.slice(0, 5) || 'horário não informado';  
-
-    await enviarMensagem(`O aluno *${aluno.nome}* se desinscreveu da aula no dia *${dataFormatada}* às *${horarioFormatado}*.`);  
-
-    // Processar data e horário da aula
-    const dataBruta = infoAula.data instanceof Date ? infoAula.data.toISOString().split('T')[0] : infoAula.data;  
-    const horarioBruto = infoAula.horario || '00:00:00';  
-    let [hora, minuto, segundo] = horarioBruto.split(':');  
-    const dataHora = moment(dataBruta).set({  
-      hour: parseInt(hora || '0'),  
-      minute: parseInt(minuto || '0'),  
-      second: parseInt(segundo || '0'),  
-      millisecond: 0  
-    });  
-
-    if (!dataHora.isValid()) {  
-      console.error('Data/hora inválida da aula:', { dataBruta, horarioBruto });  
-      return res.status(400).send('Data/hora inválida da aula');  
-    }  
-
-    const agora = moment().utcOffset('-03:00');  
-    const diffHoras = dataHora.diff(agora, 'hours', true);  
-
-    const [registros] = await db.query(
-      'SELECT COUNT(*) AS total FROM aulas_alunos WHERE aluno_id = ? AND aula_id != ?',  
-      [alunoId, aulaId]  
-    );  
-    const jaParticipouAntes = registros[0].total > 0;  
-    const horasMinimas = jaParticipouAntes ? 12 : 2;  
-
-    if (diffHoras < horasMinimas) {  
-      return res.status(403).send(`Você só pode se desinscrever com pelo menos ${horasMinimas} horas de antecedência.`);  
-    }  
-
-    // Verifica se está inscrito e obtém o pacote vinculado
-    const [[inscricao]] = await db.query(
-      'SELECT * FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?',  
-      [alunoId, aulaId]  
-    );  
-    if (!inscricao) {  
-      return res.status(400).send('Você não está inscrito nesta aula.');  
-    }
-
-    // Iniciar transação
-    await db.query('START TRANSACTION');
-
-    // Remover inscrição
-    await db.query('DELETE FROM aulas_alunos WHERE aluno_id = ? AND aula_id = ?', [alunoId, aulaId]);  
-
-    // Atualizar número de vagas
-    await db.query('UPDATE aulas SET vagas = vagas + 1 WHERE id = ?', [aulaId]);  
-
-    // Devolver crédito ao pacote (caso tenha sido usado um pacote)
-    if (inscricao.pacote_id) {
-      await db.query(`
-        UPDATE pacotes
-        SET aulas_usadas = aulas_usadas - 1
-        WHERE id = ?
-      `, [inscricao.pacote_id]);
-    }
-
-    await db.query('COMMIT');
-    res.redirect('/aluno/aulas');
-
-  } catch (err) {
-    await db.query('ROLLBACK');
-    console.error('Erro ao desinscrever aluno da aula:', err);  
-    res.status(500).send('Erro ao desinscrever da aula');  
-  }  
-};
-
-exports.inscreverAlunoEmAula = async (req, res) => {
-  const { aulaId } = req.body;
+exports.inscreverAluno = async (req, res) => {
+  const aulaId = req.params.id;
   const alunoId = req.session.user.id;
 
   try {
-    // Verifica se a aula existe
-    const [aulas] = await db.query('SELECT * FROM aulas WHERE id = ?', [aulaId]);
-    const aula = aulas[0];
-
-    if (!aula) {
-      return res.status(404).send('Aula não encontrada');
-    }
-
-    if (aula.vagas <= 0) {
-      return res.status(400).send('Aula sem vagas disponíveis');
-    }
-
-    // Verifica se o aluno já está inscrito
-    const [inscricaoExistente] = await db.query(
-      'SELECT * FROM aula_aluno WHERE aula_id = ? AND aluno_id = ?',
+    // Verifica se já está inscrito
+    const [inscrito] = await db.query(
+      `SELECT * FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
       [aulaId, alunoId]
     );
 
-    if (inscricaoExistente.length > 0) {
-      return res.status(400).send('Você já está inscrito nesta aula.');
+    if (inscrito.length > 0) {
+      return res.redirect('/aluno/aulas'); // já está inscrito
     }
 
-    // Busca pacote válido
-    const [pacotes] = await db.query(
-      `SELECT * FROM pacotes_aluno 
-       WHERE aluno_id = ?
-         AND data_validade >= CURDATE()
-         AND (
-           (passe_livre = 1) OR (passe_livre = 0 AND categoria_id = ?)
-         )
-         AND quantidade_aulas > aulas_utilizadas
-       ORDER BY data_validade ASC`,
-      [alunoId, aula.categoria_id]
+    // Buscar categoria da aula
+    const [[aula]] = await db.query(
+      `SELECT categoria_id, vagas FROM aulas WHERE id = ?`,
+      [aulaId]
     );
 
+    if (!aula || aula.vagas <= 0) {
+      return res.redirect('/aluno/aulas');
+    }
+
+    const categoriaId = aula.categoria_id;
+
+    // Buscar pacote válido
+    const [pacotes] = await db.query(`
+      SELECT * FROM pacotes_aluno
+      WHERE aluno_id = ?
+        AND data_validade >= CURDATE()
+        AND (passe_livre = 1 OR categoria_id = ?)
+        AND quantidade_aulas > aulas_utilizadas
+      ORDER BY data_validade ASC
+      LIMIT 1
+    `, [alunoId, categoriaId]);
+
     if (pacotes.length === 0) {
-      return res.status(400).send('Você não possui créditos disponíveis para essa modalidade.');
+      req.session.erroAula = {
+        aula_id: parseInt(aulaId, 10),
+        mensagem: "Você não possui pacote válido para essa aula."
+      };
+      return res.redirect('/aluno/aulas');
     }
 
     const pacote = pacotes[0];
 
-    // Inscreve o aluno
+    // Inserir vínculo
+    await db.query(`
+      INSERT INTO aulas_alunos (aula_id, aluno_id, pacote_id)
+      VALUES (?, ?, ?)
+    `, [aulaId, alunoId, pacote.id]);
+
+    // Atualizar vagas
     await db.query(
-      'INSERT INTO aula_aluno (aula_id, aluno_id) VALUES (?, ?)',
-      [aulaId, alunoId]
+      `UPDATE aulas SET vagas = vagas - 1 WHERE id = ?`,
+      [aulaId]
     );
 
-    // Atualiza vagas da aula
-    await db.query('UPDATE aulas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
-
-    // Atualiza uso de créditos do pacote
+    // Atualizar pacote
     await db.query(
-      'UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?',
+      `UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?`,
       [pacote.id]
     );
 
     res.redirect('/aluno/aulas');
-  } catch (error) {
-    console.error('Erro ao inscrever aluno:', error);
-    res.status(500).send('Erro interno ao inscrever o aluno.');
+
+  } catch (err) {
+    console.error("Erro ao inscrever aluno:", err);
+    res.status(500).send("Erro ao processar inscrição.");
+  }
+};
+exports.desinscreverAluno = async (req, res) => {
+  const aulaId = req.params.aulaId;
+  const alunoId = req.session.user.id;
+
+  try {
+    // Buscar data/hora da aula
+    const [[aula]] = await db.query(`
+      SELECT data, horario FROM aulas WHERE id = ?
+    `, [aulaId]);
+
+    if (!aula) return res.status(404).send('Aula não encontrada');
+
+    const agora = moment().utcOffset('-03:00');
+    const [hora, minuto] = aula.horario.split(':');
+    const dataHoraAula = moment(aula.data).set({
+      hour: parseInt(hora),
+      minute: parseInt(minuto),
+      second: 0
+    });
+
+    let tempo_cancelamento = 12;
+
+    // Verifica se é a primeira aula do aluno
+    const [primeira] = await db.query(`
+      SELECT a.id FROM aulas a
+      JOIN aulas_alunos aa ON aa.aula_id = a.id
+      WHERE aa.aluno_id = ?
+      ORDER BY a.data ASC, a.horario ASC
+      LIMIT 1
+    `, [alunoId]);
+
+    const primeiraAulaId = primeira.length ? primeira[0].id : null;
+    if (aulaId == primeiraAulaId) tempo_cancelamento = 2;
+
+    const horasParaAula = dataHoraAula.diff(agora, 'hours', true);
+
+    if (horasParaAula < tempo_cancelamento) {
+      return res.status(400).send('Você só pode se desinscrever com antecedência mínima.');
+    }
+
+    // Verifica se o aluno estava inscrito e se usou pacote
+    const [[registro]] = await db.query(`
+      SELECT pacote_id FROM aulas_alunos 
+      WHERE aula_id = ? AND aluno_id = ?
+    `, [aulaId, alunoId]);
+
+    // Remove inscrição
+    await db.query(`
+      DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?
+    `, [aulaId, alunoId]);
+
+    // Libera vaga
+    await db.query(`
+      UPDATE aulas SET vagas = vagas + 1 WHERE id = ?
+    `, [aulaId]);
+
+    // Repor crédito se pacote foi usado
+    if (registro && registro.pacote_id) {
+      await db.query(`
+        UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas - 1
+        WHERE id = ? AND aulas_utilizadas > 0
+      `, [registro.pacote_id]);
+      console.log("Crédito devolvido ao pacote:", registro.pacote_id);
+    }
+
+    res.redirect('/aluno/aulas');
+
+  } catch (err) {
+    console.error('Erro ao desinscrever aluno:', err);
+    res.status(500).send('Erro ao desinscrever da aula.');
   }
 };
 
