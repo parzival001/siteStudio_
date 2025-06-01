@@ -11,9 +11,6 @@ const db = require('../config/db'); // Ajuste conforme sua estrutura
 const professorController = require('../controllers/professorController');
 console.log('Editar função:', professorController.editarPacoteForm);
 
-
-router.get('/pacotes', professorController.listarPacotesPorAluno);
-
 // Configuração do armazenamento dos arquivos PDF
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -71,34 +68,32 @@ router.post('/pacotes/editar/:id', professorController.atualizarPacote);
 
 
 router.get('/pacotes/:id/editar', professorController.editarPacoteForm);
-
+router.get('/pacotes/aluno/:id', professorController.verPacotesAluno);
 
 router.get('/pacotes/mover-aula/:id', professorController.selecionarAulaParaMover);
 router.post('/pacotes/mover-aula/:id', professorController.moverAulaParaPacote);
 router.get('/pacotes/editar/:id', professorController.editarPacote);
 
 
-// PACOTES
+///////////////////////////////////////////////////// PACOTES/////////////////////////////////////////////////////////
 
+router.post('/pacotes/deletar/:id', professorController.deletarPacote);
 router.get('/pacotes/novo/:id', professorController.formNovoPacote);
 router.post('/pacotes/novo', professorController.criarPacote);
-router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
-router.post('/pacotes/deletar/:id', professorController.deletarPacote);
-
-router.get('/alunos/:id/pacotes', professorController.verPacotesAluno);
+//router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
 router.post('/pacotes/criar', professorController.criarPacote);
-router.get('/pacotes/:id', professorController.verPacotesPorAluno);
+//router.get('/pacotes/:id', professorController.verPacotesPorAluno);
+router.get('pacotes/alunos/:aluno_id', professorController.listarPacotesPorAluno);
 
 router.post('/pacotes', authProfessor, professorController.adicionarPacote);
 router.get('/pacotes', async (req, res) => {
   try {
     const [pacotes] = await db.query(`
-  SELECT p.*, a.nome AS aluno_nome, c.nome AS modalidade
-  FROM pacotes p
-  JOIN alunos a ON p.aluno_id = a.id
-  LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
-`);
-
+      SELECT p.*, a.nome AS aluno_nome, c.nome AS categoria_nome
+      FROM pacotes p
+      JOIN alunos a ON p.aluno_id = a.id
+      LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+    `);
     res.render('professor/pacotes', { pacotes });
   } catch (err) {
     console.error('Erro ao buscar pacotes:', err);
@@ -106,7 +101,49 @@ router.get('/pacotes', async (req, res) => {
   }
 });
 
-// Créditos manuais
+router.get('/aluno/:id/pacote', authProfessor, async (req, res) => {
+  const alunoId = req.params.id;
+  try {
+    const [aluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+    res.render('professor/adicionarPacote', { aluno: aluno[0] });
+  } catch (err) {
+    res.status(500).send('Erro ao carregar dados do aluno');
+  }
+});
+
+router.post('/aluno/:id/pacote', authProfessor, async (req, res) => {
+  const alunoId = req.params.id;
+  const { quantidade, validade } = req.body;
+
+  try {
+    await db.query(`
+      INSERT INTO pacotes (aluno_id, quantidade_creditos, validade)
+      VALUES (?, ?, ?)`,
+      [alunoId, quantidade, validade]
+    );
+    res.redirect('/professor/pacotes/aluno/${alunoId}');
+  } catch (err) {
+    res.status(500).send('Erro ao adicionar pacote');
+  }
+});
+
+//deletar pacote
+router.post('/deletar-pacote/:id', (req, res) => {
+  const pacoteId = req.params.id;
+  console.log('Tentando deletar pacote:', pacoteId);
+
+  db.query('DELETE FROM pacotes WHERE id = ?', [pacoteId], (err, results) => {
+    if (err) {
+      console.error('Erro ao deletar pacote:', err);
+      return res.status(500).send('Erro ao deletar pacote');
+    }
+    console.log('Pacote deletado:', results);
+    res.redirect('/professor/pacotes');
+  });
+});
+
+
+/////////////////////////////////////////////////// Créditos manuais//////////////////////////////////////////////
 router.get('/creditos/novo', professorController.formAdicionarCredito);
 router.post('/creditos/novo', professorController.adicionarCredito);
 router.get('/creditos', professorController.listarCreditos);
@@ -417,31 +454,6 @@ router.post('/aulas-fixas/deletar/:id', authProfessor, async (req, res) => {
 });
 
 // Pacotes por aluno
-router.get('/aluno/:id/pacote', authProfessor, async (req, res) => {
-  const alunoId = req.params.id;
-  try {
-    const [aluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
-    res.render('professor/adicionarPacote', { aluno: aluno[0] });
-  } catch (err) {
-    res.status(500).send('Erro ao carregar dados do aluno');
-  }
-});
-
-router.post('/aluno/:id/pacote', authProfessor, async (req, res) => {
-  const alunoId = req.params.id;
-  const { quantidade, validade } = req.body;
-
-  try {
-    await db.query(`
-      INSERT INTO pacotes (aluno_id, quantidade_creditos, validade)
-      VALUES (?, ?, ?)`,
-      [alunoId, quantidade, validade]
-    );
-    res.redirect('/professor/alunos');
-  } catch (err) {
-    res.status(500).send('Erro ao adicionar pacote');
-  }
-});
 
 
 // Anamnese
@@ -552,20 +564,7 @@ router.get('/atualizar-dados-aluno/:id', async (req, res) => {
   }
 });
 
-//deletar pacote
-router.post('/deletar-pacote/:id', (req, res) => {
-  const pacoteId = req.params.id;
-  console.log('Tentando deletar pacote:', pacoteId);
 
-  db.query('DELETE FROM pacotes WHERE id = ?', [pacoteId], (err, results) => {
-    if (err) {
-      console.error('Erro ao deletar pacote:', err);
-      return res.status(500).send('Erro ao deletar pacote');
-    }
-    console.log('Pacote deletado:', results);
-    res.redirect('/professor/pacotes');
-  });
-});
 
 
 

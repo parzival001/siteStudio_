@@ -21,79 +21,11 @@ function authAluno(req, res, next) {
 
 
 
-router.post('/inscrever/:aulaId', alunoController.inscreverAlunoEmAula);
+router.post('/inscrever/:id', alunoController.inscreverAluno);
+router.post('/desinscrever/:id', alunoController.desinscreverAluno); // se tiver isso também
 
+router.get('/home', authAluno, alunoController.homeAluno);
 
-
-
-
-// Rota de home do aluno
-router.get('/home', authAluno, async (req, res) => {
-  const alunoId = req.session.user.id;
-
-  try {
-    // Carregar os dados do aluno
-    const [[aluno]] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
-
-    // Carregar as aulas pendentes
-    const [aulas] = await db.query(`
-      SELECT a.id, a.data, a.horario, a.vagas, c.nome AS categoria_nome, p.nome AS professor_nome, a.status
-      FROM aulas a
-      JOIN categorias c ON a.categoria_id = c.categoria_id
-      JOIN professores p ON a.professor_id = p.id
-      WHERE a.status = 'pendente'
-    `);
-
-    // Carregar as aulas já agendadas pelo aluno
-    const [agendadas] = await db.query('SELECT aula_id FROM aulas_alunos WHERE aluno_id = ?', [alunoId]);
-    const aulasAgendadas = agendadas.map(a => a.aula_id);
-
-    // Verificar se o aluno já está inscrito nas aulas pendentes
-    const aulasFormatadas = aulas.map(aula => {
-      const jaInscrito = aulasAgendadas.includes(aula.id);
-      const podeDesmarcar = podeDesmarcarAula(aula.data); // função definida em outro lugar
-      return {
-        ...aula,
-        ja_inscrito: jaInscrito,
-        pode_desmarcar: podeDesmarcar,
-      };
-    });
-
-    // Carregar o histórico de aulas concluídas
-    const [historico] = await db.query(`
-      SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
-      FROM aulas_alunos aa
-      JOIN aulas a ON aa.aula_id = a.id
-      JOIN categorias c ON a.categoria_id = c.categoria_id
-      JOIN professores p ON a.professor_id = p.id
-      WHERE aa.aluno_id = ? AND a.status = 'concluida'
-      ORDER BY a.data DESC
-    `, [alunoId]);
-
-    // Carregar os pacotes ativos do aluno
-    const [pacotes] = await db.query(`
-      SELECT * FROM pacotes_aluno WHERE aluno_id = ? AND data_validade >= CURRENT_DATE
-    `, [alunoId]);
-
-    // Carregar a anamnese do aluno
-    const [[anamnese]] = await db.query(`
-      SELECT observacoes FROM anamneses WHERE aluno_id = ?
-    `, [alunoId]);
-
-    // Passar os dados para a página do aluno
-    res.render('aluno/home', {
-      aluno,
-      aulas: aulasFormatadas,
-      aulasAgendadas,
-      historico,
-      pacotes,
-      anamnese: anamnese ? anamnese.observacoes : "Nenhuma anamnese cadastrada"
-    });
-  } catch (err) {
-    console.error('Erro ao carregar home do aluno:', err);
-    res.render('aluno/home', { error: 'Erro ao carregar os dados. Tente novamente.' });
-  }
-});
 
 // Função que calcula se o aluno pode desmarcar a aula
 function podeDesmarcarAula(dataAula) {
@@ -111,6 +43,13 @@ function podeDesmarcarAula(dataAula) {
   }
   return false;
 }
+
+
+
+
+
+// Rota de home do aluno
+
 
 router.get('/aulas', authAluno, async (req, res) => {
   const alunoId = req.session.user.id;
@@ -248,20 +187,6 @@ router.get('/historico', authAluno, async (req, res) => {
   }
 });
 
-// Exibir dados pessoais
-router.get('/dados', authAluno, async (req, res) => {
-  const alunoId = req.session.user.id; // Mudança aqui: agora usamos req.session.user
-
-  try {
-    const [[aluno]] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
-
-    res.render('aluno/dados', { aluno });
-  } catch (err) {
-    console.error('Erro ao carregar dados pessoais:', err);
-    res.render('aluno/dados', { error: 'Erro ao carregar os dados pessoais. Tente novamente.' });
-  }
-});
-
 
 // Exibir anamnese
 router.get('/anamnese', authAluno, async (req, res) => {
@@ -290,7 +215,7 @@ router.get('/anamnese', authAluno, async (req, res) => {
   res.render('aluno/anamnese', { anamnese });
 });
 
-// Exibir dados pessoais
+
 router.get('/dados', authAluno, async (req, res) => {
   const alunoId = req.session.user.id;
 
@@ -299,6 +224,10 @@ router.get('/dados', authAluno, async (req, res) => {
     FROM alunos
     WHERE id = ?
   `, [alunoId]);
+
+  if (aluno && aluno.data_nascimento) {
+    aluno.data_nascimento_formatada = moment(aluno.data_nascimento).utcOffset(-3).format('DD/MM/YYYY');
+  }
 
   res.render('aluno/dados', { aluno });
 });
@@ -335,9 +264,7 @@ router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
 });
 
 
-router.post('/desinscrever/:aulaId', alunoController.desinscreverAluno);
 
-// Rota para listar pacotes do aluno
 
 
 

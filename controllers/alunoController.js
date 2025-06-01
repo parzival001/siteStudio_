@@ -2,7 +2,7 @@ const db = require('../config/db'); // Ajuste o caminho conforme o seu projeto
 const bcrypt = require('bcryptjs');
 const moment = require('moment');
 const axios = require('axios');
-
+const { enviarMensagem } = require('../utils/telegram');
 
 
 // Exibição do formulário de login
@@ -47,18 +47,34 @@ exports.login = (req, res) => {
 };
 
 // Função para carregar a home do aluno
+
+function podeDesmarcarAula(dataAula, horarioAula, isPrimeiraAula) {
+  const dataHora = moment(`${dataAula} ${horarioAula}`, 'YYYY-MM-DD HH:mm:ss');
+  const agora = moment();
+  const horasDeAntecedencia = isPrimeiraAula ? 2 : 12;
+  return dataHora.diff(agora, 'hours', true) >= horasDeAntecedencia;
+}
+
 exports.homeAluno = async (req, res) => {
   const alunoId = req.session.user.id;
 
   try {
+    // Dados pessoais do aluno
+    const [[aluno]] = await db.query(`
+      SELECT nome, data_nascimento, endereco, cidade, uf, telefone, rg, cpf
+      FROM alunos
+      WHERE id = ?
+    `, [alunoId]);
+
+   if (aluno && aluno.data_nascimento) {
+  aluno.data_nascimento_formatada = moment(aluno.data_nascimento).utcOffset(-3).format('DD/MM/YYYY');
+}
+    console.log("Data de nascimento formatada:", aluno.data_nascimento_formatada);
+    // Aulas pendentes
     const [aulas] = await db.query(`
       SELECT 
-        a.id, 
-        a.data AS data_raw, 
-        DATE_FORMAT(a.data, '%d/%m/%Y') AS data_formatada,
-        a.horario, 
-        a.vagas, 
-        IFNULL(c.nome, 'Sem categoria definida') AS categoria_nome,
+        a.id, a.data, a.horario, a.vagas, 
+        c.nome AS categoria_nome, 
         p.nome AS professor_nome, 
         a.status
       FROM aulas a
@@ -67,64 +83,77 @@ exports.homeAluno = async (req, res) => {
       WHERE a.status = 'pendente'
     `);
 
+    // IDs das aulas já agendadas
     const [inscricoes] = await db.query(`
       SELECT aula_id FROM aulas_alunos WHERE aluno_id = ?
     `, [alunoId]);
 
-    const aulasAgendadas = inscricoes.map(i => i.aula_id);
+    const aulasAgendadas = inscricoes.map(a => a.aula_id);
 
-    const [primeiraAula] = await db.query(`
-      SELECT a.id, a.data, a.horario 
+    // Verificar qual é a primeira aula agendada
+    const [primeira] = await db.query(`
+      SELECT a.id, a.data, a.horario
       FROM aulas a
       JOIN aulas_alunos aa ON aa.aula_id = a.id
       WHERE aa.aluno_id = ?
-      ORDER BY a.data, a.horario
+      ORDER BY a.data ASC, a.horario ASC
       LIMIT 1
     `, [alunoId]);
 
-    const aulasFormatadas = await Promise.all(aulas.map(async (aula) => {
-      const [alunos] = await db.query(`
-        SELECT alunos.id, alunos.nome 
-        FROM aulas_alunos 
-        JOIN alunos ON alunos.id = aulas_alunos.aluno_id 
-        WHERE aula_id = ?
-      `, [aula.id]);
+    const primeiraAulaId = primeira.length > 0 ? primeira[0].id : null;
 
+    // Montar dados das aulas com status de inscrição e cancelamento
+    const aulasFormatadas = aulas.map(aula => {
       const jaInscrito = aulasAgendadas.includes(aula.id);
-      const agora = moment();
-
-      const horarioSplit = aula.horario.split(':');
-      const dataHoraAula = moment(aula.data_raw).set({
-        hour: parseInt(horarioSplit[0], 10),
-        minute: parseInt(horarioSplit[1], 10),
-        second: 0
-      });
-
-      let tempo_cancelamento = 12;
-      if (primeiraAula.length && primeiraAula[0].id === aula.id) {
-        tempo_cancelamento = 2;
-      }
-
-      const diffHoras = dataHoraAula.diff(agora, 'hours', true);
-      const pode_desmarcar = diffHoras >= tempo_cancelamento;
+      const isPrimeiraAula = aula.id === primeiraAulaId;
+      const pode_desmarcar = podeDesmarcarAula(aula.data, aula.horario, isPrimeiraAula);
 
       return {
         ...aula,
+        data_formatada: moment(aula.data).format('DD/MM/YYYY'),
         horario_formatado: moment(aula.horario, 'HH:mm:ss').format('HH:mm'),
-        alunos,
         ja_inscrito: jaInscrito,
         pode_desmarcar,
-        tempo_cancelamento,
       };
-    }));
+    });
 
-    res.render('aluno/aulas', {
-      aulas: aulasFormatadas
+    // Histórico de aulas concluídas
+    const [historico] = await db.query(`
+      SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
+      FROM aulas_alunos aa
+      JOIN aulas a ON aa.aula_id = a.id
+      JOIN categorias c ON a.categoria_id = c.categoria_id
+      JOIN professores p ON a.professor_id = p.id
+      WHERE aa.aluno_id = ? AND a.status = 'concluida'
+      ORDER BY a.data DESC
+    `, [alunoId]);
+
+    // Pacotes ativos
+    const [pacotes] = await db.query(`
+      SELECT * FROM pacotes_aluno 
+      WHERE aluno_id = ? AND data_validade >= CURRENT_DATE
+    `, [alunoId]);
+
+    // Anamnese (se existir)
+    const [[anamnese]] = await db.query(`
+      SELECT observacoes 
+      FROM anamneses 
+      WHERE aluno_id = ?
+    `, [alunoId]);
+          console.log('Aluno enviado para view:', aluno);
+    // Renderizar página home do aluno
+    res.render('aluno/home', {
+      aluno,
+      aulas: aulasFormatadas,
+      aulasAgendadas,
+      historico,
+      pacotes,
+      anamnese: anamnese ? anamnese.observacoes : 'Nenhuma anamnese cadastrada'
     });
 
   } catch (err) {
-    console.error('Erro ao carregar aulas:', err);
-    res.render('aluno/aulas', { error: 'Erro ao carregar as aulas. Tente novamente.' });
+    console.error('Erro ao carregar home do aluno:', err);
+    res.render('aluno/home', { error: 'Erro ao carregar os dados. Tente novamente.' });
   }
 };
 
@@ -203,78 +232,75 @@ exports.inscreverAluno = async (req, res) => {
   }
 };
 exports.desinscreverAluno = async (req, res) => {
-  const aulaId = req.params.aulaId;
+  // Verifica se há usuário na sessão
+  if (!req.session.user || !req.session.user.id) {
+    return res.status(401).send('Sessão expirada ou usuário não autenticado.');
+  }
+
+  const aulaId = req.params.id;
   const alunoId = req.session.user.id;
 
   try {
-    // Buscar data/hora da aula
-    const [[aula]] = await db.query(`
-      SELECT data, horario FROM aulas WHERE id = ?
+    // Buscar info do pacote (se existir)
+    const [[registro]] = await db.query(
+      `SELECT pacote_id FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
+      [aulaId, alunoId]
+    );
+
+    // Buscar dados da aula e do aluno para compor a mensagem
+    const [[aulaInfo]] = await db.query(`
+      SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
+      FROM aulas a
+      JOIN categorias c ON a.categoria_id = c.categoria_id
+      JOIN professores p ON a.professor_id = p.id
+      WHERE a.id = ?
     `, [aulaId]);
 
-    if (!aula) return res.status(404).send('Aula não encontrada');
-
-    const agora = moment().utcOffset('-03:00');
-    const [hora, minuto] = aula.horario.split(':');
-    const dataHoraAula = moment(aula.data).set({
-      hour: parseInt(hora),
-      minute: parseInt(minuto),
-      second: 0
-    });
-
-    let tempo_cancelamento = 12;
-
-    // Verifica se é a primeira aula do aluno
-    const [primeira] = await db.query(`
-      SELECT a.id FROM aulas a
-      JOIN aulas_alunos aa ON aa.aula_id = a.id
-      WHERE aa.aluno_id = ?
-      ORDER BY a.data ASC, a.horario ASC
-      LIMIT 1
+    const [[alunoInfo]] = await db.query(`
+      SELECT nome FROM alunos WHERE id = ?
     `, [alunoId]);
 
-    const primeiraAulaId = primeira.length ? primeira[0].id : null;
-    if (aulaId == primeiraAulaId) tempo_cancelamento = 2;
+    // Remover aluno da aula
+    await db.query(
+      `DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
+      [aulaId, alunoId]
+    );
 
-    const horasParaAula = dataHoraAula.diff(agora, 'hours', true);
+    // Incrementar vaga da aula
+    await db.query(
+      `UPDATE aulas SET vagas = vagas + 1 WHERE id = ?`,
+      [aulaId]
+    );
 
-    if (horasParaAula < tempo_cancelamento) {
-      return res.status(400).send('Você só pode se desinscrever com antecedência mínima.');
+    // Repor crédito ao pacote, se houver
+    if (registro && registro.pacote_id) {
+      await db.query(
+        `UPDATE pacotes_aluno 
+         SET aulas_utilizadas = GREATEST(aulas_utilizadas - 1, 0)
+         WHERE id = ?`,
+        [registro.pacote_id]
+      );
     }
 
-    // Verifica se o aluno estava inscrito e se usou pacote
-    const [[registro]] = await db.query(`
-      SELECT pacote_id FROM aulas_alunos 
-      WHERE aula_id = ? AND aluno_id = ?
-    `, [aulaId, alunoId]);
+    // Enviar mensagem ao admin via Telegram
+    if (aulaInfo && alunoInfo) {
+      const mensagem =
+        `⚠️ *Cancelamento de Aula*\n\n` +
+        `👤 Aluno: ${alunoInfo.nome || ''}\n` +
+        `📅 Data: ${new Date(aulaInfo.data).toLocaleDateString('pt-BR')}\n` +
+        `⏰ Horário: ${aulaInfo.horario?.slice(0, 5) || ''}\n` +
+        `🏷️ Categoria: ${aulaInfo.categoria_nome || ''}\n` +
+        `👨‍🏫 Professor: ${aulaInfo.professor_nome || ''}`;
 
-    // Remove inscrição
-    await db.query(`
-      DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?
-    `, [aulaId, alunoId]);
-
-    // Libera vaga
-    await db.query(`
-      UPDATE aulas SET vagas = vagas + 1 WHERE id = ?
-    `, [aulaId]);
-
-    // Repor crédito se pacote foi usado
-    if (registro && registro.pacote_id) {
-      await db.query(`
-        UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas - 1
-        WHERE id = ? AND aulas_utilizadas > 0
-      `, [registro.pacote_id]);
-      console.log("Crédito devolvido ao pacote:", registro.pacote_id);
+      await enviarMensagem(mensagem);
     }
 
     res.redirect('/aluno/aulas');
-
-  } catch (err) {
-    console.error('Erro ao desinscrever aluno:', err);
-    res.status(500).send('Erro ao desinscrever da aula.');
+  } catch (error) {
+    console.error('Erro ao desinscrever aluno:', error);
+    res.status(500).send('Erro ao desinscrever aluno.');
   }
 };
-
 exports.listarPacotes = async (req, res) => {
   try {
     const alunoId = req.session.user?.id;
@@ -289,6 +315,7 @@ exports.listarPacotes = async (req, res) => {
         a.nome AS aluno_nome, 
         p.quantidade_aulas AS aulas_total, 
         p.aulas_utilizadas, 
+        p.data_inicio,
         p.data_validade AS validade, 
         p.pago, 
         p.passe_livre, 
@@ -299,30 +326,38 @@ exports.listarPacotes = async (req, res) => {
       WHERE p.aluno_id = ?
     `, [alunoId]);
 
-    pacotes.forEach(pacote => {
-      const validade = new Date(pacote.validade);
-      validade.setHours(0, 0, 0, 0);
+  pacotes.forEach(pacote => {
+  const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
+  const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
+  pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
+  
+  if (pacote.validade) {
+    const validade = new Date(pacote.validade);
+    validade.setHours(0, 0, 0, 0);
 
-      const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
 
-      const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
-      const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
-      pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
+    const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
 
-      pacote.status_validade = diasRestantes < 0
-        ? 'Vencido'
-        : diasRestantes <= 7
-          ? 'Próximo do vencimento'
-          : 'Válido';
+    pacote.status_validade = diasRestantes < 0
+      ? 'Vencido'
+      : diasRestantes <= 7
+        ? 'Próximo do vencimento'
+        : 'Válido';
 
-      const dia = String(validade.getDate()).padStart(2, '0');
-      const mes = String(validade.getMonth() + 1).padStart(2, '0');
-      const ano = validade.getFullYear();
-      pacote.validade = `${dia}/${mes}/${ano}`;
-    });
+    // Formata data
+    const dia = String(validade.getDate()).padStart(2, '0');
+    const mes = String(validade.getMonth() + 1).padStart(2, '0');
+    const ano = validade.getFullYear();
+    pacote.validade = `${dia}/${mes}/${ano}`;
+  } else {
+    pacote.status_validade = 'Sem validade';
+    pacote.validade = '-';
+  }
+});
+
     console.log('Pacotes retornados:', pacotes);
     res.render('aluno/pacotes', { pacotes });
   } catch (err) {

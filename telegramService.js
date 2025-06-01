@@ -19,3 +19,6 @@ function enviarMensagem(texto) {
 }
 
 module.exports = { enviarMensagem };
+
+
+

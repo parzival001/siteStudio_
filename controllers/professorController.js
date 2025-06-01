@@ -12,6 +12,11 @@ exports.home = (req, res) => {
   res.render('professor/home', { nome: req.session.user.nome });
 };
 
+
+
+
+
+
 exports.criarAula = async (req, res) => {
   const { professor_id, categoria_id, data, horario, vagas } = req.body;
 
@@ -241,24 +246,43 @@ exports.deletarAula = async (req, res) => {
 };
 
 exports.concluirAula = async (req, res) => {
-  const aulaId = parseInt(req.params.id, 10);
+  const aulaId = req.params.id;
+
   try {
-    const [alunos] = await db.query('SELECT aluno_id FROM aula_alunos WHERE aula_id = ?', [aulaId]);
-    for (const { aluno_id } of alunos) {
-      await db.query(
-        `UPDATE pacotes_aluno
-         SET creditos = creditos - 1
-         WHERE aluno_id = ? AND validade >= CURDATE() AND creditos > 0
-         ORDER BY validade ASC
-         LIMIT 1`,
-        [aluno_id]
-      );
-    }
-    await db.query("UPDATE aulas SET status = 'concluida' WHERE id = ?", [aulaId]);
+    // Atualiza status da aula
+    await db.query('UPDATE aulas SET concluida = 1 WHERE id = ?', [aulaId]);
+
+    // Buscar detalhes da aula (data, hora e professor)
+    const [[aula]] = await db.query(`
+      SELECT a.data, a.hora, p.nome AS professor_nome
+      FROM aulas a
+      JOIN professores p ON a.professor_id = p.id
+      WHERE a.id = ?
+    `, [aulaId]);
+
+    // Formatar data e hora
+    const dataFormatada = new Date(aula.data).toLocaleDateString('pt-BR');
+    const horaFormatada = aula.hora.slice(0, 5); // hh:mm
+
+    // Buscar participantes da aula
+    const [alunos] = await db.query(`
+      SELECT a.nome FROM alunos a
+      JOIN aulas_alunos aa ON aa.aluno_id = a.id
+      WHERE aa.aula_id = ?
+    `, [aulaId]);
+
+    const nomes = alunos.map(a => a.nome).join(', ') || 'Nenhum participante';
+
+    // Montar mensagem para o Telegram
+    const mensagem = `✅ *Aula Concluída*\n👨‍🏫 Professor: ${aula.professor_nome}\n📅 Data: ${dataFormatada}\n🕒 Hora: ${horaFormatada}\n👥 Participantes: ${nomes}`;
+
+    // Enviar mensagem
+    await enviarMensagem(mensagem);
+
     res.redirect('/professor/aulas');
   } catch (err) {
     console.error('Erro ao concluir aula:', err);
-    res.status(500).send('Erro interno no servidor');
+    res.status(500).send('Erro ao concluir aula');
   }
 };
 
@@ -847,6 +871,285 @@ exports.formPacotes = async (req, res) => {
   }
 };
 
+
+
+
+// Mostrar formulário de crédito manual
+exports.formAdicionarCredito = async (req, res) => {
+  const alunos = await Aluno.findAll();
+  const categorias = await Categoria.findAll();
+  res.render('professor/formAdicionarCredito', { alunos, categorias });
+};
+
+// Criar crédito manual
+exports.adicionarCredito = async (req, res) => {
+  const { aluno_id, categoria_id, data_credito, validade } = req.body;
+
+  await Credito.create({
+    aluno_id,
+    categoria_id,
+    data_credito,
+    validade,
+    usado: false
+  });
+
+  res.redirect('/professor/creditos');
+};
+
+// Listar créditos de todos os alunos (opcional)
+exports.listarCreditos = async (req, res) => {
+  const creditos = await Credito.findAll({
+    include: [Aluno, Categoria],
+    order: [['validade', 'ASC']]
+  });
+  res.render('professor/listarCreditos', { creditos });
+};
+
+
+exports.atualizarPacote = async (req, res) => {
+  const pacoteId = parseInt(req.params.id, 10);
+  const {
+    categoria_id,
+    quantidade_aulas,
+    data_inicio,
+    data_validade,
+    pago,
+    passe_livre
+  } = req.body;
+
+  try {
+    await db.query(`
+      UPDATE pacotes_aluno
+      SET categoria_id = ?, quantidade_aulas = ?, data_inicio = ?, data_validade = ?, pago = ?, passe_livre = ?
+      WHERE id = ?
+    `, [
+      categoria_id || null,
+      quantidade_aulas,
+      data_inicio,
+      data_validade,
+      pago ? 1 : 0,
+      passe_livre ? 1 : 0,
+      pacoteId
+    ]);
+
+    res.redirect(`/professor/pacotes/${pacoteId}`);
+  } catch (err) {
+    console.error('Erro ao atualizar pacote:', err);
+    res.status(500).send('Erro ao atualizar pacote.');
+  }
+};
+
+
+
+
+exports.selecionarAulaParaMover = async (req, res) => {
+  try {
+    const pacoteId = req.params.id;
+
+    // Buscar o pacote e o aluno correspondente
+    const [pacote] = await db.query(`
+      SELECT pacotes.*, alunos.nome AS nomeAluno
+      FROM pacotes
+      JOIN alunos ON pacotes.aluno_id = alunos.id
+      WHERE pacotes.id = ?
+    `, [pacoteId]);
+
+    if (pacote.length === 0) {
+      return res.status(404).send('Pacote não encontrado');
+    }
+
+    const alunoId = pacote[0].aluno_id;
+
+    // Buscar aulas avulsas do aluno que ainda não foram vinculadas a pacotes
+    const [aulasAvulsas] = await db.query(`
+      SELECT aulas.id, aulas.titulo, aulas.data, aulas.horario, categorias.nome AS modalidade
+      FROM aulas
+      JOIN categorias ON aulas.categoria_id = categorias.id
+      WHERE aulas.aluno_id = ? AND aulas.pacote_id IS NULL
+      ORDER BY aulas.data DESC
+    `, [alunoId]);
+
+    res.render('professor/selecionarAulaParaMover', {
+      pacote: pacote[0],
+      aulasAvulsas,
+    });
+  } catch (error) {
+    console.error('Erro ao buscar aulas avulsas para mover:', error);
+    res.status(500).send('Erro no servidor');
+  }
+};
+
+exports.atualizarAulasUtilizadas = async (req, res) => {
+  try {
+    const pacoteId = parseInt(req.params.id, 10);
+    const aulasUtilizadas = parseInt(req.body.aulas_utilizadas, 10);
+    const alunoId = parseInt(req.body.aluno_id, 10);
+    console.log('req.body:', req.body);
+
+    if (isNaN(pacoteId) || isNaN(alunoId)) {
+      console.error("ID inválido:", pacoteId, alunoId);
+      return res.status(400).send("Dados inválidos.");
+    }
+    console.log('req.body:', req.body);
+    await db.query(
+      "UPDATE pacotes_aluno SET aulas_utilizadas = ? WHERE id = ?",
+      [aulasUtilizadas, pacoteId]
+    );
+
+    res.redirect(`/professor/pacotes/aluno/${alunoId}`);
+  } catch (error) {
+    console.error("Erro ao atualizar aulas utilizadas:", error);
+    res.status(500).send("Erro interno.");
+  }
+
+
+};
+
+
+////////////////////////////////////////////////PACOTES//////////////////////////////////////////////////
+
+exports.deletarPacote = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await db.query('DELETE FROM pacotes_aluno WHERE id = ?', [id]);
+    res.redirect('/professor/pacotes'); // ou para a rota certa da listagem
+  } catch (error) {
+    console.error('Erro ao deletar pacote:', error);
+    res.status(500).send('Erro ao deletar pacote.');
+  }
+};
+
+exports.editarPacote = async (req, res) => {
+  const pacoteId = req.params.id;
+
+  try {
+    const [pacote] = await db.query('SELECT *, aluno_id FROM pacotes WHERE id = ?', [pacoteId]);
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    if (!pacote.length) {
+      return res.status(404).send('Pacote não encontrado');
+    }
+
+    res.render('professor/editarPacote', {
+      pacote: pacote[0],
+      categorias
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar edição de pacote:', error);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+exports.moverAulaParaPacote = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const { aulaId, pacoteId } = req.body;
+
+    // Verifica se a aula já está associada a um pacote
+    const [aulaResult] = await connection.query(`
+      SELECT pacote_id FROM aulas WHERE id = ?
+    `, [aulaId]);
+
+    if (aulaResult.length === 0) {
+      req.flash('error_msg', 'Aula não encontrada.');
+      return res.redirect('/professor/pacotes');
+    }
+
+    if (aulaResult[0].pacote_id) {
+      req.flash('error_msg', 'A aula já está vinculada a um pacote.');
+      return res.redirect('/professor/pacotes');
+    }
+
+    // Atualiza a aula para associá-la ao pacote
+    await connection.query(`
+      UPDATE aulas
+      SET pacote_id = ?
+      WHERE id = ?
+    `, [pacoteId, aulaId]);
+
+    // Atualiza créditos usados e disponíveis
+    await connection.query(`
+      UPDATE pacotes
+      SET aulas_usadas = aulas_usadas + 1,
+          aulas_disponiveis = aulas_disponiveis - 1
+      WHERE id = ?
+    `, [pacoteId]);
+
+    req.flash('success_msg', 'Aula movida com sucesso para o pacote.');
+    return res.redirect('/professor/pacotes');
+
+  } catch (error) {
+    console.error('Erro ao mover aula para pacote:', error);
+    req.flash('error_msg', 'Erro ao mover aula para o pacote.');
+    return res.redirect('/professor/pacotes');
+  } finally {
+    connection.release();
+  }
+};
+
+exports.editarPacoteForm = async (req, res) => {
+  const pacoteId = req.params.id;
+
+  try {
+    const [[pacote]] = await db.query('SELECT * FROM pacotes_aluno WHERE id = ?', [pacoteId]);
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    if (!pacote) {
+      return res.status(404).send('Pacote não encontrado.');
+    }
+
+    res.render('professor/editarPacote', { pacote, categorias });
+  } catch (err) {
+    console.error('Erro ao carregar formulário de edição:', err);
+    res.status(500).send('Erro ao carregar o formulário.');
+  }
+};
+
+exports.verPacotesPorAluno = async (req, res) => {
+  const alunoId = parseInt(req.params.id, 10);
+
+  try {
+    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
+
+    const [pacotes] = await db.query(`
+      SELECT 
+        p.id,
+        p.quantidade_aulas,
+        p.aulas_utilizadas,
+        p.data_inicio,
+        p.data_validade,
+        p.pago,
+        p.passe_livre,
+        c.nome AS categoria_nome
+      FROM pacotes_aluno p
+      LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+      WHERE p.aluno_id = ?
+      ORDER BY p.data_inicio DESC
+    `, [alunoId]);
+
+    const hoje = new Date();
+
+    pacotes.forEach(p => {
+      const validade = new Date(p.data_validade);
+      const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+      p.status_validade = diasRestantes <= 0
+        ? 'Vencido'
+        : diasRestantes <= 7
+          ? 'Vence em breve'
+          : `Válido (${diasRestantes} dias)`;
+      p.creditos_restantes = (p.quantidade_aulas || 0) - (p.aulas_utilizadas || 0);
+    });
+
+    res.render('professor/pacotesPorAluno', { aluno, pacotes });
+  } catch (err) {
+    console.error('Erro ao buscar pacotes do aluno:', err);
+    res.status(500).send('Erro ao buscar pacotes.');
+  }
+};
+
 exports.adicionarPacote = async (req, res) => {
   const { aluno_id, creditos, validade } = req.body;
   try {
@@ -870,110 +1173,84 @@ exports.formNovoPacote = async (req, res) => {
   }
 };
 
-
-
-exports.listarPacotesPorAluno = async (req, res) => {
+exports.verPacotesAluno = async (req, res) => {
   try {
+    const alunoId = req.params.id;
+
+    // Buscar dados do aluno
+    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
+
+    // Buscar pacotes do aluno com nome da categoria
     const [pacotes] = await db.query(`
-      SELECT
-        p.id,
-        a.nome AS aluno_nome,
-        p.quantidade_aulas AS aulas_total,
-        p.aulas_utilizadas,
-        p.data_inicio,
-        p.data_validade AS validade,
-        p.pago,
-        p.passe_livre,
-        p.tipo,
-        c.nome AS modalidade
+      SELECT p.*, c.nome AS categoria_nome
       FROM pacotes_aluno p
-      JOIN alunos a ON a.id = p.aluno_id
-      LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
-    `);
+      LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+      WHERE p.aluno_id = ?
+    `, [alunoId]);
 
-    console.log('Pacotes brutos:', pacotes);
-
+    // Processamento igual ao da função listarPacotesPorAluno
     function isValidDate(d) {
       return d instanceof Date && !isNaN(d);
     }
 
     pacotes.forEach(pacote => {
-      console.log(`Pacote ID: ${pacote.id} - validade raw:`, pacote.validade, `tipo: ${pacote.tipo}`);
-
-      const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
+      const aulasTotal = parseInt(pacote.quantidade_aulas, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
+      // Formatando data de início
       if (pacote.data_inicio) {
         const dataInicio = new Date(pacote.data_inicio);
-        pacote.data_inicio = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
+        pacote.data_inicio_formatada = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
       }
 
-      if (!pacote.validade || pacote.validade === '0000-00-00' || pacote.validade === '' || pacote.tipo === 'avulsa') {
-        pacote.validade = '—';
+      // Formatando data de validade e status
+      if (!pacote.data_validade || pacote.data_validade === '0000-00-00' || pacote.data_validade === '' || pacote.tipo === 'avulsa') {
+        pacote.data_validade_formatada = '—';
         pacote.status_validade = 'Sem validade';
       } else {
-        const validade = new Date(pacote.validade);
+        const validade = new Date(pacote.data_validade);
         validade.setHours(0, 0, 0, 0);
 
         if (!isValidDate(validade)) {
-          console.log(`Data inválida para pacote ID ${pacote.id}:`, pacote.validade);
-          pacote.validade = '—';
+          pacote.data_validade_formatada = '—';
           pacote.status_validade = 'Sem validade';
         } else {
           const hoje = new Date();
           hoje.setHours(0, 0, 0, 0);
-
           const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
 
           pacote.status_validade = diasRestantes < 0
             ? 'Vencido'
             : diasRestantes <= 7
-              ? 'Próximo do vencimento'
+              ? 'Vence em breve'
               : 'Válido';
 
-          pacote.status_validade = pacote.status_validade.trim();
-
-          pacote.validade = `${String(validade.getDate()).padStart(2, '0')}/${String(validade.getMonth() + 1).padStart(2, '0')}/${validade.getFullYear()}`;
+          pacote.data_validade_formatada = `${String(validade.getDate()).padStart(2, '0')}/${String(validade.getMonth() + 1).padStart(2, '0')}/${validade.getFullYear()}`;
         }
       }
 
-      pacote.pago = pacote.pago ? 'Sim' : 'Não';
-
-      console.log(`Pacote ID ${pacote.id} final: validade formatada = ${pacote.validade}, status = ${pacote.status_validade}, pago = ${pacote.pago}`);
+      // Ajuste booleano de pagamento
+      pacote.pago = !!pacote.pago;
     });
 
-    res.render('professor/listaPacotes', { pacotes });
+    // Buscar todas as categorias disponíveis
+    const [categorias] = await db.query('SELECT * FROM categorias');
+
+    res.render('professor/pacotesAluno', {
+      aluno,
+      pacotes,
+      categorias
+    });
+
   } catch (err) {
-    console.error('Erro ao listar pacotes:', err);
-    res.status(500).send('Erro ao listar pacotes');
+    console.error('Erro ao carregar pacotes do aluno:', err);
+    res.status(500).send('Erro interno');
   }
 };
 
-exports.verPacotesAluno = async (req, res) => {
-  const alunoId = req.params.id;
 
-  // Buscar dados do aluno
-  const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
 
-  // Buscar pacotes do aluno com nome da categoria
-  const [pacotes] = await db.query(`
-    SELECT p.*, c.nome AS categoria_nome 
-    FROM pacotes p
-    LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
-    WHERE p.aluno_id = ?
-  `, [alunoId]);
-
-  // Buscar todas as categorias disponíveis
-  const [categorias] = await db.query('SELECT * FROM categorias');
-
-  // Renderizar view
-  res.render('professor/pacotesAluno', {
-    aluno,
-    pacotes,
-    categorias
-  });
-};
 // Cria novo pacote para um aluno
 exports.criarPacote = async (req, res) => {
   console.log("Data recebida:", req.body.data_inicio);
@@ -1060,7 +1337,7 @@ exports.criarPacote = async (req, res) => {
         }
       }
 
-      return res.redirect('/professor/pacotes');
+      return res.redirect(`/professor/pacotes/aluno/${novoPacote.aluno_id}`);
     } else {
       throw new Error('Falha ao criar pacote');
     }
@@ -1071,291 +1348,98 @@ exports.criarPacote = async (req, res) => {
 };
 
 exports.deletarPacote = async (req, res) => {
-  const pacoteId = req.params.id;
+  const { id } = req.params;
 
   try {
-    // Primeiro busca o aluno_id antes de deletar
-    const [[pacote]] = await db.query('SELECT aluno_id FROM pacotes_aluno WHERE id = ?', [pacoteId]);
+    // Buscar o aluno_id antes de deletar
+    const [[pacote]] = await db.query('SELECT aluno_id FROM pacotes_aluno WHERE id = ?', [id]);
 
     if (!pacote) {
-      console.log(`Pacote com ID ${pacoteId} não encontrado.`);
-      return res.redirect('/professor/alunos'); // ou outra página padrão
+      return res.status(404).send('Pacote não encontrado.');
     }
 
-    await db.query('DELETE FROM pacotes_aluno WHERE id = ?', [pacoteId]);
+    const alunoId = pacote.aluno_id;
 
-    // Redireciona de volta para os pacotes do aluno específico
-    res.redirect(`/professor/pacotes/aluno/${pacote.aluno_id}`);
-  } catch (err) {
-    console.error('Erro ao deletar pacote:', err);
+    // Deletar o pacote
+    await db.query('DELETE FROM pacotes_aluno WHERE id = ?', [id]);
+
+    // Redirecionar para a página de pacotes do aluno
+    res.redirect(`/professor/pacotes/aluno/${alunoId}`);
+  } catch (error) {
+    console.error('Erro ao deletar pacote:', error);
     res.status(500).send('Erro ao deletar pacote.');
   }
 };
 
-exports.verPacotesPorAluno = async (req, res) => {
-  const alunoId = parseInt(req.params.id, 10);
+
+exports.listarPacotesPorAluno = async (req, res) => {
+  const aluno_id = req.params.aluno_id;
 
   try {
-    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
-
     const [pacotes] = await db.query(`
-      SELECT 
+      SELECT
         p.id,
+        a.nome AS aluno_nome,
+        a.id AS aluno_id,
         p.quantidade_aulas,
         p.aulas_utilizadas,
         p.data_inicio,
         p.data_validade,
         p.pago,
         p.passe_livre,
+        p.tipo,
         c.nome AS categoria_nome
       FROM pacotes_aluno p
-      LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+      JOIN alunos a ON a.id = p.aluno_id
+      LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
       WHERE p.aluno_id = ?
-      ORDER BY p.data_inicio DESC
-    `, [alunoId]);
+    `, [aluno_id]);
 
-    const hoje = new Date();
+    const [dadosAluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [aluno_id]);
+    const aluno = dadosAluno[0];
 
-    pacotes.forEach(p => {
-      const validade = new Date(p.data_validade);
-      const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
-      p.status_validade = diasRestantes <= 0
-        ? 'Vencido'
-        : diasRestantes <= 7
+    function isValidDate(d) {
+      return d instanceof Date && !isNaN(d);
+    }
+
+    pacotes.forEach(pacote => {
+      const aulasTotal = parseInt(pacote.quantidade_aulas, 10) || 0;
+      const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
+      pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
+
+      // Formatando data de início
+      if (pacote.data_inicio) {
+        const dataInicio = new Date(pacote.data_inicio);
+        pacote.data_inicio = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
+      }
+
+      // Formatando validade e status
+      if (!pacote.data_validade || pacote.data_validade === '0000-00-00' || pacote.tipo === 'avulsa') {
+        pacote.data_validade = '—';
+        pacote.status_validade = 'Sem validade';
+      } else {
+        const validade = new Date(pacote.data_validade);
+        validade.setHours(0, 0, 0, 0);
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+        pacote.status_validade = diasRestantes < 0
+          ? 'Vencido'
+          : diasRestantes <= 7
           ? 'Vence em breve'
-          : `Válido (${diasRestantes} dias)`;
-      p.creditos_restantes = (p.quantidade_aulas || 0) - (p.aulas_utilizadas || 0);
+          : 'Válido';
+        pacote.data_validade = `${String(validade.getDate()).padStart(2, '0')}/${String(validade.getMonth() + 1).padStart(2, '0')}/${validade.getFullYear()}`;
+      }
+
+      pacote.pago = pacote.pago ? true : false;
     });
 
-    res.render('professor/pacotesPorAluno', { aluno, pacotes });
+    res.render('professor/listaPacotes', { pacotes, aluno });
+
   } catch (err) {
-    console.error('Erro ao buscar pacotes do aluno:', err);
-    res.status(500).send('Erro ao buscar pacotes.');
+    console.error('Erro ao listar pacotes:', err);
+    res.status(500).send('Erro ao listar pacotes');
   }
 };
-//CREDITOS
-
-// Mostrar formulário de crédito manual
-exports.formAdicionarCredito = async (req, res) => {
-  const alunos = await Aluno.findAll();
-  const categorias = await Categoria.findAll();
-  res.render('professor/formAdicionarCredito', { alunos, categorias });
-};
-
-// Criar crédito manual
-exports.adicionarCredito = async (req, res) => {
-  const { aluno_id, categoria_id, data_credito, validade } = req.body;
-
-  await Credito.create({
-    aluno_id,
-    categoria_id,
-    data_credito,
-    validade,
-    usado: false
-  });
-
-  res.redirect('/professor/creditos');
-};
-
-// Listar créditos de todos os alunos (opcional)
-exports.listarCreditos = async (req, res) => {
-  const creditos = await Credito.findAll({
-    include: [Aluno, Categoria],
-    order: [['validade', 'ASC']]
-  });
-  res.render('professor/listarCreditos', { creditos });
-};
-
-
-exports.atualizarPacote = async (req, res) => {
-  const pacoteId = parseInt(req.params.id, 10);
-  const {
-    categoria_id,
-    quantidade_aulas,
-    data_inicio,
-    data_validade,
-    pago,
-    passe_livre
-  } = req.body;
-
-  try {
-    await db.query(`
-      UPDATE pacotes_aluno
-      SET categoria_id = ?, quantidade_aulas = ?, data_inicio = ?, data_validade = ?, pago = ?, passe_livre = ?
-      WHERE id = ?
-    `, [
-      categoria_id || null,
-      quantidade_aulas,
-      data_inicio,
-      data_validade,
-      pago ? 1 : 0,
-      passe_livre ? 1 : 0,
-      pacoteId
-    ]);
-
-    res.redirect(`/professor/pacotes/${pacoteId}`);
-  } catch (err) {
-    console.error('Erro ao atualizar pacote:', err);
-    res.status(500).send('Erro ao atualizar pacote.');
-  }
-};
-
-exports.editarPacoteForm = async (req, res) => {
-  const pacoteId = req.params.id;
-
-  try {
-    const [[pacote]] = await db.query('SELECT * FROM pacotes_aluno WHERE id = ?', [pacoteId]);
-    const [categorias] = await db.query('SELECT * FROM categorias');
-
-    if (!pacote) {
-      return res.status(404).send('Pacote não encontrado.');
-    }
-
-    res.render('professor/editarPacote', { pacote, categorias });
-  } catch (err) {
-    console.error('Erro ao carregar formulário de edição:', err);
-    res.status(500).send('Erro ao carregar o formulário.');
-  }
-};
-
-
-exports.selecionarAulaParaMover = async (req, res) => {
-  try {
-    const pacoteId = req.params.id;
-
-    // Buscar o pacote e o aluno correspondente
-    const [pacote] = await db.query(`
-      SELECT pacotes.*, alunos.nome AS nomeAluno
-      FROM pacotes
-      JOIN alunos ON pacotes.aluno_id = alunos.id
-      WHERE pacotes.id = ?
-    `, [pacoteId]);
-
-    if (pacote.length === 0) {
-      return res.status(404).send('Pacote não encontrado');
-    }
-
-    const alunoId = pacote[0].aluno_id;
-
-    // Buscar aulas avulsas do aluno que ainda não foram vinculadas a pacotes
-    const [aulasAvulsas] = await db.query(`
-      SELECT aulas.id, aulas.titulo, aulas.data, aulas.horario, categorias.nome AS modalidade
-      FROM aulas
-      JOIN categorias ON aulas.categoria_id = categorias.id
-      WHERE aulas.aluno_id = ? AND aulas.pacote_id IS NULL
-      ORDER BY aulas.data DESC
-    `, [alunoId]);
-
-    res.render('professor/selecionarAulaParaMover', {
-      pacote: pacote[0],
-      aulasAvulsas,
-    });
-  } catch (error) {
-    console.error('Erro ao buscar aulas avulsas para mover:', error);
-    res.status(500).send('Erro no servidor');
-  }
-};
-
-exports.moverAulaParaPacote = async (req, res) => {
-  const connection = await db.getConnection();
-
-  try {
-    const { aulaId, pacoteId } = req.body;
-
-    // Verifica se a aula já está associada a um pacote
-    const [aulaResult] = await connection.query(`
-      SELECT pacote_id FROM aulas WHERE id = ?
-    `, [aulaId]);
-
-    if (aulaResult.length === 0) {
-      req.flash('error_msg', 'Aula não encontrada.');
-      return res.redirect('/professor/pacotes');
-    }
-
-    if (aulaResult[0].pacote_id) {
-      req.flash('error_msg', 'A aula já está vinculada a um pacote.');
-      return res.redirect('/professor/pacotes');
-    }
-
-    // Atualiza a aula para associá-la ao pacote
-    await connection.query(`
-      UPDATE aulas
-      SET pacote_id = ?
-      WHERE id = ?
-    `, [pacoteId, aulaId]);
-
-    // Atualiza créditos usados e disponíveis
-    await connection.query(`
-      UPDATE pacotes
-      SET aulas_usadas = aulas_usadas + 1,
-          aulas_disponiveis = aulas_disponiveis - 1
-      WHERE id = ?
-    `, [pacoteId]);
-
-    req.flash('success_msg', 'Aula movida com sucesso para o pacote.');
-    return res.redirect('/professor/pacotes');
-
-  } catch (error) {
-    console.error('Erro ao mover aula para pacote:', error);
-    req.flash('error_msg', 'Erro ao mover aula para o pacote.');
-    return res.redirect('/professor/pacotes');
-  } finally {
-    connection.release();
-  }
-};
-
-
-exports.editarPacote = async (req, res) => {
-  const pacoteId = req.params.id;
-
-  try {
-    const [pacote] = await db.query('SELECT *, aluno_id FROM pacotes WHERE id = ?', [pacoteId]);
-    const [categorias] = await db.query('SELECT * FROM categorias');
-
-    if (!pacote.length) {
-      return res.status(404).send('Pacote não encontrado');
-    }
-
-    res.render('professor/editarPacote', {
-      pacote: pacote[0],
-      categorias
-    });
-
-  } catch (error) {
-    console.error('Erro ao carregar edição de pacote:', error);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
-exports.atualizarAulasUtilizadas = async (req, res) => {
-  try {
-    const pacoteId = parseInt(req.params.id, 10);
-    const aulasUtilizadas = parseInt(req.body.aulas_utilizadas, 10);
-    const alunoId = parseInt(req.body.aluno_id, 10);
-    console.log('req.body:', req.body);
-
-    if (isNaN(pacoteId) || isNaN(alunoId)) {
-      console.error("ID inválido:", pacoteId, alunoId);
-      return res.status(400).send("Dados inválidos.");
-    }
-    console.log('req.body:', req.body);
-    await db.query(
-      "UPDATE pacotes_aluno SET aulas_utilizadas = ? WHERE id = ?",
-      [aulasUtilizadas, pacoteId]
-    );
-
-    res.redirect(`/professor/pacotes/aluno/${alunoId}`);
-  } catch (error) {
-    console.error("Erro ao atualizar aulas utilizadas:", error);
-    res.status(500).send("Erro interno.");
-  }
-
-
-};
-
-
-
-
-
 
 module.exports = exports;

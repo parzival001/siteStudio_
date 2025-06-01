@@ -47,9 +47,6 @@ async function verificarAniversarios() {
 
 
 
-
-
-
 // Configurar handlebars com helpers
 const hbs = handlebars.create({
   defaultLayout: 'main',
