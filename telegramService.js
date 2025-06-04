@@ -5,7 +5,7 @@ const bot = new TelegramBot(token, { polling: true });
 console.log("Bot do Telegram está rodando...");
 
 // Chat ID do admin (fixo ou salvo de um banco de dados)
-const CHAT_ID_ADMIN = '5535291163'; // substitua pelo seu
+const CHAT_ID_ADMIN = 5535291163; // substitua pelo seu
 
 bot.on('message', (msg) => {
   console.log("Mensagem recebida:", msg.text);

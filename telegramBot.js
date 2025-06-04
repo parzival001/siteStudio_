@@ -10,7 +10,7 @@ bot.on('message', (msg) => {
 });
 
 // Chat ID do professor (fixo)
-const CHAT_ID = 123456789; // Substitua pelo seu ID real
+const CHAT_ID = 5535291163; // Substitua pelo seu ID real
 
 // Exporta a função para enviar notificação
 function enviarNotificacao(texto) {

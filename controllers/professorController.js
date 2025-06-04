@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const express = require('express');
 const dayjs = require('dayjs');
 const router = express.Router();
-
+const { enviarMensagem } = require('../utils/telegram');
 
 
 // Controller para rotas de 'professor'
@@ -245,6 +245,10 @@ exports.deletarAula = async (req, res) => {
   }
 };
 
+
+//const { enviarMensagem } = require('../utils/telegram');
+
+
 exports.concluirAula = async (req, res) => {
   const aulaId = req.params.id;
 
@@ -277,7 +281,8 @@ exports.concluirAula = async (req, res) => {
     const mensagem = `✅ *Aula Concluída*\n👨‍🏫 Professor: ${aula.professor_nome}\n📅 Data: ${dataFormatada}\n🕒 Hora: ${horaFormatada}\n👥 Participantes: ${nomes}`;
 
     // Enviar mensagem
-    await enviarMensagem(mensagem);
+    console.log('➡️ Concluindo aula ID:', aulaId);
+    await enviarMensagem(mensagem, 'Markdown');
 
     res.redirect('/professor/aulas');
   } catch (err) {
