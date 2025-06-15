@@ -171,6 +171,7 @@ exports.adicionarAlunoNaAula = async (req, res) => {
       [pacote.id]
     );
 
+    console.log('📌 Adicionando aluno na aula:', { aula_id, aluno_id });
     res.redirect('/professor/aulas');
   } catch (err) {
     console.error('Erro ao adicionar aluno na aula:', err);
@@ -254,34 +255,49 @@ exports.concluirAula = async (req, res) => {
 
   try {
     // Atualiza status da aula
-    await db.query('UPDATE aulas SET concluida = 1 WHERE id = ?', [aulaId]);
+    await db.query('UPDATE aulas SET status = "concluida" WHERE id = ?', [aulaId]);
 
-    // Buscar detalhes da aula (data, hora e professor)
+    // Buscar detalhes da aula (incluindo categoria e professor)
     const [[aula]] = await db.query(`
-      SELECT a.data, a.hora, p.nome AS professor_nome
+      SELECT a.data, a.horario, a.professor_id, a.categoria_id, p.nome AS professor_nome
       FROM aulas a
       JOIN professores p ON a.professor_id = p.id
       WHERE a.id = ?
     `, [aulaId]);
 
+    if (!aula) {
+      throw new Error('Aula não encontrada');
+    }
+
     // Formatar data e hora
     const dataFormatada = new Date(aula.data).toLocaleDateString('pt-BR');
-    const horaFormatada = aula.hora.slice(0, 5); // hh:mm
+    const horaFormatada = aula.horario.slice(0, 5); // hh:mm
 
     // Buscar participantes da aula
     const [alunos] = await db.query(`
-      SELECT a.nome FROM alunos a
+      SELECT a.id, a.nome 
+      FROM alunos a
       JOIN aulas_alunos aa ON aa.aluno_id = a.id
       WHERE aa.aula_id = ?
     `, [aulaId]);
 
+    // Inserir cada aluno no histórico
+    for (const aluno of alunos) {
+      await db.query(`
+        INSERT INTO historico_aulas (aluno_id, professor_id, categoria_id, data, horario)
+        VALUES (?, ?, ?, ?, ?)
+      `, [
+        aluno.id,
+        aula.professor_id,
+        aula.categoria_id,
+        aula.data,
+        aula.horario
+      ]);
+    }
+
+    // Enviar mensagem para o Telegram
     const nomes = alunos.map(a => a.nome).join(', ') || 'Nenhum participante';
-
-    // Montar mensagem para o Telegram
     const mensagem = `✅ *Aula Concluída*\n👨‍🏫 Professor: ${aula.professor_nome}\n📅 Data: ${dataFormatada}\n🕒 Hora: ${horaFormatada}\n👥 Participantes: ${nomes}`;
-
-    // Enviar mensagem
-    console.log('➡️ Concluindo aula ID:', aulaId);
     await enviarMensagem(mensagem, 'Markdown');
 
     res.redirect('/professor/aulas');
@@ -378,7 +394,7 @@ exports.listaAlunos = async (req, res) => {
 
 
 
-// Lista todas as aulas fixas
+/////////////////////////////////////////////////AULAS FIXAS///////////////////////////////////////////
 exports.listarAulasFixas = async (req, res) => {
   try {
     const [aulasFixas] = await db.query(`
@@ -410,6 +426,107 @@ exports.formNovaAulaFixa = async (req, res) => {
     res.status(500).send('Erro interno no servidor');
   }
 };
+
+// Salva nova aula fixa
+exports.salvarAulaFixa = async (req, res) => {
+  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
+
+  if (!categoria_id || !professor_id || !dia_semana || !horario || !vagas) {
+    return res.status(400).send('Todos os campos são obrigatórios.');
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO aulas_fixas (categoria_id, professor_id, dia_semana, horario, vagas)
+       VALUES (?, ?, ?, ?, ?)`,
+      [categoria_id, professor_id, dia_semana, horario, vagas]
+    );
+    res.redirect('/professor/aulas-fixas/nova');
+  } catch (err) {
+    console.error('Erro ao salvar aula fixa:', err);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+// Exibe form para editar uma aula fixa existente
+exports.formEditarAulaFixa = async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    const [[aula]] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
+    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
+    const [professores] = await db.query('SELECT id, nome FROM professores');
+    res.render('professor/editarAulaFixa', { aula, categorias, professores });
+  } catch (err) {
+    console.error('Erro ao buscar aula fixa para editar:', err);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+exports.removerAlunoAulaFixa = async (req, res) => {
+  const { aulaId, alunoId } = req.params;
+
+  try {
+    // Remove o aluno da aula fixa
+    await db.query(
+      'DELETE FROM alunos_aulas_fixas WHERE aula_fixa_id = ? AND aluno_id = ?',
+      [aulaId, alunoId]
+    );
+
+    // Aumenta o número de vagas disponíveis
+    await db.query(
+      'UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?',
+      [aulaId]
+    );
+
+    res.redirect('/professor/aulas-fixas/nova');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao remover aluno da aula fixa');
+  }
+};
+
+// Atualiza a aula fixa editada
+exports.editarAulaFixa = async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
+  try {
+    await db.query(
+      `UPDATE aulas_fixas
+         SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
+       WHERE id = ?`,
+      [categoria_id, professor_id, dia_semana, horario, vagas, id]
+    );
+    res.redirect('/professor/aulas-fixas/nova');
+  } catch (err) {
+    console.error('Erro ao atualizar aula fixa:', err);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+// Remove uma aula fixa
+exports.deletarAulaFixa = async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);
+    res.redirect('/professor/aulas-fixas/nova');
+  } catch (err) {
+    console.error('Erro ao deletar aula fixa:', err);
+    res.status(500).send('Erro interno no servidor');
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 exports.listarAlunos = async (req, res) => {
   try {
@@ -644,83 +761,6 @@ exports.verAnamnese = async (req, res) => {
   }
 };
 
-// Salva nova aula fixa
-exports.salvarAulaFixa = async (req, res) => {
-  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
-  try {
-    await db.query(
-      `INSERT INTO aulas_fixas 
-        (categoria_id, professor_id, dia_semana, horario, vagas)
-       VALUES (?, ?, ?, ?, ?)`,
-      [categoria_id, professor_id, dia_semana, horario, vagas]
-    );
-    res.redirect('/professor/aulas-fixas/nova');
-  } catch (err) {
-    console.error('Erro ao salvar aula fixa:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
-// Exibe form para editar uma aula fixa existente
-exports.formEditarAulaFixa = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  try {
-    const [[aula]] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
-    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
-    const [professores] = await db.query('SELECT id, nome FROM professores');
-    res.render('professor/editarAulaFixa', { aula, categorias, professores });
-  } catch (err) {
-    console.error('Erro ao buscar aula fixa para editar:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
-exports.removerAlunoAulaFixa = async (req, res) => {
-  const { aulaId, alunoId } = req.params;
-
-  try {
-    await db.query(
-      'DELETE FROM alunos_aulas_fixas WHERE aula_fixa_id = ? AND aluno_id = ?',
-      [aulaId, alunoId]
-    );
-
-    // ✅ Redireciona de volta para a página de listagem
-    res.redirect('/professor/aulas-fixas/nova');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Erro ao remover aluno da aula fixa');
-  }
-};
-
-// Atualiza a aula fixa editada
-exports.editarAulaFixa = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
-  try {
-    await db.query(
-      `UPDATE aulas_fixas
-         SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
-       WHERE id = ?`,
-      [categoria_id, professor_id, dia_semana, horario, vagas, id]
-    );
-    res.redirect('/professor/aulas-fixas/nova');
-  } catch (err) {
-    console.error('Erro ao atualizar aula fixa:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
-// Remove uma aula fixa
-exports.deletarAulaFixa = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  try {
-    await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);
-    res.redirect('/professor/aulas-fixas/nova');
-  } catch (err) {
-    console.error('Erro ao deletar aula fixa:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
 
 
 
@@ -1446,5 +1486,49 @@ exports.listarPacotesPorAluno = async (req, res) => {
     res.status(500).send('Erro ao listar pacotes');
   }
 };
+
+
+
+// exports.finalizarAula = async (req, res) => {
+//   const { aula_id } = req.params;
+
+//   try {
+//     // Buscar detalhes da aula
+//     const [aula] = await pool.query(`
+//       SELECT aa.id AS aula_aluno_id, aa.aluno_id, aa.aula_id,
+//              a.professor_id, a.categoria_id, a.data, a.horario
+//       FROM aulas_alunos aa
+//       JOIN aulas a ON a.id = aa.aula_id
+//       WHERE aa.id = ?
+//     `, [aula_id]);
+
+//     if (!aula.length) {
+//       return res.status(404).send('Aula não encontrada');
+//     }
+
+//     const aulaInfo = aula[0];
+
+//     // Inserir no histórico
+//     await pool.query(`
+//       INSERT INTO historico_aulas (aluno_id, professor_id, categoria_id, data, horario)
+//       VALUES (?, ?, ?, ?, ?)
+//     `, [
+//       aulaInfo.aluno_id,
+//       aulaInfo.professor_id,
+//       aulaInfo.categoria_id,
+//       aulaInfo.data,
+//       aulaInfo.horario
+//     ]);
+
+//     // Aqui você pode marcar a aula como concluída também, se quiser
+//     await pool.query(`UPDATE aulas_alunos SET status = 'concluída' WHERE id = ?`, [aula_id]);
+
+//     res.redirect('/professor/aulas'); // ou outro destino
+
+//   } catch (err) {
+//     console.error('Erro ao finalizar aula:', err.message);
+//     res.status(500).send('Erro ao finalizar aula');
+//   }
+// };
 
 module.exports = exports;

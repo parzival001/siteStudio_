@@ -408,11 +408,11 @@ router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, async 
 
 // Adicionar aluno à aula fixa
 router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) => {
-  const aulaId = req.params.id; // Pega o ID da aula fixa
-  const alunoId = req.body.aluno_id; // Pega o ID do aluno a ser adicionado
+  const aulaId = req.params.id;
+  const alunoId = req.body.aluno_id;
 
   try {
-    // Verifica se o aluno já está cadastrado nessa aula
+    // Verifica se o aluno já está cadastrado
     const [existe] = await db.query(`
       SELECT * FROM alunos_aulas_fixas WHERE aula_fixa_id = ? AND aluno_id = ?`,
       [aulaId, alunoId]
@@ -422,21 +422,46 @@ router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) 
       return res.status(400).send('Aluno já está cadastrado nesta aula');
     }
 
-    // Adiciona o aluno à aula fixa
+    // Verifica vagas disponíveis
+    const [[aula]] = await db.query('SELECT vagas, categoria_id FROM aulas_fixas WHERE id = ?', [aulaId]);
+
+    if (aula.vagas <= 0) {
+      return res.status(400).send('Não há mais vagas disponíveis para esta aula');
+    }
+
+    // Busca pacote válido do aluno
+    const [[pacote]] = await db.query(`
+      SELECT * FROM pacotes_aluno
+      WHERE aluno_id = ?
+        AND (FIND_IN_SET(?, categoria_id) OR passe_livre = 1)
+        AND quantidade_aulas > 0
+        AND data_validade >= CURDATE()
+      ORDER BY data_validade ASC
+      LIMIT 1
+    `, [alunoId, aula.categoria_id]);
+
+    if (!pacote) {
+      return res.status(400).send('O aluno não possui créditos disponíveis para esta modalidade');
+    }
+
+    // Adiciona o aluno na aula
     await db.query(`
-      INSERT INTO alunos_aulas_fixas (aula_fixa_id, aluno_id) 
-      VALUES (?, ?)`,
-      [aulaId, alunoId]
+      INSERT INTO alunos_aulas_fixas (aula_fixa_id, aluno_id)
+      VALUES (?, ?)`, [aulaId, alunoId]
     );
 
-    // Atualiza a quantidade de vagas da aula fixa
-    const [aula] = await db.query('SELECT vagas FROM aulas_fixas WHERE id = ?', [aulaId]);
-    const vagasRestantes = aula[0].vagas - 1;
+    // Atualiza as vagas
+    await db.query('UPDATE aulas_fixas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
 
-    await db.query('UPDATE aulas_fixas SET vagas = ? WHERE id = ?', [vagasRestantes, aulaId]);
+    // Atualiza o pacote
+    await db.query(`
+      UPDATE pacotes_aluno
+      SET quantidade_aulas = quantidade_aulas - 1,
+          aulas_utilizadas = aulas_utilizadas + 1
+      WHERE id = ?`, [pacote.id]
+    );
 
-    res.redirect(`/professor/aulas-fixas/${aulaId}`); // Redireciona para a página da aula fixa
-
+    res.redirect(`/professor/aulas-fixas/${aulaId}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao adicionar aluno à aula');
@@ -453,7 +478,6 @@ router.post('/aulas-fixas/deletar/:id', authProfessor, async (req, res) => {
   }
 });
 
-// Pacotes por aluno
 
 
 // Anamnese

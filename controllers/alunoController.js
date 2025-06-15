@@ -367,3 +367,23 @@ exports.listarPacotes = async (req, res) => {
 };
 
 
+exports.historicoAluno = async (req, res) => {
+  const alunoId = req.session.user.id;
+
+  try {
+    const [historico] = await pool.query(`
+      SELECT h.*, c.nome AS tipo_nome, p.nome AS professor_nome
+      FROM historico_aulas h
+      JOIN categorias c ON c.id = h.categoria_id
+      JOIN professores p ON p.id = h.professor_id
+      WHERE h.aluno_id = ?
+      ORDER BY h.data DESC, h.horario DESC
+    `, [alunoId]);
+
+    res.render('aluno/historico', { historico });
+
+  } catch (err) {
+    console.error('Erro ao buscar histórico:', err.message);
+    res.status(500).send('Erro ao buscar histórico');
+  }
+};

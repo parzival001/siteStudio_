@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const token = '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8'; // Substitua pelo seu token real do BotFather
+const token = '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8'; 
 const bot = new TelegramBot(token, { polling: true }); // polling true para testes
 
 // Para descobrir seu chat_id ao digitar /start ou outra mensagem
