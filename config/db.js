@@ -11,13 +11,13 @@ const mysql = require('mysql2/promise');
 // });
 
  const db = mysql.createPool({
-   host: '195.200.6.199',
-   user: 'root',
-   password: '083665',
-   database: 'sistema_studioarte',
-   waitForConnections: true,
-   connectionLimit: 10,
-   queueLimit: 0
+  host: 'localhost',
+  user: 'studiouser',
+  password: '083665',
+  database: 'sistema_studioarte',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 
