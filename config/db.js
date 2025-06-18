@@ -11,9 +11,9 @@ const mysql = require('mysql2/promise');
 // });
 
  const db = mysql.createPool({
-   host: 'localhost',
+   host: '127.0.0.1',
    user: 'root',
-   password: '083665',
+   password: 'KWA220816L0g1t3ch@',
    database: 'sistema_studioarte',
    waitForConnections: true,
    connectionLimit: 10,
