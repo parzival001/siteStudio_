@@ -13,7 +13,7 @@ const mysql = require('mysql2/promise');
  const db = mysql.createPool({
    host: '127.0.0.1',
    user: 'root',
-   password: 'KWA220816L0g1t3ch@',
+   password: '083665',
    database: 'sistema_studioarte',
    waitForConnections: true,
    connectionLimit: 10,
