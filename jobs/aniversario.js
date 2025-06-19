@@ -6,7 +6,7 @@ const cron = require('node-cron');
 const CHAT_ID_ADMIN = -1002656604822;
 
 // Executar todo dia às 08:01
-cron.schedule('18 12 * * *', async () => {
+cron.schedule('00 07 * * *', async () => {
   try {
     const [aniversariantes] = await pool.query(`
       SELECT a.nome AS aluno_nome
