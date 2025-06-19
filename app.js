@@ -246,3 +246,7 @@ exports.logout = (req, res) => {
     res.redirect('/login');
   });
 };
+
+app.get('/', (req, res) => {
+  res.render('home'); // Isso renderiza a view "home.handlebars"
+});
