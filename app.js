@@ -246,3 +246,8 @@ exports.logout = (req, res) => {
     res.redirect('/login');
   });
 };
+
+
+app.get('/', (req, res) => {
+  res.send('Olá, servidor funcionando!');
+});
