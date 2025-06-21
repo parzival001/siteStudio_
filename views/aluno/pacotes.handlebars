@@ -1,58 +1,98 @@
-{{!-- professor/listaPacotes.handlebars --}}
-<div class="container my-4" style="background-color: #B395C0; padding: 20px; border-radius: 8px; color: white;">
-  <h2 class="mb-4">Pacotes por Aluno</h2>
+<div class="container my-4 text-white">
+  <h2 class="mb-4 text-center">Meus Pacotes</h2>
 
   {{#if pacotes.length}}
-    <div class="table-responsive">
-      <table class="table table-dark table-striped">
-        <thead>
-          <tr>
-            <th>Aluno</th>
-            <th>Modalidade</th>
-            <th>Aulas Total</th>
-            <th>Aulas Utilizadas</th>
-            <th>Aulas Restantes</th>
-            <th>Data Início</th>
-            <th>Validade</th>
-            <th>Status Validade</th>
-            <th>Pago</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each pacotes}}
+
+    <!-- TABELA - VISÍVEL EM TELAS MÉDIAS E GRANDES -->
+    <div class="card p-4 mb-4 d-none d-md-block" style="background-color: #B395C0;">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped align-middle">
+          <thead>
             <tr>
-              <td>{{aluno_nome}}</td>
-              <td>{{modalidade}}</td>
-              <td>{{aulas_total}}</td>
-              <td>{{aulas_utilizadas}}</td>
-              <td>{{aulas_restantes}}</td>
-              <td>{{data_inicio_formatada}}</td>
-              <td>{{validade}}</td>
-              <td>
-                {{!-- Status validade com badge colorida --}}
-                {{#if (eq status_validade "Vencido")}}
-                  <span class="badge bg-danger">{{status_validade}}</span>
-                {{else if (eq status_validade "Próximo do vencimento")}}
-                  <span class="badge bg-warning text-dark">{{status_validade}}</span>
-                {{else if (eq status_validade "Válido")}}
-                  <span class="badge bg-success">{{status_validade}}</span>
-                {{else}}
-                  <span class="badge bg-secondary">{{status_validade}}</span>
-                {{/if}}
-              </td>
-              <td>
-                {{#if (eq pago "Sim")}}
-                  <span class="badge bg-success">Sim</span>
-                {{else}}
-                  <span class="badge bg-danger">Não</span>
-                {{/if}}
-              </td>
+              <th>Aluno</th>
+              <th>Modalidade</th>
+              <th>Total</th>
+              <th>Usadas</th>
+              <th>Restantes</th>
+              <th>Início</th>
+              <th>Validade</th>
+              <th>Status</th>
+              <th>Pago</th>
             </tr>
-          {{/each}}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {{#each pacotes}}
+              <tr>
+                <td>{{aluno_nome}}</td>
+                <td>{{modalidade}}</td>
+                <td>{{aulas_total}}</td>
+                <td>{{aulas_utilizadas}}</td>
+                <td>{{aulas_restantes}}</td>
+                <td>{{data_inicio_formatada}}</td>
+                <td>{{validade}}</td>
+                <td>
+                  {{#if (eq status_validade "Vencido")}}
+                    <span class="badge bg-danger">{{status_validade}}</span>
+                  {{else if (eq status_validade "Próximo do vencimento")}}
+                    <span class="badge bg-warning text-dark">{{status_validade}}</span>
+                  {{else if (eq status_validade "Válido")}}
+                    <span class="badge bg-success">{{status_validade}}</span>
+                  {{else}}
+                    <span class="badge bg-secondary">{{status_validade}}</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if (eq pago "Sim")}}
+                    <span class="badge bg-success">Sim</span>
+                  {{else}}
+                    <span class="badge bg-danger">Não</span>
+                  {{/if}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
     </div>
+
+    <!-- CARDS - VISÍVEL EM TELAS PEQUENAS -->
+    <div class="d-md-none">
+      {{#each pacotes}}
+      <div class="card text-dark p-3 mb-3" style="background-color: #B395C0;">
+        <p class="mb-1"><strong>Aluno:</strong> {{aluno_nome}}</p>
+        <p class="mb-1"><strong>Modalidade:</strong> {{modalidade}}</p>
+        <p class="mb-1"><strong>Total de Aulas:</strong> {{aulas_total}}</p>
+        <p class="mb-1"><strong>Usadas:</strong> {{aulas_utilizadas}}</p>
+        <p class="mb-1"><strong>Restantes:</strong> {{aulas_restantes}}</p>
+        <p class="mb-1"><strong>Início:</strong> {{data_inicio_formatada}}</p>
+        <p class="mb-1"><strong>Validade:</strong> {{validade}}</p>
+        <p class="mb-1">
+          <strong>Status:</strong>
+          {{#if (eq status_validade "Vencido")}}
+            <span class="badge bg-danger">{{status_validade}}</span>
+          {{else if (eq status_validade "Próximo do vencimento")}}
+            <span class="badge bg-warning text-dark">{{status_validade}}</span>
+          {{else if (eq status_validade "Válido")}}
+            <span class="badge bg-success">{{status_validade}}</span>
+          {{else}}
+            <span class="badge bg-secondary">{{status_validade}}</span>
+          {{/if}}
+        </p>
+        <p class="mb-1">
+          <strong>Pago:</strong>
+          {{#if (eq pago "Sim")}}
+            <span class="badge bg-success">Sim</span>
+          {{else}}
+            <span class="badge bg-danger">Não</span>
+          {{/if}}
+        </p>
+      </div>
+      {{/each}}
+    </div>
+
   {{else}}
-    <p>Nenhum pacote encontrado para exibir.</p>
+    <div class="card text-dark p-4" style="background-color: #B395C0;">
+      <p class="text-center">Nenhum pacote encontrado para exibir.</p>
+    </div>
   {{/if}}
 </div>

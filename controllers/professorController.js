@@ -186,11 +186,19 @@ exports.adicionarAlunoNaAula = async (req, res) => {
 exports.deletarAluno = async (req, res) => {
   const { id } = req.params;
   try {
+    // Deleta pacotes vinculados ao aluno
+    await db.query('DELETE FROM pacotes_aluno WHERE aluno_id = ?', [id]);
+
+    // Deleta anamnese do aluno
+    await db.query('DELETE FROM anamneses WHERE aluno_id = ?', [id]);
+
+    // Agora deleta o aluno
     await db.query('DELETE FROM alunos WHERE id = ?', [id]);
+
     res.redirect('/professor/alunos');
   } catch (err) {
     console.error('Erro ao deletar aluno:', err);
-    res.status(500).send('Erro interno no servidor');
+    res.status(500).send('Erro ao deletar aluno.');
   }
 };
 
@@ -1197,8 +1205,15 @@ exports.verPacotesPorAluno = async (req, res) => {
 
 exports.adicionarPacote = async (req, res) => {
   const { aluno_id, creditos, validade } = req.body;
+
+  // Garante que a validade seja nula se estiver vazia
+  const validadeCorrigida = validade && validade.trim() !== '' ? validade : null;
+
   try {
-    await db.query('INSERT INTO pacotes_aluno (aluno_id, creditos, validade) VALUES (?, ?, ?)', [aluno_id, creditos, validade]);
+    await db.query(
+      'INSERT INTO pacotes_aluno (aluno_id, creditos, validade) VALUES (?, ?, ?)',
+      [aluno_id, creditos, validadeCorrigida]
+    );
     res.redirect('/professor/pacotes');
   } catch (err) {
     console.error('Erro ao adicionar pacote:', err);
@@ -1340,25 +1355,29 @@ exports.criarPacote = async (req, res) => {
     };
 
     // Se for passe livre, ignora a categoria
-    if (novoPacote.passe_livre) {
-      novoPacote.categoria_id = null;
-    }
+if (novoPacote.passe_livre) {
+  novoPacote.categoria_id = null;
+}
 
-    const [result] = await db.query(
-      `INSERT INTO pacotes_aluno (
-        aluno_id, categoria_id, tipo, quantidade_aulas, data_inicio, data_validade, pago, passe_livre
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        novoPacote.aluno_id,
-        novoPacote.categoria_id,
-        novoPacote.tipo,
-        novoPacote.quantidade_aulas,
-        novoPacote.data_inicio,
-        novoPacote.data_validade, // aqui vai null de forma correta
-        novoPacote.pago,
-        novoPacote.passe_livre
-      ]
-    );
+if (!novoPacote.data_validade || novoPacote.data_validade.trim() === '') {
+  novoPacote.data_validade = null;
+}
+
+const [result] = await db.query(
+  `INSERT INTO pacotes_aluno (
+    aluno_id, categoria_id, tipo, quantidade_aulas, data_inicio, data_validade, pago, passe_livre
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    novoPacote.aluno_id,
+    novoPacote.categoria_id,
+    novoPacote.tipo,
+    novoPacote.quantidade_aulas,
+    novoPacote.data_inicio,
+    novoPacote.data_validade,
+    novoPacote.pago,
+    novoPacote.passe_livre
+  ]
+);
 
     if (result.affectedRows > 0) {
       const pacote_id = result.insertId;

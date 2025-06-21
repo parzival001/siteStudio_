@@ -308,7 +308,7 @@ exports.listarPacotes = async (req, res) => {
     if (!alunoId) {
       return res.status(401).send('Usuário não logado.');
     }
-    console.log('Aluno ID da sessão:', alunoId);
+
     const [pacotes] = await db.query(`
       SELECT 
         p.id, 
@@ -326,39 +326,48 @@ exports.listarPacotes = async (req, res) => {
       WHERE p.aluno_id = ?
     `, [alunoId]);
 
-  pacotes.forEach(pacote => {
-  const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
-  const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
-  pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
+    pacotes.forEach(pacote => {
+      const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
+      const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
+      pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-  
-  if (pacote.validade) {
-    const validade = new Date(pacote.validade);
-    validade.setHours(0, 0, 0, 0);
+      // ✅ Formatar data de início
+      if (pacote.data_inicio) {
+        const inicio = new Date(pacote.data_inicio);
+        const dia = String(inicio.getDate()).padStart(2, '0');
+        const mes = String(inicio.getMonth() + 1).padStart(2, '0');
+        const ano = inicio.getFullYear();
+        pacote.data_inicio_formatada = `${dia}/${mes}/${ano}`;
+      } else {
+        pacote.data_inicio_formatada = '-';
+      }
 
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+      // ✅ Formatar validade e status
+      if (pacote.validade) {
+        const validade = new Date(pacote.validade);
+        validade.setHours(0, 0, 0, 0);
 
-    const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
 
-    pacote.status_validade = diasRestantes < 0
-      ? 'Vencido'
-      : diasRestantes <= 7
-        ? 'Próximo do vencimento'
-        : 'Válido';
+        const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
 
-    // Formata data
-    const dia = String(validade.getDate()).padStart(2, '0');
-    const mes = String(validade.getMonth() + 1).padStart(2, '0');
-    const ano = validade.getFullYear();
-    pacote.validade = `${dia}/${mes}/${ano}`;
-  } else {
-    pacote.status_validade = 'Sem validade';
-    pacote.validade = '-';
-  }
-});
+        pacote.status_validade = diasRestantes < 0
+          ? 'Vencido'
+          : diasRestantes <= 7
+            ? 'Próximo do vencimento'
+            : 'Válido';
 
-    console.log('Pacotes retornados:', pacotes);
+        const dia = String(validade.getDate()).padStart(2, '0');
+        const mes = String(validade.getMonth() + 1).padStart(2, '0');
+        const ano = validade.getFullYear();
+        pacote.validade = `${dia}/${mes}/${ano}`;
+      } else {
+        pacote.status_validade = 'Sem validade';
+        pacote.validade = '-';
+      }
+    });
+
     res.render('aluno/pacotes', { pacotes });
   } catch (err) {
     console.error('Erro ao listar pacotes:', err);

@@ -35,32 +35,40 @@
                 <td>{{this.quantidade_aulas}}</td>
                 <td>
                   <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="d-flex gap-1">
-                    <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}" value="{{this.aulas_utilizadas}}" class="form-control form-control-sm" required>
+                    <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
+                      value="{{this.aulas_utilizadas}}" class="form-control form-control-sm" required>
                     <input type="hidden" name="aluno_id" value="{{../aluno.id}}">
                     <button type="submit" class="btn btn-sm btn-outline-primary">Mover Aula</button>
                   </form>
                 </td>
                 <td>{{formatDate this.data_inicio}}</td>
-                <td>{{formatDate this.data_validade}}</td>
+                <td>
+                  {{#if this.data_validade}}
+                  {{formatDate this.data_validade}}
+                  {{else}}
+                  Sem validade
+                  {{/if}}
+                </td>
                 <td>
                   {{#if (eq this.status_validade "Vencido")}}
-                    <span class="badge bg-danger">Vencido</span>
+                  <span class="badge bg-danger">Vencido</span>
                   {{else if (eq this.status_validade "Vence em breve")}}
-                    <span class="badge bg-warning text-dark">Vence em breve</span>
+                  <span class="badge bg-warning text-dark">Vence em breve</span>
                   {{else}}
-                    <span class="badge bg-success">{{this.status_validade}}</span>
+                  <span class="badge bg-success">{{this.status_validade}}</span>
                   {{/if}}
                 </td>
                 <td>
                   {{#if this.pago}}
-                    <span class="badge bg-success">Sim</span>
+                  <span class="badge bg-success">Sim</span>
                   {{else}}
-                    <span class="badge bg-danger">Não</span>
+                  <span class="badge bg-danger">Não</span>
                   {{/if}}
                 </td>
                 <td>
                   <div class="d-flex flex-column gap-1">
-                    <form method="POST" action="/professor/pacotes/deletar/{{this.id}}" onsubmit="return confirm('Deseja excluir este pacote?');">
+                    <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"
+                      onsubmit="return confirm('Deseja excluir este pacote?');">
                       <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
                     </form>
                   </div>
@@ -81,34 +89,43 @@
           <p class="mb-1"><strong>Qtd Aulas:</strong> {{this.quantidade_aulas}}</p>
           <p class="mb-1"><strong>Usadas:</strong> {{this.aulas_utilizadas}}</p>
           <p class="mb-1"><strong>Início:</strong> {{formatDate this.data_inicio}}</p>
-          <p class="mb-1"><strong>Validade:</strong> {{formatDate this.data_validade}}</p>
+          <p class="mb-1">
+            <strong>Validade:</strong>
+            {{#if this.data_validade}}
+            {{formatDate this.data_validade}}
+            {{else}}
+            Sem validade
+            {{/if}}
+          </p>
           <p class="mb-1">
             <strong>Status:</strong>
             {{#if (eq this.status_validade "Vencido")}}
-              <span class="badge bg-danger">Vencido</span>
+            <span class="badge bg-danger">Vencido</span>
             {{else if (eq this.status_validade "Vence em breve")}}
-              <span class="badge bg-warning text-dark">Vence em breve</span>
+            <span class="badge bg-warning text-dark">Vence em breve</span>
             {{else}}
-              <span class="badge bg-success">{{this.status_validade}}</span>
+            <span class="badge bg-success">{{this.status_validade}}</span>
             {{/if}}
           </p>
           <p class="mb-2">
             <strong>Pago:</strong>
             {{#if this.pago}}
-              <span class="badge bg-success">Sim</span>
+            <span class="badge bg-success">Sim</span>
             {{else}}
-              <span class="badge bg-danger">Não</span>
+            <span class="badge bg-danger">Não</span>
             {{/if}}
           </p>
           <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">
             <div class="input-group input-group-sm">
-              <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}" value="{{this.aulas_utilizadas}}" class="form-control" required>
+              <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
+                value="{{this.aulas_utilizadas}}" class="form-control" required>
               <input type="hidden" name="aluno_id" value="{{../aluno.id}}">
               <button type="submit" class="btn btn-sm btn-outline-primary">Mover Aula</button>
             </div>
           </form>
           <div class="d-flex flex-column gap-1">
-            <form method="POST" action="/professor/pacotes/deletar/{{this.id}}" onsubmit="return confirm('Deseja excluir este pacote?');">
+            <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"
+              onsubmit="return confirm('Deseja excluir este pacote?');">
               <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
             </form>
           </div>
@@ -117,9 +134,9 @@
       </div>
 
       {{else}}
-        <div class="card text-dark p-4 text-center" style="background-color: #B395C0;">
-          <p>Nenhum pacote encontrado para este aluno.</p>
-        </div>
+      <div class="card text-dark p-4 text-center" style="background-color: #B395C0;">
+        <p>Nenhum pacote encontrado para este aluno.</p>
+      </div>
       {{/if}}
 
     </div>

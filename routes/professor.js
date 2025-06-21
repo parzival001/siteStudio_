@@ -94,7 +94,7 @@ router.get('/pacotes', async (req, res) => {
       JOIN alunos a ON p.aluno_id = a.id
       LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
     `);
-    res.render('professor/pacotes', { pacotes });
+    res.render('professor/pacotesAluno', { pacotes });
   } catch (err) {
     console.error('Erro ao buscar pacotes:', err);
     res.status(500).send('Erro ao buscar pacotes');
@@ -181,6 +181,7 @@ router.post('/categorias/:id/delete', professorController.deletarCategoria);
 router.get('/alunos/cadastrar', authProfessor, professorController.formCadastroAluno);
 router.post('/alunos/cadastrar', authProfessor, professorController.cadastrarAluno);
 router.get('/aluno/:id/deletar', authProfessor, professorController.deletarAluno);
+router.post('/alunos/:id/delete', authProfessor, professorController.deletarAluno);
 
 //Professor
 router.get('/professores', professorController.listarProfessores);
