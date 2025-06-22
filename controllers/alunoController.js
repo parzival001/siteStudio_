@@ -450,7 +450,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
   const hoje = new Date().toISOString().slice(0, 10);
 
   try {
-    // Buscar aulas fixas disponíveis com dados necessários e inscrição do aluno
+    // Buscar todas as aulas fixas, independentemente das vagas
     const [aulas] = await db.query(`
       SELECT 
         af.id, 
@@ -469,10 +469,10 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       JOIN professores p ON af.professor_id = p.id
       LEFT JOIN alunos_aulas_fixas aaf
         ON af.id = aaf.aula_fixa_id AND aaf.aluno_id = ?
-      WHERE af.vagas > 0
+      -- Removido filtro de vagas para mostrar todas as aulas
     `, [alunoId]);
 
-    // Buscar todos os pacotes válidos do aluno (categoria + passe livre)
+    // Buscar pacotes válidos do aluno
     const [pacotes] = await db.query(`
       SELECT categoria_id, passe_livre, quantidade_aulas, aulas_utilizadas, data_validade
       FROM pacotes_aluno
@@ -481,14 +481,14 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         AND (quantidade_aulas - aulas_utilizadas) > 0
     `, [alunoId, hoje]);
 
-    // Função para verificar se aluno tem pacote para categoria ou passe livre
+    // Verifica se aluno tem pacote para categoria ou passe livre
     function temPacoteParaCategoria(categoriaId) {
       return pacotes.some(pacote => 
         pacote.passe_livre === 1 || pacote.categoria_id === categoriaId
       );
     }
 
-    // Mapear aulas adicionando temPacote e pode_desistir
+    // Mapeia aulas adicionando flags temPacote e pode_desistir
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
       const agora = new Date();
@@ -496,7 +496,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       let podeDesistir = false;
       if (dataHoraAula) {
         const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
-        podeDesistir = diffHoras >= 2; // regra para desistir
+        podeDesistir = diffHoras >= 2;
       }
 
       return {
