@@ -80,9 +80,9 @@ router.get('/pacotes/editar/:id', professorController.editarPacote);
 router.post('/pacotes/deletar/:id', professorController.deletarPacote);
 router.get('/pacotes/novo/:id', professorController.formNovoPacote);
 router.post('/pacotes/novo', professorController.criarPacote);
-//router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
+router.get('/pacotes/aluno/:id', professorController.verPacotesPorAluno);
 router.post('/pacotes/criar', professorController.criarPacote);
-//router.get('/pacotes/:id', professorController.verPacotesPorAluno);
+router.get('/pacotes/:id', professorController.verPacotesPorAluno);
 router.get('pacotes/alunos/:aluno_id', professorController.listarPacotesPorAluno);
 
 router.post('/pacotes', authProfessor, professorController.adicionarPacote);

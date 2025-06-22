@@ -264,8 +264,10 @@ router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
 });
 
 
+//////////////////////////////////////////////AULAS FIXAS /////////////////////////////////////////////
 
-
-
+router.get('/aulas-fixas', authAluno, alunoController.listarAulasFixasDisponiveis);
+router.post('/aulas-fixas/inscrever/:id', authAluno, alunoController.inscreverNaAulaFixa);
+router.post('/aulas-fixas/desistir/:aulaId', authAluno, alunoController.desistirAulaFixa);
 
 module.exports = router;

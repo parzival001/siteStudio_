@@ -383,7 +383,7 @@ exports.historicoAluno = async (req, res) => {
     const [historico] = await pool.query(`
       SELECT h.*, c.nome AS tipo_nome, p.nome AS professor_nome
       FROM historico_aulas h
-      JOIN categorias c ON c.id = h.categoria_id
+      JOIN categorias c ON categoria_id = h.categoria_id
       JOIN professores p ON p.id = h.professor_id
       WHERE h.aluno_id = ?
       ORDER BY h.data DESC, h.horario DESC
@@ -394,5 +394,316 @@ exports.historicoAluno = async (req, res) => {
   } catch (err) {
     console.error('Erro ao buscar histórico:', err.message);
     res.status(500).send('Erro ao buscar histórico');
+  }
+};
+
+
+
+
+////////////////////////////////////////////////AULAS FIXAS/////////////////////////////////////////////////
+
+// Função para calcular a próxima data da aula
+function proximaDataDoDiaSemana(diaSemana, horario) {
+  const diasSemana = {
+    'domingo': 0,
+    'segunda-feira': 1,
+    'segunda': 1,
+    'terça-feira': 2,
+    'terça': 2,
+    'quarta-feira': 3,
+    'quarta': 3,
+    'quinta-feira': 4,
+    'quinta': 4,
+    'sexta-feira': 5,
+    'sexta': 5,
+    'sábado': 6,
+    'sabado': 6
+  };
+
+  const diaLower = diaSemana.toLowerCase();
+  const diaAlvo = diasSemana[diaLower];
+  if (diaAlvo === undefined) {
+    throw new Error('Dia da semana inválido: ' + diaSemana);
+  }
+
+  const hoje = new Date();
+  const hojeDia = hoje.getDay();
+
+  // Calcula diferença em dias para o próximo dia da semana alvo
+  let diffDias = diaAlvo - hojeDia;
+  if (diffDias < 0 || (diffDias === 0 && hoje.getHours() > parseInt(horario.split(':')[0]))) {
+    diffDias += 7; // Próxima semana
+  }
+
+  const proximaData = new Date(hoje);
+  proximaData.setDate(hoje.getDate() + diffDias);
+
+  const [h, m] = horario.split(':');
+  proximaData.setHours(parseInt(h), parseInt(m), 0, 0);
+
+  return proximaData;
+}
+
+// Controller listar aulas fixas disponíveis
+exports.listarAulasFixasDisponiveis = async (req, res) => {
+  const alunoId = req.session.user?.id;
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  try {
+    // Buscar aulas fixas disponíveis com dados necessários e inscrição do aluno
+    const [aulas] = await db.query(`
+      SELECT 
+        af.id, 
+        c.nome AS categoria_nome, 
+        p.nome AS professor_nome,
+        af.dia_semana, 
+        af.horario, 
+        af.vagas,
+        af.categoria_id,
+        CASE 
+          WHEN aaf.aluno_id IS NOT NULL THEN 1
+          ELSE 0
+        END AS inscrito
+      FROM aulas_fixas af
+      JOIN categorias c ON af.categoria_id = c.categoria_id
+      JOIN professores p ON af.professor_id = p.id
+      LEFT JOIN alunos_aulas_fixas aaf
+        ON af.id = aaf.aula_fixa_id AND aaf.aluno_id = ?
+      WHERE af.vagas > 0
+    `, [alunoId]);
+
+    // Buscar todos os pacotes válidos do aluno (categoria + passe livre)
+    const [pacotes] = await db.query(`
+      SELECT categoria_id, passe_livre, quantidade_aulas, aulas_utilizadas, data_validade
+      FROM pacotes_aluno
+      WHERE aluno_id = ?
+        AND (data_validade IS NULL OR data_validade >= ?)
+        AND (quantidade_aulas - aulas_utilizadas) > 0
+    `, [alunoId, hoje]);
+
+    // Função para verificar se aluno tem pacote para categoria ou passe livre
+    function temPacoteParaCategoria(categoriaId) {
+      return pacotes.some(pacote => 
+        pacote.passe_livre === 1 || pacote.categoria_id === categoriaId
+      );
+    }
+
+    // Mapear aulas adicionando temPacote e pode_desistir
+    const aulasComExtras = aulas.map(aula => {
+      const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
+      const agora = new Date();
+
+      let podeDesistir = false;
+      if (dataHoraAula) {
+        const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
+        podeDesistir = diffHoras >= 2; // regra para desistir
+      }
+
+      return {
+        ...aula,
+        temPacote: temPacoteParaCategoria(aula.categoria_id),
+        pode_desistir: podeDesistir,
+      };
+    });
+
+    res.render('aluno/aulasFixasDisponiveis', { aulas: aulasComExtras });
+  } catch (err) {
+    console.error('Erro ao listar aulas fixas:', err);
+    res.status(500).send('Erro interno ao buscar aulas fixas');
+  }
+};
+
+exports.inscreverNaAulaFixa = async (req, res) => {
+  const alunoId = req.session.user?.id;
+  const aulaFixaId = req.params.id;
+
+  try {
+    // 1. Buscar a aula fixa e categoria dela
+    const [[aula]] = await db.query(
+      `SELECT categoria_id, vagas FROM aulas_fixas WHERE id = ?`,
+      [aulaFixaId]
+    );
+
+    if (!aula) {
+      return res.status(404).send('Aula fixa não encontrada.');
+    }
+
+    if (aula.vagas <= 0) {
+      return res.status(400).send('Não há vagas disponíveis nessa aula.');
+    }
+
+    // 2. Verificar se aluno já está inscrito na aula fixa
+    const [[inscrito]] = await db.query(
+      `SELECT * FROM alunos_aulas_fixas WHERE aluno_id = ? AND aula_fixa_id = ?`,
+      [alunoId, aulaFixaId]
+    );
+
+    if (inscrito) {
+      return res.status(400).send('Você já está inscrito nessa aula.');
+    }
+
+    // 3. Verificar se aluno tem pacote válido e com créditos para essa categoria
+    const hoje = new Date().toISOString().slice(0, 10); // formato 'YYYY-MM-DD'
+    const [pacotes] = await db.query(
+      `SELECT * FROM pacotes_aluno
+       WHERE aluno_id = ?
+         AND (categoria_id = ? OR passe_livre = 1)
+         AND (data_validade IS NULL OR data_validade >= ?)
+         AND (quantidade_aulas - aulas_utilizadas) > 0
+       ORDER BY data_validade ASC
+       LIMIT 1`,
+      [alunoId, aula.categoria_id, hoje]
+    );
+
+    if (pacotes.length === 0) {
+      // Se não tem pacote válido, recarrega a lista de aulas com flag para mensagem
+      const [aulas] = await db.query(`
+        SELECT af.id, af.dia_semana, af.horario, af.vagas, af.categoria_id,
+               c.nome AS categoria_nome,
+               p.nome AS professor_nome,
+               CASE WHEN aaf.aluno_id IS NOT NULL THEN 1 ELSE 0 END AS inscrito
+        FROM aulas_fixas af
+        JOIN categorias c ON af.categoria_id = c.categoria_id
+        JOIN professores p ON af.professor_id = p.id
+        LEFT JOIN alunos_aulas_fixas aaf ON af.id = aaf.aula_fixa_id AND aaf.aluno_id = ?
+        WHERE af.vagas > 0
+      `, [alunoId]);
+
+      // Configura temPacote para cada aula:
+      aulas.forEach(aulaItem => {
+        // Para a aula que tentou inscrever e falhou: false
+        // Para as outras: true (assumindo que tem pacote para as outras)
+        aulaItem.temPacote = aulaItem.id !== parseInt(aulaFixaId);
+      });
+
+      return res.render('aluno/aulasFixas', {
+        aulas,
+        mensagemErroId: parseInt(aulaFixaId),
+        mensagemErroTexto: 'Você não possui pacote válido com aulas disponíveis para essa categoria.'
+      });
+    }
+
+    const pacote = pacotes[0];
+
+    // 4. Inserir inscrição na aula fixa
+    await db.query(
+      `INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id) VALUES (?, ?)`,
+      [alunoId, aulaFixaId]
+    );
+
+    // 5. Diminuir uma aula disponível no pacote
+    await db.query(
+      `UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?`,
+      [pacote.id]
+    );
+
+    // 6. Diminuir a vaga da aula fixa
+    await db.query(
+      `UPDATE aulas_fixas SET vagas = vagas - 1 WHERE id = ?`,
+      [aulaFixaId]
+    );
+
+    res.redirect('/aluno/aulas-fixas');
+
+  } catch (err) {
+    console.error('Erro ao inscrever em aula fixa:', err);
+    res.status(500).send('Erro ao inscrever na aula');
+  }
+};
+
+exports.desistirAulaFixa = async (req, res) => {
+  const alunoId = req.session.user.id;
+  const aulaId = req.params.aulaId;
+
+  try {
+    const [[aula]] = await db.query(`
+      SELECT categoria_id, dia_semana, horario FROM aulas_fixas WHERE id = ?
+    `, [aulaId]);
+
+    if (!aula) {
+      return res.status(404).send('Aula fixa não encontrada.');
+    }
+
+    const diasSemanaMap = {
+      domingo: 0,
+      segunda: 1,
+      terca: 2,
+      terça: 2,
+      quarta: 3,
+      quinta: 4,
+      sexta: 5,
+      sabado: 6,
+      sábado: 6
+    };
+
+    function getProximaDataAula(diaSemana, horario) {
+      const hoje = new Date();
+      const diaAtual = hoje.getDay();
+
+      const diaSemanaNum = diasSemanaMap[diaSemana.toLowerCase()];
+      if (diaSemanaNum === undefined) throw new Error(`Dia da semana inválido: ${diaSemana}`);
+
+      let diasAteAula = diaSemanaNum - diaAtual;
+      if (diasAteAula < 0) diasAteAula += 7;
+
+      const proximaAula = new Date(hoje);
+      proximaAula.setDate(hoje.getDate() + diasAteAula);
+
+      const [hora, minuto] = horario.split(':').map(Number);
+      proximaAula.setHours(hora, minuto, 0, 0);
+
+      if (proximaAula <= hoje) proximaAula.setDate(proximaAula.getDate() + 7);
+
+      return proximaAula;
+    }
+
+    const dataAula = getProximaDataAula(aula.dia_semana, aula.horario);
+    const agora = new Date();
+
+    const diffHoras = (dataAula - agora) / (1000 * 60 * 60);
+
+    if (diffHoras < 2) {
+      return res.status(400).send('Desistência só permitida com no mínimo 2 horas de antecedência.');
+    }
+
+    // Remove inscrição do aluno
+    await db.query(`
+      DELETE FROM alunos_aulas_fixas WHERE aluno_id = ? AND aula_fixa_id = ?
+    `, [alunoId, aulaId]);
+
+    // Aumenta 1 vaga na aula
+    await db.query(`
+      UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?
+    `, [aulaId]);
+
+    // *** Devolver crédito no pacote ***
+
+    const hojeISO = new Date().toISOString().slice(0, 10);
+
+    // Buscar pacote válido usado para essa categoria (mesmo critério da inscrição)
+    const [pacotes] = await db.query(`
+      SELECT id, aulas_utilizadas FROM pacotes_aluno
+      WHERE aluno_id = ?
+        AND (categoria_id = ? OR passe_livre = 1)
+        AND (data_validade IS NULL OR data_validade >= ?)
+        AND aulas_utilizadas > 0
+      ORDER BY data_validade ASC
+      LIMIT 1
+    `, [alunoId, aula.categoria_id, hojeISO]);
+
+    if (pacotes.length > 0) {
+      const pacote = pacotes[0];
+
+      // Decrementar aulas_utilizadas (devolver crédito)
+      await db.query(`
+        UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas - 1 WHERE id = ?
+      `, [pacote.id]);
+    }
+
+    res.redirect('/aluno/aulas-fixas');
+
+  } catch (error) {
+    console.error('Erro ao desistir da aula fixa:', error);
+    res.status(500).send('Erro interno no servidor');
   }
 };

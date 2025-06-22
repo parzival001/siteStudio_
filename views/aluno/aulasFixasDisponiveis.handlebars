@@ -1,0 +1,48 @@
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+
+      <h2 class="text-center mb-4">Aulas Fixas Disponíveis</h2>
+
+      {{#if aulas.length}}
+        {{#each aulas}}
+          <div class="border rounded p-4 mb-4" style="background-color: #B395C0;">
+            <h5>{{categoria_nome}} - {{professor_nome}}</h5>
+            <p>{{dia_semana}} - {{horario}}</p>
+            <p>Vagas: {{vagas}}</p>
+
+            {{#if inscrito}}
+              <button disabled class="btn btn-outline-custom">Já Inscrito</button>
+              <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
+                <button class="btn btn-danger">Desistir</button>
+              </form>
+            {{else}}
+              {{#if temPacote}}
+                <form action="/aluno/aulas-fixas/inscrever/{{id}}" method="POST" class="d-inline">
+                  <button class="btn btn-outline-custom">Inscrever</button>
+                </form>
+              {{else}}
+                {{#eq ../mensagemErroId id}}
+                  <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
+                    {{../mensagemErroTexto}}
+                  </div>
+                {{else}}
+                  <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
+                    Você não possui pacote válido com aulas disponíveis para essa categoria.
+                  </div>
+                {{/eq}}
+              {{/if}}
+            {{/if}}
+          </div>
+        {{/each}}
+      {{else}}
+        <p class="text-center">Nenhuma aula fixa disponível no momento.</p>
+      {{/if}}
+
+      <div class="text-center mt-4">
+        <a href="/aluno/home" class="btn btn-outline-custom">Voltar para Home</a>
+      </div>
+
+    </div>
+  </div>
+</div>

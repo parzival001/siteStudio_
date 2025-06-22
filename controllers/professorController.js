@@ -1204,17 +1204,34 @@ exports.verPacotesPorAluno = async (req, res) => {
 };
 
 exports.adicionarPacote = async (req, res) => {
-  const { aluno_id, creditos, validade } = req.body;
-
-  // Garante que a validade seja nula se estiver vazia
-  const validadeCorrigida = validade && validade.trim() !== '' ? validade : null;
+  const {
+    aluno_id,
+    categoria_id,
+    tipo,
+    quantidade_aulas,
+    data_inicio,
+    data_validade
+  } = req.body;
 
   try {
-    await db.query(
-      'INSERT INTO pacotes_aluno (aluno_id, creditos, validade) VALUES (?, ?, ?)',
-      [aluno_id, creditos, validadeCorrigida]
-    );
-    res.redirect('/professor/pacotes');
+    // Garante que data_validade seja nula se estiver vazia
+    const validadeFinal = data_validade && data_validade.trim() !== '' ? data_validade : null;
+
+    // Insere o novo pacote na tabela com os campos corretos
+    await db.query(`
+      INSERT INTO pacotes_aluno 
+        (aluno_id, categoria_id, tipo, quantidade_aulas, data_inicio, data_validade)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      aluno_id,
+      categoria_id || null, // caso esteja em branco
+      tipo,
+      quantidade_aulas,
+      data_inicio,
+      validadeFinal
+    ]);
+
+    res.redirect(`/professor/pacotes/aluno/${aluno_id}`);
   } catch (err) {
     console.error('Erro ao adicionar pacote:', err);
     res.status(500).send('Erro interno no servidor');
@@ -1313,7 +1330,9 @@ exports.verPacotesAluno = async (req, res) => {
 
 // Cria novo pacote para um aluno
 exports.criarPacote = async (req, res) => {
-  console.log("Data recebida:", req.body.data_inicio);
+
+  console.log('Aluno selecionado:', req.body.aluno_id);
+  console.log('Dados recebidos:', req.body);
 
   try {
     const dataBruta = req.body.data_inicio;
