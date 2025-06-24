@@ -1,24 +1,47 @@
-<h2>Editar Pacote</h2>
-<form action="/professor/pacotes/editar/{{pacote.id}}" method="POST">
-  <label>Aluno ID: {{pacote.aluno_id}}</label><br>
+<form method="POST" action="/professor/pacotes/editar/{{pacote.id}}">
+  <input type="hidden" name="aluno_id" value="{{pacote.aluno_id}}">
 
-  <label>Categoria</label>
-  <select name="categoria_id">
-    {{#each categorias}}
-      <option value="{{id}}" {{#ifCond this.id '==' ../pacote.categoria_id}}selected{{/ifCond}}>
-        {{nome}}
+  <!-- Tipo -->
+  <div class="mb-3">
+    <label class="form-label">Tipo:</label>
+    <select name="tipo" class="form-select" required>
+      <option value="mensal" {{#ifCond pacote.tipo '==' 'mensal' }}selected{{/ifCond}}>Mensal</option>
+      <option value="trimestral" {{#ifCond pacote.tipo '==' 'trimestral' }}selected{{/ifCond}}>Trimestral</option>
+      <option value="semestral" {{#ifCond pacote.tipo '==' 'semestral' }}selected{{/ifCond}}>Semestral</option>
+      <option value="anual" {{#ifCond pacote.tipo '==' 'anual' }}selected{{/ifCond}}>Anual</option>
+      <option value="avulsa" {{#ifCond pacote.tipo '==' 'avulsa' }}selected{{/ifCond}}>Avulsa</option>
+    </select>
+  </div>
+
+  <!-- Categoria -->
+  <div class="mb-3">
+    <label class="form-label">Categoria:</label>
+    <select name="categoria_id" class="form-select" required>
+      {{#each categorias}}
+      <option value="{{categoria_id}}" {{#ifCond ../pacote.categoria_id '==' categoria_id}}selected{{/ifCond}}>{{nome}}
       </option>
-    {{/each}}
-  </select><br>
+      {{/each}}
+    </select>
+  </div>
 
-  <label>Quantidade de Aulas</label>
-  <input type="number" name="quantidade" value="{{pacote.quantidade}}"><br>
+  <!-- Quantidade -->
+  <div class="mb-3">
+    <label class="form-label">Quantidade de Aulas:</label>
+    <input type="number" name="quantidade_aulas" class="form-control" value="{{pacote.quantidade_aulas}}" required>
+  </div>
 
-  <label>Validade</label>
-  <input type="date" name="validade" value="{{formatDate pacote.validade}}"><br>
+  <!-- Data de Início -->
+  <div class="mb-3">
+    <label class="form-label">Data de Início:</label>
+    <input type="date" name="data_inicio" class="form-control" value="{{pacote.data_inicio}}">
+  </div>
 
-  <label>Pago?</label>
-  <input type="checkbox" name="pago" {{#if pacote.pago}}checked{{/if}}><br>
+  <!-- Pago -->
+  <div class="mb-3 form-check">
+    <input class="form-check-input" type="checkbox" name="pago" value="1" id="pagoCheck" {{#if
+      pacote.pago}}checked{{/if}}>
+    <label class="form-check-label" for="pagoCheck">Pago</label>
+  </div>
 
-  <button type="submit">Salvar</button>
+  <button type="submit" class="btn btn-outline-custom w-100">Salvar Alterações</button>
 </form>

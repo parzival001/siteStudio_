@@ -250,3 +250,4 @@ exports.logout = (req, res) => {
 app.get('/', (req, res) => {
   res.render('login'); // Isso renderiza a view "home.handlebars"
 });
+

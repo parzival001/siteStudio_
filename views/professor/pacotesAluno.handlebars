@@ -67,6 +67,7 @@
                 </td>
                 <td>
                   <div class="d-flex flex-column gap-1">
+                    <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary">Editar</a>
                     <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"
                       onsubmit="return confirm('Deseja excluir este pacote?');">
                       <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
@@ -129,6 +130,7 @@
               <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
             </form>
           </div>
+          <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary mb-2">Editar</a>
         </div>
         {{/each}}
       </div>
@@ -142,3 +144,4 @@
     </div>
   </div>
 </div>
+
