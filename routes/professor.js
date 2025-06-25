@@ -153,10 +153,7 @@ router.get('/adicionar-aluno/:id', authProfessor, professorController.formAdicio
 router.post('/adicionar-aluno/:id', authProfessor, professorController.adicionarAlunoNaAula);
 
 
-// Formulário de edição de aula fixa
-router.get('/aulas-fixas/editar/:id', authProfessor, professorController.formEditarAulaFixa);
-// Atualizar aula fixa
-router.post('/aulas-fixas/editar/:id', authProfessor, professorController.editarAulaFixa);
+
 // Deletar aula fixa
 router.post('/aulas-fixas/deletar/:id', authProfessor, professorController.deletarAulaFixa);
 //router.post('/aulas-fixas/remover-aluno', authProfessor, professorController.removerAlunoAulaFixa);
@@ -356,17 +353,7 @@ router.post('/aulas-fixas/nova', authProfessor, async (req, res) => {
   }
 });
 
-router.get('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
-  const id = req.params.id;
-  try {
-    const [aula] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
-    const [categorias] = await db.query('SELECT * FROM categorias');
-    const [professores] = await db.query('SELECT * FROM professores');
-    res.render('professor/editarAulaFixa', { aula: aula[0], categorias, professores });
-  } catch (err) {
-    res.status(500).send('Erro ao carregar aula fixa');
-  }
-});
+
 
 router.post('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
   const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;

@@ -9,8 +9,8 @@
         <a href="/professor/pacotes/novo/{{aluno.id}}" class="btn btn-outline-custom">+ Novo Pacote</a>
       </div>
 
-      <!-- VISUALIZAÇÃO EM TABELA (DESKTOP) -->
       {{#if pacotes.length}}
+      <!-- VISUALIZAÇÃO EM TABELA (DESKTOP) -->
       <div class="card p-4 text-dark d-none d-md-block" style="background-color: #B395C0;">
         <div class="table-responsive">
           <table class="table table-bordered table-hover align-middle mb-0">
@@ -44,25 +44,35 @@
                 <td>{{formatDate this.data_inicio}}</td>
                 <td>
                   {{#if this.data_validade}}
-                  {{formatDate this.data_validade}}
+                    {{formatDate this.data_validade}}
                   {{else}}
-                  Sem validade
+                    Sem validade
                   {{/if}}
                 </td>
                 <td>
                   {{#if (eq this.status_validade "Vencido")}}
-                  <span class="badge bg-danger">Vencido</span>
+                    <span class="badge bg-danger">Vencido</span>
                   {{else if (eq this.status_validade "Vence em breve")}}
-                  <span class="badge bg-warning text-dark">Vence em breve</span>
+                    <span class="badge bg-warning text-dark">Vence em breve</span>
                   {{else}}
-                  <span class="badge bg-success">{{this.status_validade}}</span>
+                    <span class="badge bg-success">{{this.status_validade}}</span>
                   {{/if}}
                 </td>
                 <td>
                   {{#if this.pago}}
-                  <span class="badge bg-success">Sim</span>
+                    <span class="badge bg-success">Sim</span>
                   {{else}}
-                  <span class="badge bg-danger">Não</span>
+                    <span class="badge bg-danger">Não</span>
+                  {{/if}}
+
+                  {{#if this.usos}}
+                    <br />
+                    <small><strong>Créditos usados (aulas fixas):</strong></small>
+                    <ul style="list-style:none; padding-left:0; max-height: 100px; overflow-y:auto; margin-top:4px;">
+                      {{#each this.usos}}
+                        <li style="font-size: 0.85em;">{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
+                      {{/each}}
+                    </ul>
                   {{/if}}
                 </td>
                 <td>
@@ -93,29 +103,41 @@
           <p class="mb-1">
             <strong>Validade:</strong>
             {{#if this.data_validade}}
-            {{formatDate this.data_validade}}
+              {{formatDate this.data_validade}}
             {{else}}
-            Sem validade
+              Sem validade
             {{/if}}
           </p>
           <p class="mb-1">
             <strong>Status:</strong>
             {{#if (eq this.status_validade "Vencido")}}
-            <span class="badge bg-danger">Vencido</span>
+              <span class="badge bg-danger">Vencido</span>
             {{else if (eq this.status_validade "Vence em breve")}}
-            <span class="badge bg-warning text-dark">Vence em breve</span>
+              <span class="badge bg-warning text-dark">Vence em breve</span>
             {{else}}
-            <span class="badge bg-success">{{this.status_validade}}</span>
+              <span class="badge bg-success">{{this.status_validade}}</span>
             {{/if}}
           </p>
           <p class="mb-2">
             <strong>Pago:</strong>
             {{#if this.pago}}
-            <span class="badge bg-success">Sim</span>
+              <span class="badge bg-success">Sim</span>
             {{else}}
-            <span class="badge bg-danger">Não</span>
+              <span class="badge bg-danger">Não</span>
             {{/if}}
           </p>
+
+          {{#if this.usos}}
+          <div style="max-height: 120px; overflow-y: auto; margin-top: 8px; font-size: 0.9em;">
+            <strong>Créditos usados (aulas fixas):</strong>
+            <ul style="list-style:none; padding-left:0; margin-top: 4px;">
+              {{#each this.usos}}
+                <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
+              {{/each}}
+            </ul>
+          </div>
+          {{/if}}
+
           <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">
             <div class="input-group input-group-sm">
               <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
@@ -144,4 +166,3 @@
     </div>
   </div>
 </div>
-

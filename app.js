@@ -7,7 +7,7 @@ const bcrypt = require('bcrypt'); // Incluído para usar no login
 const upload = require('./utils/upload');
 const app = express();
 require('./jobs/aniversario');
-
+require('./cron');
 
 
 
@@ -250,4 +250,7 @@ exports.logout = (req, res) => {
 app.get('/', (req, res) => {
   res.render('login'); // Isso renderiza a view "home.handlebars"
 });
+
+
+
 

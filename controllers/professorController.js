@@ -402,16 +402,37 @@ exports.listaAlunos = async (req, res) => {
 
 
 
+
 /////////////////////////////////////////////////AULAS FIXAS///////////////////////////////////////////
 exports.listarAulasFixas = async (req, res) => {
   try {
     const [aulasFixas] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
-      JOIN categorias c     ON af.categoria_id  = c.categoria_id
-      JOIN professores p    ON af.professor_id  = p.id
+      JOIN categorias c ON af.categoria_id = c.categoria_id
+      JOIN professores p ON af.professor_id = p.id
       ORDER BY af.dia_semana, af.horario
     `);
+
+    for (const aula of aulasFixas) {
+      const [alunosFixo] = await db.query(`
+        SELECT aaf.aluno_id, a.nome 
+        FROM alunos_aulas_fixas aaf
+        JOIN alunos a ON a.id = aaf.aluno_id
+        WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = true
+      `, [aula.id]);
+
+      const [alunosTemporarios] = await db.query(`
+        SELECT aaf.aluno_id, a.nome 
+        FROM alunos_aulas_fixas aaf
+        JOIN alunos a ON a.id = aaf.aluno_id
+        WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = false
+      `, [aula.id]);
+
+      aula.alunosFixo = alunosFixo;
+      aula.alunosTemporarios = alunosTemporarios;
+    }
+
     res.render('professor/novaAulaFixa', { aulasFixas });
   } catch (err) {
     console.error('Erro ao listar aulas fixas:', err);
@@ -456,20 +477,6 @@ exports.salvarAulaFixa = async (req, res) => {
   }
 };
 
-// Exibe form para editar uma aula fixa existente
-exports.formEditarAulaFixa = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  try {
-    const [[aula]] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
-    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
-    const [professores] = await db.query('SELECT id, nome FROM professores');
-    res.render('professor/editarAulaFixa', { aula, categorias, professores });
-  } catch (err) {
-    console.error('Erro ao buscar aula fixa para editar:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
 exports.removerAlunoAulaFixa = async (req, res) => {
   const { aulaId, alunoId } = req.params;
 
@@ -493,24 +500,6 @@ exports.removerAlunoAulaFixa = async (req, res) => {
   }
 };
 
-// Atualiza a aula fixa editada
-exports.editarAulaFixa = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
-  try {
-    await db.query(
-      `UPDATE aulas_fixas
-         SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
-       WHERE id = ?`,
-      [categoria_id, professor_id, dia_semana, horario, vagas, id]
-    );
-    res.redirect('/professor/aulas-fixas/nova');
-  } catch (err) {
-    console.error('Erro ao atualizar aula fixa:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
 // Remove uma aula fixa
 exports.deletarAulaFixa = async (req, res) => {
   const id = parseInt(req.params.id, 10);
@@ -522,6 +511,102 @@ exports.deletarAulaFixa = async (req, res) => {
     res.status(500).send('Erro interno no servidor');
   }
 };
+
+exports.adicionarAlunoAulaFixa = async (req, res) => {
+  const { aulaId } = req.params;
+  const { aluno_id, eh_fixo } = req.body;
+
+  try {
+    await db.query(`
+      INSERT INTO alunos_aulas_fixas (aula_fixa_id, aluno_id, eh_fixo)
+      VALUES (?, ?, ?)
+    `, [aulaId, aluno_id, eh_fixo === 'true']);
+
+    await db.query(`
+      UPDATE aulas_fixas SET vagas = vagas - 1 WHERE id = ?
+    `, [aulaId]);
+
+    res.redirect('/professor/aulas-fixas/nova');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao adicionar aluno na aula fixa');
+  }
+};
+
+
+function proximaDataSemana(diaSemana) {
+  const hoje = new Date();
+  const diaAtual = hoje.getDay();
+  const diasAteProxima = (diaSemana - diaAtual + 7) % 7 || 7;
+
+  const proximaData = new Date(hoje);
+  proximaData.setDate(hoje.getDate() + diasAteProxima);
+  return proximaData.toISOString().split('T')[0];
+}
+
+exports.gerarAulasFixas = async () => {
+  try {
+    console.log('⏳ Gerando aulas fixas da semana...');
+
+    const [aulasFixas] = await db.query(`
+      SELECT af.id, af.categoria_id, af.professor_id, af.dia_semana, af.horario
+      FROM aulas_fixas af
+    `);
+
+    for (const aula of aulasFixas) {
+      const dataAula = proximaDataSemana(aula.dia_semana);
+
+      // Verifica se aula já foi criada para essa data
+      const [aulaExistente] = await db.query(`
+        SELECT id FROM aulas
+        WHERE aula_fixa_id = ? AND data = ?
+      `, [aula.id, dataAula]);
+
+      if (aulaExistente.length > 0) {
+        console.log(`🔁 Aula fixa ${aula.id} já criada para ${dataAula}`);
+        continue;
+      }
+
+      // Cria nova aula
+      const [resultado] = await db.query(`
+        INSERT INTO aulas (data, horario, professor_id, categoria_id, aula_fixa_id)
+        VALUES (?, ?, ?, ?, ?)
+      `, [dataAula, aula.horario, aula.professor_id, aula.categoria_id, aula.id]);
+
+      const novaAulaId = resultado.insertId;
+      console.log(`✅ Aula criada para ${dataAula} (ID: ${novaAulaId})`);
+
+      // Pega alunos fixos da aula
+      const [alunosFixos] = await db.query(`
+        SELECT aluno_id FROM alunos_aulas_fixas
+        WHERE aula_fixa_id = ?
+      `, [aula.id]);
+
+      // Insere alunos fixos na nova aula
+      for (const { aluno_id } of alunosFixos) {
+        await db.query(`
+          INSERT INTO aulas_alunos (aula_id, aluno_id, tipo_participacao)
+          VALUES (?, ?, 'fixo')
+        `, [novaAulaId, aluno_id]);
+      }
+
+      console.log(`👥 ${alunosFixos.length} alunos fixos adicionados à aula ${novaAulaId}`);
+    }
+
+    console.log('🏁 Geração de aulas fixas concluída.');
+  } catch (error) {
+    console.error('❌ Erro ao gerar aulas fixas:', error);
+  }
+};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1301,22 +1386,19 @@ exports.listarPacotesPorAluno = async (req, res) => {
     const [dadosAluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [aluno_id]);
     const aluno = dadosAluno[0];
 
-    function isValidDate(d) {
-      return d instanceof Date && !isNaN(d);
-    }
-
-    pacotes.forEach(pacote => {
+    for (const pacote of pacotes) {
+      // Cálculo de aulas restantes
       const aulasTotal = parseInt(pacote.quantidade_aulas, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      // Formatando data de início
+      // Formatação data de início
       if (pacote.data_inicio) {
         const dataInicio = new Date(pacote.data_inicio);
         pacote.data_inicio = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
       }
 
-      // Formatando validade e status
+      // Validade e status
       if (!pacote.data_validade || pacote.data_validade === '0000-00-00' || pacote.tipo === 'avulsa') {
         pacote.data_validade = '—';
         pacote.status_validade = 'Sem validade';
@@ -1334,8 +1416,25 @@ exports.listarPacotesPorAluno = async (req, res) => {
         pacote.data_validade = `${String(validade.getDate()).padStart(2, '0')}/${String(validade.getMonth() + 1).padStart(2, '0')}/${validade.getFullYear()}`;
       }
 
-      pacote.pago = pacote.pago ? true : false;
-    });
+      pacote.pago = !!pacote.pago;
+
+      // Buscar usos do pacote
+      const [usos] = await db.query(`
+        SELECT uc.data_utilizacao, af.dia_semana, af.horario, c.nome AS categoria_nome
+        FROM uso_creditos uc
+        JOIN aulas_fixas af ON uc.aula_fixa_id = af.id
+        LEFT JOIN categorias c ON af.categoria_id = c.categoria_id
+        WHERE uc.pacote_id = ?
+        ORDER BY uc.data_utilizacao DESC
+      `, [pacote.id]);
+
+      pacote.usos = usos.map(u => ({
+        data: new Date(u.data_utilizacao).toLocaleDateString('pt-BR'),
+        diaSemana: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][u.dia_semana] || '',
+        horario: u.horario ? u.horario.slice(0, 5) : '',
+        categoria: u.categoria_nome || ''
+      }));
+    }
 
     res.render('professor/listaPacotes', { pacotes, aluno });
 
