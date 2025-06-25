@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const moment = require('moment');
 const axios = require('axios');
 const { enviarMensagem } = require('../utils/telegram');
+const path = require('path');
+const fs = require('fs');
 
 
 // Exibição do formulário de login
@@ -59,9 +61,9 @@ exports.homeAluno = async (req, res) => {
   const alunoId = req.session.user.id;
 
   try {
-    // Dados pessoais do aluno
-    const [[aluno]] = await db.query(`
-      SELECT nome, data_nascimento, endereco, cidade, uf, telefone, rg, cpf
+       // Dados pessoais do aluno
+    const [[aluno]] = await db.query(
+      `SELECT nome, data_nascimento, endereco, cidade, uf, telefone, rg, cpf
       FROM alunos
       WHERE id = ?
     `, [alunoId]);
@@ -705,5 +707,153 @@ exports.desistirAulaFixa = async (req, res) => {
   } catch (error) {
     console.error('Erro ao desistir da aula fixa:', error);
     res.status(500).send('Erro interno no servidor');
+  }
+};
+
+
+
+////////////////////////////////////////////////ANAMNESE////////////////////////////////////////////
+
+exports.exibirAnamnese = async (req, res) => {
+  const alunoId = req.session.user.id;
+
+  const [[anamnese]] = await db.query(`SELECT * FROM anamneses WHERE aluno_id = ?`, [alunoId]);
+
+  res.render('aluno/anamnese', {
+    anamnese,
+    aluno: req.session.user
+  });
+};
+
+exports.salvarAnamnese = async (req, res) => {
+  const alunoId = req.session.user.id;
+  const dados = req.body;
+
+  const [[existe]] = await db.query(`SELECT id FROM anamneses WHERE aluno_id = ?`, [alunoId]);
+
+  const aceite = dados.aceite_termo ? 1 : 0;
+
+  if (existe) {
+    await db.query(`
+      UPDATE anamneses SET
+        peso = ?, estatura = ?, contato_emergencia_nome = ?, contato_emergencia_telefone = ?,
+        tempo_sentado = ?, atividade_fisica = ?, fumante = ?, alcool = ?, alimentacao = ?, gestante = ?,
+        tratamento_medico = ?, lesoes = ?, marcapasso = ?, metais = ?, problema_cervical = ?, procedimento_cirurgico = ?,
+        alergia_medicamentosa = ?, hipertensao = ?, hipotensao = ?, diabetes = ?, epilepsia = ?, labirintite = ?,
+        observacoes = ?, aceite_termo = ?
+      WHERE aluno_id = ?
+    `, [
+      dados.peso, dados.estatura, dados.contato_emergencia_nome, dados.contato_emergencia_telefone,
+      dados.tempo_sentado, dados.atividade_fisica, dados.fumante, dados.alcool, dados.alimentacao, dados.gestante,
+      dados.tratamento_medico, dados.lesoes, dados.marcapasso, dados.metais, dados.problema_cervical, dados.procedimento_cirurgico,
+      dados.alergia_medicamentosa, dados.hipertensao, dados.hipotensao, dados.diabetes, dados.epilepsia, dados.labirintite,
+      dados.observacoes, aceite, alunoId
+    ]);
+  } else {
+    await db.query(`
+      INSERT INTO anamneses (
+        aluno_id, peso, estatura, contato_emergencia_nome, contato_emergencia_telefone,
+        tempo_sentado, atividade_fisica, fumante, alcool, alimentacao, gestante,
+        tratamento_medico, lesoes, marcapasso, metais, problema_cervical, procedimento_cirurgico,
+        alergia_medicamentosa, hipertensao, hipotensao, diabetes, epilepsia, labirintite,
+        observacoes, aceite_termo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      alunoId, dados.peso, dados.estatura, dados.contato_emergencia_nome, dados.contato_emergencia_telefone,
+      dados.tempo_sentado, dados.atividade_fisica, dados.fumante, dados.alcool, dados.alimentacao, dados.gestante,
+      dados.tratamento_medico, dados.lesoes, dados.marcapasso, dados.metais, dados.problema_cervical, dados.procedimento_cirurgico,
+      dados.alergia_medicamentosa, dados.hipertensao, dados.hipotensao, dados.diabetes, dados.epilepsia, dados.labirintite,
+      dados.observacoes, aceite
+    ]);
+  }
+
+  res.redirect('/aluno/home'); // ou para a página de confirmação
+
+};
+
+  //////////////////////////////////////////////////////////DADOS////////////////////////////////////////
+  // Controller para mostrar os dados do aluno
+exports.mostrarDadosAluno = async (req, res) => {
+  const alunoId = req.session.user.id;
+
+  try {
+    const [[aluno]] = await db.query(`
+      SELECT nome, data_nascimento, endereco, complemento, cep, cidade, uf, telefone, rg, cpf, contrato_pdf
+      FROM alunos
+      WHERE id = ?
+    `, [alunoId]);
+
+    if (!aluno) {
+      return res.status(404).send('Aluno não encontrado');
+    }
+
+    // Formata data de nascimento para YYYY-MM-DD
+    if (aluno.data_nascimento) {
+      aluno.data_nascimento = moment(aluno.data_nascimento).format('YYYY-MM-DD');
+    }
+
+    res.render('aluno/dados', { aluno });
+  } catch (error) {
+    console.error('Erro ao carregar dados do aluno:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
+};
+
+exports.atualizarDadosAluno = async (req, res) => {
+  const alunoId = req.session.user.id;
+  const {
+    nome,
+    data_nascimento,
+    endereco,
+    complemento,
+    cep,
+    cidade,
+    uf,
+    telefone,
+    rg,
+    cpf
+  } = req.body;
+
+  const contratoFile = req.file;
+  let contratoNomeArquivo;
+
+  try {
+    if (contratoFile) {
+      contratoNomeArquivo = contratoFile.filename;
+
+      const [[alunoAtual]] = await db.query('SELECT contrato_pdf FROM alunos WHERE id = ?', [alunoId]);
+      if (alunoAtual.contrato_pdf) {
+        const caminhoAntigo = path.join(__dirname, '..', 'public', 'uploads', 'contratos', alunoAtual.contrato_pdf);
+        if (fs.existsSync(caminhoAntigo)) {
+          fs.unlinkSync(caminhoAntigo);
+        }
+      }
+    }
+
+    const campos = [
+      nome, data_nascimento, endereco, complemento, cep,
+      cidade, uf, telefone, rg, cpf
+    ];
+
+    let sql = `
+      UPDATE alunos SET 
+        nome = ?, data_nascimento = ?, endereco = ?, complemento = ?, cep = ?,
+        cidade = ?, uf = ?, telefone = ?, rg = ?, cpf = ?
+    `;
+
+    if (contratoNomeArquivo) {
+      sql += `, contrato_pdf = ?`;
+      campos.push(contratoNomeArquivo);
+    }
+
+    sql += ` WHERE id = ?`;
+    campos.push(alunoId);
+
+    await db.query(sql, campos);
+
+    res.redirect('/aluno/dados');
+  } catch (error) {
+    console.error('Erro ao atualizar dados do aluno:', error);
+    res.status(500).send('Erro ao atualizar dados');
   }
 };

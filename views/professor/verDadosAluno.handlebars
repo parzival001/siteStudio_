@@ -1,26 +1,43 @@
-<div class="container d-flex flex-column align-items-center justify-content-center py-5">
-  <div class="w-100 p-4 rounded shadow text-white" style="max-width: 600px; background-color: #B395C0;">
-    <h2 class="text-center mb-4">Dados do Aluno</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
 
-    <ul class="list-unstyled">
-      <li><strong>Nome:</strong> {{aluno.nome}}</li>
-      <li><strong>Data de nascimento:</strong> {{aluno.data_nascimento}}</li>
-      <li><strong>Endereço:</strong> {{aluno.endereco}}, {{aluno.complemento}} - {{aluno.cep}}</li>
-      <li><strong>Cidade/UF:</strong> {{aluno.cidade}} - {{aluno.uf}}</li>
-      <li><strong>Telefone:</strong> {{aluno.telefone}}</li>
-      <li><strong>RG:</strong> {{aluno.rg}}</li>
-      <li><strong>CPF:</strong> {{aluno.cpf}}</li>
-    </ul>
+      <h2 class="text-center mb-4">Dados Pessoais do Aluno</h2>
 
-    <h4 class="mt-4">Contrato do Aluno</h4>
-    {{#if aluno.contrato_pdf}}
-      <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank" class="btn btn-outline-custom">Ver Contrato em PDF</a>
-    {{else}}
-      <p class="text-warning">Nenhum contrato enviado.</p>
-    {{/if}}
+      <a href="javascript:history.back()" class="btn btn-outline-custom mb-3">← Voltar</a>
 
-    <div class="text-center mt-4">
-      <a href="/professor/home" class="btn btn-outline-custom">Home</a>
+      <div class="card p-4" style="background-color: #B395C0;">
+        <p><strong>Nome:</strong> {{aluno.nome}}</p>
+
+        <p><strong>Data de Nascimento:</strong> {{formatDate aluno.data_nascimento}}</p>
+
+        <p><strong>Endereço:</strong> {{#if aluno.endereco}}{{aluno.endereco}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>Complemento:</strong> {{#if aluno.complemento}}{{aluno.complemento}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>CEP:</strong> {{#if aluno.cep}}{{aluno.cep}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>Cidade:</strong> {{#if aluno.cidade}}{{aluno.cidade}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>UF:</strong> {{#if aluno.uf}}{{aluno.uf}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>Telefone:</strong> {{#if aluno.telefone}}{{aluno.telefone}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>RG:</strong> {{#if aluno.rg}}{{aluno.rg}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>CPF:</strong> {{#if aluno.cpf}}{{aluno.cpf}}{{else}}Não informado{{/if}}</p>
+
+        <p><strong>Contrato:</strong>
+          {{#if aluno.contrato_pdf}}
+            <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank">{{aluno.contrato_pdf}}</a>
+          {{else}}
+            Nenhum contrato enviado.
+          {{/if}}
+        </p>
+      </div>
+
+      <a href="/professor/alunos" class="btn btn-outline-custom w-100 mt-4">Voltar à Lista de Alunos</a>
+      
     </div>
   </div>
 </div>

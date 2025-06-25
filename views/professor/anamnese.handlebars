@@ -4,69 +4,58 @@
 
       <h2 class="text-center mb-4">Anamnese de {{aluno.nome}}</h2>
 
-      {{#if jaTemAnamnese}}
-      <div class="mb-3 text-center">
-        <a href="/professor/aluno/{{aluno.id}}/anamnese/{{anamneseId}}" class="btn btn-outline-custom">Ver Anamnese</a>
-      </div>
-      {{/if}}
-
       <div class="card p-4" style="background-color: #B395C0;">
-        <form method="POST" action="/professor/alunos/{{aluno.id}}/anamnese">
 
-          <div class="row mb-3">
-            <div class="col-md-4">
-              <label class="form-label text-white">Peso:</label>
-              <input type="text" name="peso" value="{{anamnese.peso}}" class="form-control">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-white">Estatura:</label>
-              <input type="text" name="estatura" value="{{anamnese.estatura}}" class="form-control">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-white">Contato de Emergência (Nome):</label>
-              <input type="text" name="contato_emergencia_nome" value="{{anamnese.contato_emergencia_nome}}" class="form-control mb-2">
-              <label class="form-label text-white">Telefone:</label>
-              <input type="text" name="contato_emergencia_telefone" value="{{anamnese.contato_emergencia_telefone}}" class="form-control">
-            </div>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <label class="form-label text-white">Peso:</label>
+            <p class="form-control-plaintext">{{anamnese.peso}}</p>
           </div>
-
-          <hr class="border-light">
-
-          <div class="row mb-3">
-            {{!-- Campos booleanos (Sim/Não) --}}
-            {{#each (array 
-              "tempo_sentado" "atividade_fisica" "fumante" "alcool" "alimentacao" "gestante" 
-              "tratamento_medico" "lesoes" "marcapasso" "metais" "problema_cervical" 
-              "procedimento_cirurgico" "alergia_medicamentosa" "hipertensao" "hipotensao" 
-              "diabetes" "epilepsia" "labirintite") as |campo|}}
-              <div class="col-md-3 mb-3">
-                <label class="form-label text-white">{{capitalize (replace campo "_" " ")}}?</label>
-                <select name="{{campo}}" class="form-select">
-                  <option value="Sim" {{#ifCond (lookup ../anamnese campo) '==' 'Sim'}}selected{{/ifCond}}>Sim</option>
-                  <option value="Não" {{#ifCond (lookup ../anamnese campo) '==' 'Não'}}selected{{/ifCond}}>Não</option>
-                </select>
-              </div>
-            {{/each}}
+          <div class="col-md-4">
+            <label class="form-label text-white">Estatura:</label>
+            <p class="form-control-plaintext">{{anamnese.estatura}}</p>
           </div>
-
-          <hr class="border-light">
-
-          <div class="mb-3">
-            <label class="form-label text-white">Observações:</label>
-            <textarea name="observacoes" class="form-control">{{anamnese.observacoes}}</textarea>
+          <div class="col-md-4">
+            <label class="form-label text-white">Contato de Emergência (Nome):</label>
+            <p class="form-control-plaintext">{{anamnese.contato_emergencia_nome}}</p>
+            <label class="form-label text-white mt-2">Telefone:</label>
+            <p class="form-control-plaintext">{{anamnese.contato_emergencia_telefone}}</p>
           </div>
+        </div>
 
-          <div class="form-check mb-4">
-            <input type="checkbox" name="aceite_termo" class="form-check-input" id="aceite_termo" {{#if anamnese.aceite_termo}}checked{{/if}}>
-            <label class="form-check-label text-white" for="aceite_termo">Termo de responsabilidade: Aceito</label>
+        <hr class="border-light">
+
+        <div class="row mb-3">
+          {{!-- Campos booleanos (Sim/Não) --}}
+          {{#each (array 
+            "tempo_sentado" "atividade_fisica" "fumante" "alcool" "alimentacao" "gestante" 
+            "tratamento_medico" "lesoes" "marcapasso" "metais" "problema_cervical" 
+            "procedimento_cirurgico" "alergia_medicamentosa" "hipertensao" "hipotensao" 
+            "diabetes" "epilepsia" "labirintite") as |campo|}}
+          <div class="col-md-3 mb-3">
+            <label class="form-label text-white">{{capitalize (replace campo "_" " ")}}?</label>
+            <p class="form-control-plaintext">{{lookup ../anamnese campo}}</p>
           </div>
+          {{/each}}
+        </div>
 
-          <div class="d-flex gap-3">
-            <button type="submit" class="btn btn-outline-custom flex-fill">Salvar Anamnese</button>
-            <a href="javascript:history.back()" class="btn btn-outline-custom flex-fill">Voltar</a>
-          </div>
+        <hr class="border-light">
 
-        </form>
+        <div class="mb-3">
+          <label class="form-label text-white">Observações:</label>
+          <p class="form-control-plaintext">{{anamnese.observacoes}}</p>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-white">Termo de responsabilidade:</label>
+          {{#if anamnese.aceite_termo}}
+            <span class="badge bg-success">Aceito</span>
+          {{else}}
+            <span class="badge bg-danger">Não Aceito</span>
+          {{/if}}
+        </div>
+
+        <a href="javascript:history.back()" class="btn btn-outline-custom">Voltar</a>
       </div>
 
     </div>

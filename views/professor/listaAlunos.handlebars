@@ -7,7 +7,8 @@
       <form method="GET" action="/professor/alunos" class="mb-4">
         <div class="input-group">
           <input type="text" name="busca" class="form-control" placeholder="Buscar por nome..." value="{{busca}}">
-          <button class="btn btn-outline-custom" type="submit" style="color: #5A189A; border-color: #5A189A;">Buscar</button>
+          <button class="btn btn-outline-custom" type="submit"
+            style="color: #5A189A; border-color: #5A189A;">Buscar</button>
         </div>
       </form>
 
@@ -28,11 +29,14 @@
                 <td class="d-flex flex-wrap justify-content-center gap-2">
                   <a href="/professor/alunos/{{this.id}}/editar" class="btn btn-outline-custom"
                     style="color: #5A189A; border-color: #5A189A;">Editar</a>
-                  <a href="/professor/anamnese/{{this.id}}" class="btn btn-outline-custom"
+                  <a href="/professor/aluno/{{this.id}}/anamnese" class="btn btn-outline-custom"
                     style="color: #5A189A; border-color: #5A189A;">Anamnese</a>
                   <a href="/professor/pacotes/aluno/{{this.id}}" class="btn btn-outline-custom"
                     style="color: #5A189A; border-color: #5A189A;">Ver Pacotes</a>
-                  <form action="/professor/alunos/{{this.id}}/delete" method="POST" onsubmit="return confirm('Tem certeza que deseja deletar?')">
+                  <a href="/professor/aluno/{{this.id}}/dados-pessoais" class="btn btn-outline-custom"
+                    style="color: #5A189A; border-color: #5A189A;">Dados Pessoais</a>
+                  <form action="/professor/alunos/{{this.id}}/delete" method="POST"
+                    onsubmit="return confirm('Tem certeza que deseja deletar?')">
                     <button class="btn btn-outline-danger">Deletar</button>
                   </form>
                 </td>
@@ -51,11 +55,14 @@
           <div class="d-flex flex-column gap-2">
             <a href="/professor/alunos/{{this.id}}/editar" class="btn btn-outline-custom"
               style="color: #5A189A; border-color: #5A189A;">Editar</a>
-            <a href="/professor/anamnese/{{this.id}}" class="btn btn-outline-custom"
+            <a href="/professor/aluno/{{this.id}}/anamnese" class="btn btn-outline-custom"
               style="color: #5A189A; border-color: #5A189A;">Anamnese</a>
             <a href="/professor/pacotes/aluno/{{this.id}}" class="btn btn-outline-custom"
               style="color: #5A189A; border-color: #5A189A;">Ver Pacotes</a>
-            <form action="/professor/alunos/{{this.id}}/delete" method="POST" onsubmit="return confirm('Tem certeza que deseja deletar?')">
+            <a href="/professor/aluno/{{this.id}}/dados-pessoais" class="btn btn-outline-custom"
+              style="color: #5A189A; border-color: #5A189A;">Dados Pessoais</a>
+            <form action="/professor/alunos/{{this.id}}/delete" method="POST"
+              onsubmit="return confirm('Tem certeza que deseja deletar?')">
               <button class="btn btn-outline-danger">Deletar</button>
             </form>
           </div>

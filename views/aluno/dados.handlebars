@@ -1,27 +1,65 @@
 <div class="container py-5 text-white">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 text-center">
-
-      <h2 class="mb-4">Meus Dados</h2>
-
-      <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
-        <ul class="list-unstyled text-start mb-0">
-          <li><strong>Nome:</strong> {{aluno.nome}}</li>
-          <li><strong>Data de Nascimento:</strong> {{aluno.data_nascimento_formatada}}</li>
-          <li><strong>Endereço:</strong> {{aluno.endereco}}</li>
-          <li><strong>Cidade/UF:</strong> {{aluno.cidade}} / {{aluno.uf}}</li>
-          <li><strong>Telefone:</strong> {{aluno.telefone}}</li>
-          <li><strong>RG:</strong> {{aluno.rg}}</li>
-          <li><strong>CPF:</strong> {{aluno.cpf}}</li>
-        </ul>
-      </div>
-
-      <div class="text-center">
-        <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">
-          Voltar para Home
-        </a>
-      </div>
-
+  <h2 class="mb-4 text-center">Meus Dados Pessoais</h2>
+  <form action="/aluno/atualizar-dados" method="POST" enctype="multipart/form-data" class="mx-auto" style="max-width: 700px;">
+    
+    <div class="mb-3">
+      <label class="form-label">Nome</label>
+      <input type="text" name="nome" class="form-control" value="{{aluno.nome}}" required>
     </div>
-  </div>
+
+    <div class="mb-3">
+      <label class="form-label">Data de Nascimento</label>
+      <input type="date" name="data_nascimento" class="form-control" value="{{aluno.data_nascimento}}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Endereço</label>
+      <input type="text" name="endereco" class="form-control" value="{{aluno.endereco}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Complemento</label>
+      <input type="text" name="complemento" class="form-control" value="{{aluno.complemento}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">CEP</label>
+      <input type="text" name="cep" class="form-control" value="{{aluno.cep}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Cidade</label>
+      <input type="text" name="cidade" class="form-control" value="{{aluno.cidade}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">UF</label>
+      <input type="text" name="uf" class="form-control" value="{{aluno.uf}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Telefone</label>
+      <input type="text" name="telefone" class="form-control" value="{{aluno.telefone}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">RG</label>
+      <input type="text" name="rg" class="form-control" value="{{aluno.rg}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">CPF</label>
+      <input type="text" name="cpf" class="form-control" value="{{aluno.cpf}}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Contrato (PDF)</label>
+      {{#if aluno.contrato_pdf}}
+        <p>Arquivo atual: <a href="/uploads/contratos/{{aluno.contrato_pdf}}" target="_blank">{{aluno.contrato_pdf}}</a></p>
+      {{/if}}
+      <input type="file" name="contrato" class="form-control">
+    </div>
+
+    <button type="submit" class="btn btn-outline-custom w-100">Salvar</button>
+  </form>
 </div>

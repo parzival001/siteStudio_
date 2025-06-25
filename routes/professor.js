@@ -180,25 +180,32 @@ router.post('/alunos/:id/delete', authProfessor, professorController.deletarAlun
 //Professor
 router.get('/professores', professorController.listarProfessores);
 
-//Daods Pessoais
-router.get('/dados-pessoais-alunos', professorController.verDadosPessoaisAlunos);
-router.get('/dadosPessoaisAlunos', professorController.verDadosPessoaisAlunos);
-router.post('/atualizar-dados-aluno/:id', professorController.atualizarDadosAluno);
-router.get('/ver-dados-aluno/:id', professorController.verDadosAluno);
+//////////////////////////////////////////////////DADOS PESSOAIS////////////////////////////////////////////
+router.get('/professor/aluno/:id/dados', authProfessor, async (req, res) => {
+  const alunoId = req.params.id;
+  const [rows] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+  if (rows.length === 0) {
+    return res.status(404).send('Aluno não encontrado');
+  }
+  res.render('professor/dadosAluno', { aluno: rows[0] });
+});
 
-
-router.get('/dados-alunos', async (req, res) => {
+router.get('/aluno/:id/dados-pessoais', authProfessor, async (req, res) => {
+  const alunoId = req.params.id;
   try {
-    const [alunos] = await db.query('SELECT * FROM alunos');
-    res.render('professor/dadosAlunos', { alunos });
-  } catch (err) {
-    res.status(500).send('Erro ao carregar alunos');
+    const [[aluno]] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+    if (!aluno) {
+      return res.status(404).send('Aluno não encontrado');
+    }
+      res.render('professor/verDadosAluno', { aluno });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Erro ao buscar dados do aluno');
   }
 });
 
-
-
-
+router.get('/dados-pessoais-alunos', authProfessor, professorController.verDadosAluno);
+router.get('/dados-pessoais-alunos/:id', authProfessor, professorController.verDetalhesAluno);
 
 router.get('/alunos', authProfessor, async (req, res) => {
   const busca = req.query.busca || '';
@@ -256,13 +263,7 @@ router.post('/alunos/:id/editar', authProfessor, async (req, res) => {
   }
 });
 
-//anamnase
-router.get('/alunos/:id/anamnese', authProfessor, professorController.formAnamnese);
-router.post('/alunos/:id/anamnese', authProfessor, professorController.salvarAnamnese);
-router.get('/anamnese/:id', authProfessor, professorController.exibirFormularioAnamnese);
-router.get('/aluno/:id/anamnese', professorController.verAnamnese);
-router.get('/aluno/:id/anamnese/:anamneseId', professorController.verAnamnese);
-router.get('/aluno/:id/anamnese', professorController.exibirFormularioAnamnese);
+
 
 router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
   try {
@@ -475,48 +476,13 @@ router.post('/aulas-fixas/deletar/:id', authProfessor, async (req, res) => {
 
 
 
-// Anamnese
-router.get('/aluno/:id/anamnese', authProfessor, async (req, res) => {
-  const alunoId = req.params.id;
-  try {
-    const [aluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
-    const [anamnese] = await db.query('SELECT * FROM anamneses WHERE aluno_id = ?', [alunoId]);
+///////////////////////////////////////////////////ANAMNASE////////////////////////////////////////////////////
 
-    res.render('professor/anamnese', {
-      aluno: aluno[0],
-      anamnese: anamnese[0]
-    });
-  } catch (err) {
-    res.status(500).send('Erro ao carregar anamnese');
-  }
-});
+// Lista alunos com id da anamnese para link
+router.get('/alunos', authProfessor, professorController.listarAlunosComAnamnese);
 
-router.post('/aluno/:id/anamnese', authProfessor, async (req, res) => {
-  const alunoId = req.params.id;
-  const { observacoes } = req.body;
-  const dataAtual = new Date().toISOString().split('T')[0];
-
-  try {
-    const [existe] = await db.query('SELECT * FROM anamneses WHERE aluno_id = ?', [alunoId]);
-
-    if (existe.length > 0) {
-      await db.query(`
-        UPDATE anamneses SET observacoes = ?, data = ? WHERE aluno_id = ?`,
-        [observacoes, dataAtual, alunoId]
-      );
-    } else {
-      await db.query(`
-        INSERT INTO anamneses (aluno_id, observacoes, data)
-        VALUES (?, ?, ?)`,
-        [alunoId, observacoes, dataAtual]
-      );
-    }
-
-    res.redirect('/professor/aluno/' + alunoId + '/anamnese');
-  } catch (err) {
-    res.status(500).send('Erro ao salvar anamnese');
-  }
-});
+// Exibe a anamnese do aluno (visualização)
+router.get('/aluno/:id/anamnese', authProfessor, professorController.verAnamnese);
 
 
 //PROFESSOR

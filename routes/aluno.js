@@ -4,7 +4,9 @@ const db = require('../config/db');
 const moment = require('moment');
 const alunoController = require('../controllers/alunoController');
 const {autenticarAluno} = require('../middleware/authMiddleware')
-
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 router.get('/pacotes', autenticarAluno, alunoController.listarPacotes);
 
@@ -188,49 +190,10 @@ router.get('/historico', authAluno, async (req, res) => {
 });
 
 
-// Exibir anamnese
-router.get('/anamnese', authAluno, async (req, res) => {
-  const alunoId = req.session.user.id;
-
-  const [[anamnese]] = await db.query(`
-    SELECT
-      peso, estatura, contato_emergencia_nome, contato_emergencia_telefone,
-      tempo_sentado, atividade_fisica, fumante, alcool, alimentacao,
-      gestante, tratamento_medico, lesoes, marcapasso, metais,
-      problema_cervical, procedimento_cirurgico, alergia_medicamentosa,
-      hipertensao, hipotensao, diabetes, epilepsia, labirintite,
-      observacoes, aceite_termo, criado_em
-    FROM anamneses
-    WHERE aluno_id = ?
-  `, [alunoId]);
-
-  if (!anamnese) {
-    return res.render('aluno/anamnese', {
-      anamnese: {
-        observacoes: 'Nenhuma anamnese cadastrada.'
-      }
-    });
-  }
-
-  res.render('aluno/anamnese', { anamnese });
-});
 
 
-router.get('/dados', authAluno, async (req, res) => {
-  const alunoId = req.session.user.id;
+////////////////////////////////////////////////////////////////////////////////////////////////
 
-  const [[aluno]] = await db.query(`
-    SELECT nome, data_nascimento, endereco, cidade, uf, telefone, rg, cpf
-    FROM alunos
-    WHERE id = ?
-  `, [alunoId]);
-
-  if (aluno && aluno.data_nascimento) {
-    aluno.data_nascimento_formatada = moment(aluno.data_nascimento).utcOffset(-3).format('DD/MM/YYYY');
-  }
-
-  res.render('aluno/dados', { aluno });
-});
 
 router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
   const aulaId = req.params.aulaId;
@@ -269,5 +232,44 @@ router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
 router.get('/aulas-fixas', authAluno, alunoController.listarAulasFixasDisponiveis);
 router.post('/aulas-fixas/inscrever/:id', authAluno, alunoController.inscreverNaAulaFixa);
 router.post('/aulas-fixas/desistir/:aulaId', authAluno, alunoController.desistirAulaFixa);
+
+
+///////////////////////////////////////////ANAMNESE////////////////////////////////////////////////////
+// GET - Exibir formulário
+router.get('/anamnese', alunoController.exibirAnamnese);
+// POST - Salvar ou atualizar anamnese
+router.post('/anamnese', alunoController.salvarAnamnese);
+
+///////////////////////////////////////////DADOS ALUNO//////////////////////////////////
+
+// Configuração do Multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '..', 'public', 'uploads', 'contratos'));
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, `contrato_${Date.now()}${ext}`);
+  }
+});
+
+const upload = multer({ storage });
+// Rota para atualizar dados
+router.post('/atualizar-dados', authAluno, upload.single('contrato'), alunoController.atualizarDadosAluno);
+
+router.get('/dados', authAluno, alunoController.mostrarDadosAluno);
+// Rota para exibir dados
+router.get('/aluno/dados', authAluno, async (req, res) => {
+  const alunoId = req.session.user.id;
+
+  try {
+    const [[aluno]] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+    res.render('aluno/dados', { aluno });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao carregar dados do aluno');
+  }
+});
+
 
 module.exports = router;

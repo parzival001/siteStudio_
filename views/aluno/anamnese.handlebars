@@ -1,39 +1,66 @@
 <div class="container py-5 text-white">
   <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 text-center">
+    <div class="col-12 col-lg-10">
 
-      <h2 class="mb-4">Anamnese</h2>
+      <h2 class="text-center mb-4">Minha Anamnese</h2>
 
-      <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
-        <ul class="list-unstyled text-start">
-          <li><strong>Peso:</strong> {{anamnese.peso}}</li>
-          <li><strong>Estatura:</strong> {{anamnese.estatura}}</li>
-          <li><strong>Contato de emergência:</strong> {{anamnese.contato_emergencia_nome}} ({{anamnese.contato_emergencia_telefone}})</li>
-          <li><strong>Tempo sentado:</strong> {{anamnese.tempo_sentado}}</li>
-          <li><strong>Pratica atividade física:</strong> {{anamnese.atividade_fisica}}</li>
-          <li><strong>Fumante:</strong> {{anamnese.fumante}}</li>
-          <li><strong>Álcool:</strong> {{anamnese.alcool}}</li>
-          <li><strong>Alimentação:</strong> {{anamnese.alimentacao}}</li>
-          <li><strong>Gestante:</strong> {{anamnese.gestante}}</li>
-          <li><strong>Tratamento médico:</strong> {{anamnese.tratamento_medico}}</li>
-          <li><strong>Lesões:</strong> {{anamnese.lesoes}}</li>
-          <li><strong>Marcapasso:</strong> {{anamnese.marcapasso}}</li>
-          <li><strong>Metais:</strong> {{anamnese.metais}}</li>
-          <li><strong>Problema cervical:</strong> {{anamnese.problema_cervical}}</li>
-          <li><strong>Procedimento cirúrgico:</strong> {{anamnese.procedimento_cirurgico}}</li>
-          <li><strong>Alergia medicamentosa:</strong> {{anamnese.alergia_medicamentosa}}</li>
-          <li><strong>Hipertensão:</strong> {{anamnese.hipertensao}}</li>
-          <li><strong>Hipotensão:</strong> {{anamnese.hipotensao}}</li>
-          <li><strong>Diabetes:</strong> {{anamnese.diabetes}}</li>
-          <li><strong>Epilepsia:</strong> {{anamnese.epilepsia}}</li>
-          <li><strong>Labirintite:</strong> {{anamnese.labirintite}}</li>
-          <li><strong>Observações:</strong> {{anamnese.observacoes}}</li>
-          <li><strong>Aceite do termo:</strong> {{#if anamnese.aceite_termo}}Sim{{else}}Não{{/if}}</li>
-        </ul>
-      </div>
+      <div class="card p-4" style="background-color: #B395C0;">
+        <form method="POST" action="/aluno/anamnese">
 
-      <div class="text-center mt-4">
-        <a href="/aluno/home" class="btn btn-outline-custom" style="color: #5A189A; border-color: #5A189A;">Home</a>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label class="form-label text-white">Peso:</label>
+              <input type="text" name="peso" value="{{anamnese.peso}}" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-white">Estatura:</label>
+              <input type="text" name="estatura" value="{{anamnese.estatura}}" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-white">Contato de Emergência (Nome):</label>
+              <input type="text" name="contato_emergencia_nome" value="{{anamnese.contato_emergencia_nome}}" class="form-control mb-2">
+              <label class="form-label text-white">Telefone:</label>
+              <input type="text" name="contato_emergencia_telefone" value="{{anamnese.contato_emergencia_telefone}}" class="form-control">
+            </div>
+          </div>
+
+          <hr class="border-light">
+
+          <div class="row mb-3">
+            {{!-- Campos booleanos (Sim/Não) --}}
+            {{#each (array 
+              "tempo_sentado" "atividade_fisica" "fumante" "alcool" "alimentacao" "gestante" 
+              "tratamento_medico" "lesoes" "marcapasso" "metais" "problema_cervical" 
+              "procedimento_cirurgico" "alergia_medicamentosa" "hipertensao" "hipotensao" 
+              "diabetes" "epilepsia" "labirintite") as |campo|}}
+              <div class="col-md-3 mb-3">
+                <label class="form-label text-white">{{capitalize (replace campo "_" " ")}}?</label>
+                <select name="{{campo}}" class="form-select">
+                  <option value="Sim" {{#ifCond (lookup ../anamnese campo) '==' 'Sim'}}selected{{/ifCond}}>Sim</option>
+                  <option value="Não" {{#ifCond (lookup ../anamnese campo) '==' 'Não'}}selected{{/ifCond}}>Não</option>
+                </select>
+              </div>
+            {{/each}}
+          </div>
+
+          <hr class="border-light">
+
+          <div class="mb-3">
+            <label class="form-label text-white">Observações:</label>
+            <textarea name="observacoes" class="form-control">{{anamnese.observacoes}}</textarea>
+          </div>
+
+          <div class="form-check mb-4">
+            <input type="checkbox" name="aceite_termo" class="form-check-input" id="aceite_termo" {{#if anamnese.aceite_termo}}checked{{/if}}>
+            <label class="form-check-label text-white" for="aceite_termo">Termo de responsabilidade: Aceito</label>
+          </div>
+
+          <div class="d-flex gap-3">
+            <button type="submit" class="btn btn-outline-custom flex-fill">Salvar Anamnese</button>
+            <a href="/aluno/home" class="btn btn-outline-custom flex-fill">Voltar</a>
+          </div>
+
+        </form>
       </div>
 
     </div>

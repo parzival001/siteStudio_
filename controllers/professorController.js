@@ -546,236 +546,59 @@ exports.listarAlunos = async (req, res) => {
   }
 };
 
-//Anamnase
+////////////////////////////////////////////////////ANAMNESE///////////////////////////////////////////////
 
-exports.formAnamnese = async (req, res) => {
-  const alunoId = parseInt(req.params.id, 10);
+// Listar alunos com o id da última anamnese (se existir)
+exports.listarAlunosComAnamnese = async (req, res) => {
   try {
-    // busca dados do aluno e da anamnese (se existir)
-    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
-    const [[anamnese]] = await db.query('SELECT * FROM anamneses WHERE aluno_id = ?', [alunoId]);
-    res.render('professor/anamnese', { aluno, anamnese });
+    const busca = req.query.busca ? `%${req.query.busca}%` : '%';
+
+    const [alunos] = await db.query(
+      `SELECT 
+        alunos.id, 
+        alunos.nome,
+        (SELECT id FROM anamneses WHERE aluno_id = alunos.id ORDER BY id DESC LIMIT 1) AS anamneseId
+      FROM alunos
+      WHERE alunos.nome LIKE ?
+      ORDER BY alunos.nome`,
+      [busca]
+    );
+
+    res.render('professor/alunos', { alunos, busca: req.query.busca || '' });
   } catch (err) {
-    console.error('Erro ao carregar anamnese:', err);
-    res.status(500).send('Erro interno no servidor');
+    console.error('Erro ao listar alunos:', err);
+    res.status(500).send('Erro interno ao listar alunos');
   }
 };
 
-exports.exibirFormularioAnamnese = async (req, res) => {
+// Visualizar anamnese de um aluno pelo id
+exports.verAnamnese = async (req, res) => {
   const alunoId = parseInt(req.params.id, 10);
-
   try {
-    const [alunoRows] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
-    if (alunoRows.length === 0) {
+    // Busca aluno
+    const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
+    if (!aluno) {
       return res.status(404).send('Aluno não encontrado.');
     }
 
-    const aluno = alunoRows[0];
-
-    const [anamneseRows] = await db.query('SELECT id FROM anamneses WHERE aluno_id = ?', [alunoId]);
-    const jaTemAnamnese = anamneseRows.length > 0;
-    const anamneseId = jaTemAnamnese ? anamneseRows[0].id : null;
-
-    res.render('professor/anamnese', { aluno, jaTemAnamnese, anamneseId });
-  } catch (err) {
-    console.error('Erro ao carregar formulário de anamnese:', err);
-    res.status(500).send('Erro ao carregar formulário');
-  }
-};
-
-exports.salvarAnamnese = async (req, res) => {
-  const alunoId = parseInt(req.params.id, 10);
-  const {
-    peso,
-    estatura,
-    contato_emergencia_nome,
-    contato_emergencia_telefone,
-    tempo_sentado,
-    atividade_fisica,
-    fumante,
-    alcool,
-    alimentacao,
-    gestante,
-    tratamento_medico,
-    lesoes,
-    marcapasso,
-    metais,
-    problema_cervical,
-    procedimento_cirurgico,
-    alergia_medicamentosa,
-    hipertensao,
-    hipotensao,
-    diabetes,
-    epilepsia,
-    labirintite,
-    observacoes
-  } = req.body;
-
-  // Checkbox só envia valor se marcado
-  const aceite_termo = req.body.aceite_termo ? 1 : 0;
-
-  const criado_em = new Date(); // ou uso de NOW() no SQL
-
-  try {
-    // Verifica se já existe registro para este aluno
-    const [existe] = await db.query(
-      'SELECT * FROM anamneses WHERE aluno_id = ?',
+    // Busca anamnese mais recente do aluno
+    const [[anamnese]] = await db.query(
+      'SELECT * FROM anamneses WHERE aluno_id = ? ORDER BY id DESC LIMIT 1',
       [alunoId]
     );
 
-    if (existe.length > 0) {
-      // Atualiza
-      await db.query(
-        `UPDATE anamneses SET
-           peso                      = ?,
-           estatura                  = ?,
-           contato_emergencia_nome   = ?,
-           contato_emergencia_telefone = ?,
-           tempo_sentado             = ?,
-           atividade_fisica          = ?,
-           fumante                   = ?,
-           alcool                    = ?,
-           alimentacao               = ?,
-           gestante                  = ?,
-           tratamento_medico         = ?,
-           lesoes                    = ?,
-           marcapasso                = ?,
-           metais                    = ?,
-           problema_cervical         = ?,
-           procedimento_cirurgico    = ?,
-           alergia_medicamentosa     = ?,
-           hipertensao               = ?,
-           hipotensao                = ?,
-           diabetes                  = ?,
-           epilepsia                 = ?,
-           labirintite               = ?,
-           observacoes               = ?,
-           aceite_termo              = ?,
-           criado_em                 = ?
-         WHERE aluno_id = ?`,
-        [
-          peso,
-          estatura,
-          contato_emergencia_nome,
-          contato_emergencia_telefone,
-          tempo_sentado,
-          atividade_fisica,
-          fumante,
-          alcool,
-          alimentacao,
-          gestante,
-          tratamento_medico,
-          lesoes,
-          marcapasso,
-          metais,
-          problema_cervical,
-          procedimento_cirurgico,
-          alergia_medicamentosa,
-          hipertensao,
-          hipotensao,
-          diabetes,
-          epilepsia,
-          labirintite,
-          observacoes,
-          aceite_termo,
-          criado_em,
-          alunoId
-        ]
-      );
-    } else {
-      // Insere novo registro
-      await db.query(
-        `INSERT INTO anamneses (
-           aluno_id,
-           peso,
-           estatura,
-           contato_emergencia_nome,
-           contato_emergencia_telefone,
-           tempo_sentado,
-           atividade_fisica,
-           fumante,
-           alcool,
-           alimentacao,
-           gestante,
-           tratamento_medico,
-           lesoes,
-           marcapasso,
-           metais,
-           problema_cervical,
-           procedimento_cirurgico,
-           alergia_medicamentosa,
-           hipertensao,
-           hipotensao,
-           diabetes,
-           epilepsia,
-           labirintite,
-           observacoes,
-           aceite_termo,
-           criado_em
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          alunoId,
-          peso,
-          estatura,
-          contato_emergencia_nome,
-          contato_emergencia_telefone,
-          tempo_sentado,
-          atividade_fisica,
-          fumante,
-          alcool,
-          alimentacao,
-          gestante,
-          tratamento_medico,
-          lesoes,
-          marcapasso,
-          metais,
-          problema_cervical,
-          procedimento_cirurgico,
-          alergia_medicamentosa,
-          hipertensao,
-          hipotensao,
-          diabetes,
-          epilepsia,
-          labirintite,
-          observacoes,
-          aceite_termo,
-          criado_em
-        ]
-      );
-    }
-
-    res.redirect('/professor/aluno/' + alunoId + '/anamnese');
-  } catch (err) {
-    console.error('Erro ao salvar anamnese:', err);
-    res.status(500).send('Erro ao salvar anamnese');
-  }
-};
-
-exports.verAnamnese = async (req, res) => {
-  const anamneseId = parseInt(req.params.anamneseId, 10);
-
-  try {
-    const [rows] = await db.query('SELECT * FROM anamneses WHERE id = ?', [anamneseId]);
-
-    if (rows.length === 0) {
+    if (!anamnese) {
       return res.status(404).send('Anamnese não encontrada.');
     }
 
-    const anamnese = rows[0];
-    res.render('professor/verAnamnese', { anamnese });
+    res.render('professor/anamnese', { aluno, anamnese });
   } catch (err) {
     console.error('Erro ao buscar anamnese:', err);
-    res.status(500).send('Erro ao buscar anamnese.');
+    res.status(500).send('Erro interno ao buscar anamnese');
   }
 };
 
-
-
-
-
-
-
-
+/////////////////////////////////////////////////DADOS ALUNOS//////////////////////////////////////////////////
 // Função para formatar a data no formato yyyy-mm-dd
 
 function formatDateForInput(date) {
@@ -808,6 +631,41 @@ exports.verDadosPessoaisAlunos = async (req, res) => {
   } catch (err) {
     console.error('Erro ao buscar dados pessoais dos alunos:', err);
     return res.status(500).send('Erro ao buscar dados pessoais: ' + err.message);
+  }
+};
+
+exports.verDadosAluno = async (req, res) => {
+  const busca = req.query.busca || ''; // pega o texto da pesquisa
+
+  try {
+    let sql = `SELECT id, nome, email, telefone FROM alunos WHERE nome LIKE ? ORDER BY nome`;
+    const [alunos] = await db.query(sql, [`%${busca}%`]);
+
+    if (alunos.length === 0) {
+      return res.render('verDadosAluno', { alunos: [], mensagem: 'Aluno não encontrado', busca });
+    }
+
+    res.render('verDadosAluno', { alunos, busca });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Erro ao carregar alunos');
+  }
+}
+
+exports.verDetalhesAluno = async (req, res) => {
+  const alunoId = req.params.id;
+
+  try {
+    const [[aluno]] = await db.query('SELECT * FROM alunos WHERE id = ?', [alunoId]);
+
+    if (!aluno) {
+      return res.status(404).send('Aluno não encontrado');
+    }
+
+    res.render('detalhesAluno', { aluno });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Erro ao carregar dados do aluno');
   }
 };
 
