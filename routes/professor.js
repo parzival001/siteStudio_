@@ -138,9 +138,6 @@ router.post('/deletar-pacote/:id', (req, res) => {
 
 
 /////////////////////////////////////////////////// Créditos manuais//////////////////////////////////////////////
-router.get('/creditos/novo', professorController.formAdicionarCredito);
-router.post('/creditos/novo', professorController.adicionarCredito);
-router.get('/creditos', professorController.listarCreditos);
 
 
 
@@ -412,22 +409,22 @@ router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) 
       return res.status(400).send('Não há mais vagas disponíveis para esta aula');
     }
 
-    // Busca pacote válido do aluno
+    // Verifica se o aluno possui pacote válido para esta categoria
     const [[pacote]] = await db.query(`
-      SELECT * FROM pacotes_aluno
-      WHERE aluno_id = ?
-        AND (FIND_IN_SET(?, categoria_id) OR passe_livre = 1)
-        AND quantidade_aulas > 0
-        AND data_validade >= CURDATE()
-      ORDER BY data_validade ASC
-      LIMIT 1
-    `, [alunoId, aula.categoria_id]);
+  SELECT * FROM pacotes_aluno
+  WHERE aluno_id = ?
+    AND (categoria_id = ? OR passe_livre = 1)
+    AND quantidade_aulas > 0
+    AND data_validade >= CURDATE()
+  ORDER BY data_validade ASC
+  LIMIT 1
+`, [alunoId, aula.categoria_id]);
 
     if (!pacote) {
       return res.status(400).send('O aluno não possui créditos disponíveis para esta modalidade');
     }
 
-    // Adiciona o aluno na aula
+    // Adiciona o aluno na aula fixa (sem descontar crédito aqui)
     await db.query(`
       INSERT INTO alunos_aulas_fixas (aula_fixa_id, aluno_id)
       VALUES (?, ?)`, [aulaId, alunoId]
@@ -435,14 +432,6 @@ router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) 
 
     // Atualiza as vagas
     await db.query('UPDATE aulas_fixas SET vagas = vagas - 1 WHERE id = ?', [aulaId]);
-
-    // Atualiza o pacote
-    await db.query(`
-      UPDATE pacotes_aluno
-      SET quantidade_aulas = quantidade_aulas - 1,
-          aulas_utilizadas = aulas_utilizadas + 1
-      WHERE id = ?`, [pacote.id]
-    );
 
     res.redirect(`/professor/aulas-fixas/${aulaId}`);
   } catch (err) {

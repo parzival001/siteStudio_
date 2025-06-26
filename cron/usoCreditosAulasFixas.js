@@ -1,9 +1,13 @@
-// cron/usoCreditosAulasFixas.js
+const db = require('../config/db');
+
+
 async function descontarCreditosAulasFixas() {
   console.log('📆 Processando aulas fixas do dia para desconto de crédito...');
 
+  const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
   const hoje = new Date();
-  const diaSemana = hoje.getDay(); // 0 = domingo, 1 = segunda...
+  const diaSemanaStr = diasSemana[hoje.getDay()];  // pega o nome do dia
+
   const dataHoje = hoje.toISOString().split('T')[0];
 
   try {
@@ -12,7 +16,7 @@ async function descontarCreditosAulasFixas() {
       FROM aulas_fixas af
       JOIN professores p ON af.professor_id = p.id
       WHERE af.dia_semana = ?
-    `, [diaSemana]);
+    `, [diaSemanaStr]);
 
     for (const aula of aulas) {
       const [alunos] = await db.query(`
@@ -26,18 +30,19 @@ async function descontarCreditosAulasFixas() {
         const [pacote] = await db.query(`
           SELECT * FROM pacotes_aluno
           WHERE aluno_id = ?
-            AND (passe_livre = 1 OR FIND_IN_SET(?, modalidades_passe_livre) OR categoria_id = ?)
-            AND validade >= ?
-            AND aulas_disponiveis > 0
-          ORDER BY validade ASC, id ASC
+            AND (passe_livre = 1 OR categoria_id = ?)
+            AND data_validade >= ?
+            AND (quantidade_aulas - aulas_utilizadas) > 0
+          ORDER BY data_validade ASC, id ASC
           LIMIT 1
-        `, [aluno.aluno_id, aula.categoria_id, aula.categoria_id, dataHoje]);
+        `, [aluno.aluno_id, aula.categoria_id, dataHoje]);
 
         if (pacote.length > 0) {
           const pacoteSelecionado = pacote[0];
 
           await db.query(`
-            UPDATE pacotes_aluno SET aulas_disponiveis = aulas_disponiveis - 1, aulas_usadas = aulas_usadas + 1
+            UPDATE pacotes_aluno 
+            SET aulas_utilizadas = aulas_utilizadas + 1
             WHERE id = ?
           `, [pacoteSelecionado.id]);
 
@@ -61,5 +66,6 @@ async function descontarCreditosAulasFixas() {
     console.error('Erro ao processar créditos em aulas fixas:', err);
   }
 }
+
 
 module.exports = descontarCreditosAulasFixas;

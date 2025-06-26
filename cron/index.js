@@ -1,8 +1,14 @@
 const cron = require('node-cron');
-const descontarCreditosAulasFixas = require('./usoCreditosAulasFixas');
+const descontarCreditosAulasFixas = require('../cron/usoCreditosAulasFixas'); // ajuste o caminho correto
+const db = require('../config/db'); // importe seu db se necessário
 
-// Executar todos os dias às 23:59
-cron.schedule('04 16 * * *', async () => {
-  console.log('⏰ Executando tarefa CRON para desconto de créditos...');
-  await descontarCreditosAulasFixas();
+
+// Agenda para rodar todo dia às 20:30
+cron.schedule('09 21 * * *', () => {
+  console.log('🕣 Iniciando desconto automático de créditos das aulas fixas às 21;09...');
+  descontarCreditosAulasFixas()
+    .then(() => console.log('✅ Desconto de créditos concluído.'))
+    .catch(err => console.error('❌ Erro no desconto automático:', err));
 });
+
+console.log('Cron job iniciado e agendado para rodar todo dia às 21Ç09.');

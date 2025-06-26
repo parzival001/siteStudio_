@@ -517,22 +517,33 @@ exports.adicionarAlunoAulaFixa = async (req, res) => {
   const { aluno_id, eh_fixo } = req.body;
 
   try {
+    // Verifica se o aluno já está inscrito na aula
+    const [[existe]] = await db.query(`
+      SELECT * FROM alunos_aulas_fixas
+      WHERE aula_fixa_id = ? AND aluno_id = ?
+    `, [aulaId, aluno_id]);
+
+    if (existe) {
+      return res.status(400).send('Aluno já está inscrito nesta aula.');
+    }
+
+    // Adiciona o aluno na aula fixa
     await db.query(`
       INSERT INTO alunos_aulas_fixas (aula_fixa_id, aluno_id, eh_fixo)
       VALUES (?, ?, ?)
     `, [aulaId, aluno_id, eh_fixo === 'true']);
 
+    // Atualiza o número de vagas
     await db.query(`
       UPDATE aulas_fixas SET vagas = vagas - 1 WHERE id = ?
     `, [aulaId]);
 
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
-    console.error(err);
+    console.error('Erro ao adicionar aluno na aula fixa:', err);
     res.status(500).send('Erro ao adicionar aluno na aula fixa');
   }
 };
-
 
 function proximaDataSemana(diaSemana) {
   const hoje = new Date();
@@ -869,39 +880,6 @@ exports.formPacotes = async (req, res) => {
 
 
 
-
-// Mostrar formulário de crédito manual
-exports.formAdicionarCredito = async (req, res) => {
-  const alunos = await Aluno.findAll();
-  const categorias = await Categoria.findAll();
-  res.render('professor/formAdicionarCredito', { alunos, categorias });
-};
-
-// Criar crédito manual
-exports.adicionarCredito = async (req, res) => {
-  const { aluno_id, categoria_id, data_credito, validade } = req.body;
-
-  await Credito.create({
-    aluno_id,
-    categoria_id,
-    data_credito,
-    validade,
-    usado: false
-  });
-
-  res.redirect('/professor/creditos');
-};
-
-// Listar créditos de todos os alunos (opcional)
-exports.listarCreditos = async (req, res) => {
-  const creditos = await Credito.findAll({
-    include: [Aluno, Categoria],
-    order: [['validade', 'ASC']]
-  });
-  res.render('professor/listarCreditos', { creditos });
-};
-
-
 exports.atualizarPacote = async (req, res) => {
   const pacoteId = parseInt(req.params.id, 10);
   const {
@@ -1170,24 +1148,23 @@ exports.verPacotesAluno = async (req, res) => {
       WHERE p.aluno_id = ?
     `, [alunoId]);
 
-    // Processamento igual ao da função listarPacotesPorAluno
     function isValidDate(d) {
       return d instanceof Date && !isNaN(d);
     }
 
-    pacotes.forEach(pacote => {
+    for (const pacote of pacotes) {
+      // Cálculo de aulas restantes
       const aulasTotal = parseInt(pacote.quantidade_aulas, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      // Formatando data de início
+      // Datas formatadas
       if (pacote.data_inicio) {
         const dataInicio = new Date(pacote.data_inicio);
         pacote.data_inicio_formatada = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
       }
 
-      // Formatando data de validade e status
-      if (!pacote.data_validade || pacote.data_validade === '0000-00-00' || pacote.data_validade === '' || pacote.tipo === 'avulsa') {
+      if (!pacote.data_validade || pacote.data_validade === '0000-00-00' || pacote.tipo === 'avulsa') {
         pacote.data_validade_formatada = '—';
         pacote.status_validade = 'Sem validade';
       } else {
@@ -1212,11 +1189,32 @@ exports.verPacotesAluno = async (req, res) => {
         }
       }
 
-      // Ajuste booleano de pagamento
       pacote.pago = !!pacote.pago;
-    });
 
-    // Buscar todas as categorias disponíveis
+      // 📌 Buscar uso de créditos deste pacote
+      const [usos] = await db.query(`
+        SELECT uc.data_utilizacao, af.dia_semana, af.horario, c.nome AS categoria
+        FROM uso_creditos uc
+        JOIN aulas_fixas af ON uc.aula_fixa_id = af.id
+        LEFT JOIN categorias c ON af.categoria_id = c.categoria_id
+        WHERE uc.pacote_id = ?
+        ORDER BY uc.data_utilizacao DESC
+      `, [pacote.id]);
+
+      // Mapear resultado com dia da semana e horário
+      pacote.usos = usos.map(uso => {
+        const data = new Date(uso.data_utilizacao);
+        const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        return {
+          data: `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}/${data.getFullYear()}`,
+          diaSemana: diasSemana[uso.dia_semana] || '',
+          horario: uso.horario ? uso.horario.slice(0, 5) : '',
+          categoria: uso.categoria || ''
+        };
+      });
+    }
+
+    // Buscar todas categorias (se necessário na view)
     const [categorias] = await db.query('SELECT * FROM categorias');
 
     res.render('professor/pacotesAluno', {
@@ -1230,7 +1228,6 @@ exports.verPacotesAluno = async (req, res) => {
     res.status(500).send('Erro interno');
   }
 };
-
 
 
 // Cria novo pacote para um aluno

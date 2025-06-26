@@ -10,7 +10,6 @@ require('./jobs/aniversario');
 require('./cron');
 
 
-
 cron.schedule('*/1 * * * *', async () => {
   console.log('🧹 Executando limpeza de aulas expiradas...');
 
