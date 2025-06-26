@@ -452,7 +452,6 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
   const hoje = new Date().toISOString().slice(0, 10);
 
   try {
-    // Buscar todas as aulas fixas, independentemente das vagas
     const [aulas] = await db.query(`
       SELECT 
         af.id, 
@@ -465,16 +464,15 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         CASE 
           WHEN aaf.aluno_id IS NOT NULL THEN 1
           ELSE 0
-        END AS inscrito
+        END AS inscrito,
+        IFNULL(aaf.eh_fixo, 0) AS eh_fixo
       FROM aulas_fixas af
       JOIN categorias c ON af.categoria_id = c.categoria_id
       JOIN professores p ON af.professor_id = p.id
       LEFT JOIN alunos_aulas_fixas aaf
         ON af.id = aaf.aula_fixa_id AND aaf.aluno_id = ?
-      -- Removido filtro de vagas para mostrar todas as aulas
     `, [alunoId]);
 
-    // Buscar pacotes válidos do aluno
     const [pacotes] = await db.query(`
       SELECT categoria_id, passe_livre, quantidade_aulas, aulas_utilizadas, data_validade
       FROM pacotes_aluno
@@ -483,28 +481,24 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         AND (quantidade_aulas - aulas_utilizadas) > 0
     `, [alunoId, hoje]);
 
-    // Verifica se aluno tem pacote para categoria ou passe livre
     function temPacoteParaCategoria(categoriaId) {
-      return pacotes.some(pacote => 
+      return pacotes.some(pacote =>
         pacote.passe_livre === 1 || pacote.categoria_id === categoriaId
       );
     }
 
-    // Mapeia aulas adicionando flags temPacote e pode_desistir
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
       const agora = new Date();
 
-      let podeDesistir = false;
-      if (dataHoraAula) {
-        const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
-        podeDesistir = diffHoras >= 2;
-      }
+      const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
+      const podeDesistir = diffHoras >= 2;
 
       return {
         ...aula,
         temPacote: temPacoteParaCategoria(aula.categoria_id),
         pode_desistir: podeDesistir,
+        ehFixo: aula.eh_fixo === 1, // converte 1 para true, 0 para false
       };
     });
 
@@ -668,21 +662,33 @@ exports.desistirAulaFixa = async (req, res) => {
       return res.status(400).send('Desistência só permitida com no mínimo 2 horas de antecedência.');
     }
 
-    // Remove inscrição do aluno
+    const dataAulaStr = dataAula.toISOString().slice(0, 10);
+
+    // Remove desistência anterior para evitar erro de chave duplicada
+    await db.query(`
+      DELETE FROM desistencias_aula_fixa 
+      WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
+    `, [alunoId, aulaId, dataAulaStr]);
+
+    // Insere a nova desistência
+    await db.query(`
+      INSERT INTO desistencias_aula_fixa (aluno_id, aula_fixa_id, data)
+      VALUES (?, ?, ?)
+    `, [alunoId, aulaId, dataAulaStr]);
+
+    // Remove inscrição do aluno na aula fixa
     await db.query(`
       DELETE FROM alunos_aulas_fixas WHERE aluno_id = ? AND aula_fixa_id = ?
     `, [alunoId, aulaId]);
 
-    // Aumenta 1 vaga na aula
+    // Aumenta uma vaga na aula fixa
     await db.query(`
       UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?
     `, [aulaId]);
 
-    // *** Devolver crédito no pacote ***
-
+    // Devolve crédito no pacote do aluno
     const hojeISO = new Date().toISOString().slice(0, 10);
 
-    // Buscar pacote válido usado para essa categoria (mesmo critério da inscrição)
     const [pacotes] = await db.query(`
       SELECT id, aulas_utilizadas FROM pacotes_aluno
       WHERE aluno_id = ?
@@ -695,8 +701,6 @@ exports.desistirAulaFixa = async (req, res) => {
 
     if (pacotes.length > 0) {
       const pacote = pacotes[0];
-
-      // Decrementar aulas_utilizadas (devolver crédito)
       await db.query(`
         UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas - 1 WHERE id = ?
       `, [pacote.id]);

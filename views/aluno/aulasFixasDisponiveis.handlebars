@@ -12,27 +12,46 @@
             <p>Vagas: {{vagas}}</p>
 
             {{#if inscrito}}
-              <button disabled class="btn btn-outline-custom">Já Inscrito</button>
-              <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
-                <button class="btn btn-danger">Desmarcar</button>
-              </form>
-            {{else}}
-              {{#if temPacote}}
-                <form action="/aluno/aulas-fixas/inscrever/{{id}}" method="POST" class="d-inline">
-                  <button class="btn btn-outline-custom">Inscrever</button>
-                </form>
-              {{else}}
-                {{#eq ../mensagemErroId id}}
-                  <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
-                    {{../mensagemErroTexto}}
-                  </div>
+              <p>
+                <span class="badge {{#if ehFixo}}bg-primary{{else}}bg-success{{/if}}">
+                  {{#if ehFixo}}Inscrito (fixo){{else}}Inscrito (temporário){{/if}}
+                </span>
+              </p>
+
+              {{#if pode_desistir}}
+                {{#unless desistiu}}
+                  <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
+                    <button class="btn btn-danger">Desmarcar</button>
+                  </form>
                 {{else}}
-                  <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
-                    Você não possui pacote válido com aulas disponíveis para essa categoria.
-                  </div>
-                {{/eq}}
+                  <button class="btn btn-secondary" disabled>Você já desistiu desta semana</button>
+                {{/unless}}
+              {{else}}
+                <button class="btn btn-secondary" disabled>Desistência indisponível (menos de 2h)</button>
+              {{/if}}
+
+            {{else}}
+              {{#if desistiu}}
+                <button class="btn btn-outline-warning" disabled>Você desistiu desta semana</button>
+              {{else}}
+                {{#if temPacote}}
+                  <form action="/aluno/aulas-fixas/inscrever/{{id}}" method="POST" class="d-inline">
+                    <button class="btn btn-outline-custom">Inscrever</button>
+                  </form>
+                {{else}}
+                  {{#eq ../mensagemErroId id}}
+                    <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
+                      {{../mensagemErroTexto}}
+                    </div>
+                  {{else}}
+                    <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
+                      Você não possui pacote válido com aulas disponíveis para essa categoria.
+                    </div>
+                  {{/eq}}
+                {{/if}}
               {{/if}}
             {{/if}}
+
           </div>
         {{/each}}
       {{else}}

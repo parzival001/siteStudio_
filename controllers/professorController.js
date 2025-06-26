@@ -545,7 +545,9 @@ exports.adicionarAlunoAulaFixa = async (req, res) => {
   }
 };
 
-function proximaDataSemana(diaSemana) {
+function proximaDataSemana(diaSemanaTexto) {
+  const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const diaSemana = dias.indexOf(diaSemanaTexto);
   const hoje = new Date();
   const diaAtual = hoje.getDay();
   const diasAteProxima = (diaSemana - diaAtual + 7) % 7 || 7;
@@ -587,13 +589,21 @@ exports.gerarAulasFixas = async () => {
       const novaAulaId = resultado.insertId;
       console.log(`✅ Aula criada para ${dataAula} (ID: ${novaAulaId})`);
 
-      // Pega alunos fixos da aula
+      // Pega alunos fixos que NÃO desistiram dessa data
       const [alunosFixos] = await db.query(`
-        SELECT aluno_id FROM alunos_aulas_fixas
-        WHERE aula_fixa_id = ?
-      `, [aula.id]);
+        SELECT aaf.aluno_id
+        FROM alunos_aulas_fixas aaf
+        WHERE aaf.aula_fixa_id = ?
+          AND aaf.eh_fixo = 1
+          AND NOT EXISTS (
+            SELECT 1 FROM desistencias_aula_fixa d
+            WHERE d.aluno_id = aaf.aluno_id
+              AND d.aula_fixa_id = aaf.aula_fixa_id
+              AND d.data = ?
+          )
+      `, [aula.id, dataAula]);
 
-      // Insere alunos fixos na nova aula
+      // Insere os alunos fixos que não desistiram na nova aula
       for (const { aluno_id } of alunosFixos) {
         await db.query(`
           INSERT INTO aulas_alunos (aula_id, aluno_id, tipo_participacao)

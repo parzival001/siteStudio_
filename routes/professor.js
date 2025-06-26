@@ -6,8 +6,6 @@ const path = require('path');
 const db = require('../config/db'); // Ajuste conforme sua estrutura
 
 
-
-
 const professorController = require('../controllers/professorController');
 
 // Configuração do armazenamento dos arquivos PDF
