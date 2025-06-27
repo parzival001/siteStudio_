@@ -24,6 +24,7 @@
                 <th>Validade</th>
                 <th>Status</th>
                 <th>Pago</th>
+                <th>Créditos</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -64,15 +65,16 @@
                   {{else}}
                     <span class="badge bg-danger">Não</span>
                   {{/if}}
-
+                </td>
+                <td>
                   {{#if this.usos}}
-                    <br />
-                    <small><strong>Créditos usados (aulas fixas):</strong></small>
-                    <ul style="list-style:none; padding-left:0; max-height: 100px; overflow-y:auto; margin-top:4px;">
+                    <ul style="list-style:none; padding-left:0; max-height: 100px; overflow-y:auto; font-size: 0.85em;">
                       {{#each this.usos}}
-                        <li style="font-size: 0.85em;">{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
+                        <li>{{this.data}} ({{this.diaSemana}} {{this.horario}}) - {{this.categoria}}</li>
                       {{/each}}
                     </ul>
+                  {{else}}
+                    <span class="text-muted">Nenhum uso</span>
                   {{/if}}
                 </td>
                 <td>
@@ -118,7 +120,7 @@
               <span class="badge bg-success">{{this.status_validade}}</span>
             {{/if}}
           </p>
-          <p class="mb-2">
+          <p class="mb-1">
             <strong>Pago:</strong>
             {{#if this.pago}}
               <span class="badge bg-success">Sim</span>
@@ -127,15 +129,17 @@
             {{/if}}
           </p>
 
+          <p class="mb-1"><strong>Créditos:</strong></p>
           {{#if this.usos}}
-          <div style="max-height: 120px; overflow-y: auto; margin-top: 8px; font-size: 0.9em;">
-            <strong>Créditos usados (aulas fixas):</strong>
-            <ul style="list-style:none; padding-left:0; margin-top: 4px;">
-              {{#each this.usos}}
-                <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
-              {{/each}}
-            </ul>
-          </div>
+            <div style="max-height: 120px; overflow-y: auto; font-size: 0.9em; margin-bottom: 10px;">
+              <ul style="list-style:none; padding-left:0; margin-top: 4px;">
+                {{#each this.usos}}
+                  <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
+                {{/each}}
+              </ul>
+            </div>
+          {{else}}
+            <p class="text-muted mb-2">Nenhum crédito usado</p>
           {{/if}}
 
           <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">

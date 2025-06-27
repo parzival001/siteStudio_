@@ -18,6 +18,7 @@
               <th>Validade</th>
               <th>Status</th>
               <th>Pago</th>
+              <th>Créditos Usados</th>
             </tr>
           </thead>
           <tbody>
@@ -46,6 +47,17 @@
                     <span class="badge bg-success">Sim</span>
                   {{else}}
                     <span class="badge bg-danger">Não</span>
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if usos}}
+                    <ul style="list-style:none; padding-left:0; max-height:100px; overflow-y:auto; font-size: 0.85em;">
+                      {{#each usos}}
+                        <li>{{this.data}} ({{this.diaSemana}} {{this.horario}}) - {{this.categoria}}</li>
+                      {{/each}}
+                    </ul>
+                  {{else}}
+                    <span class="text-muted">Nenhum uso</span>
                   {{/if}}
                 </td>
               </tr>
@@ -86,6 +98,20 @@
             <span class="badge bg-danger">Não</span>
           {{/if}}
         </p>
+
+        <p class="mb-1"><strong>Créditos Usados:</strong></p>
+        {{#if usos}}
+          <div style="max-height: 120px; overflow-y: auto; font-size: 0.9em;">
+            <ul style="list-style:none; padding-left:0; margin-top: 4px;">
+              {{#each usos}}
+                <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
+              {{/each}}
+            </ul>
+          </div>
+        {{else}}
+          <p class="text-muted">Nenhum crédito utilizado</p>
+        {{/if}}
+
       </div>
       {{/each}}
     </div>

@@ -4,7 +4,7 @@ const db = require('../config/db'); // importe seu db se necessário
 
 
 // Agenda para rodar todo dia às 20:30
-cron.schedule('09 21 * * *', () => {
+cron.schedule('40 13 * * *', () => {
   console.log('🕣 Iniciando desconto automático de créditos das aulas fixas às 21;09...');
   descontarCreditosAulasFixas()
     .then(() => console.log('✅ Desconto de créditos concluído.'))

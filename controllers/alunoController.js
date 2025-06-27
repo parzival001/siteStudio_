@@ -303,6 +303,7 @@ exports.desinscreverAluno = async (req, res) => {
     res.status(500).send('Erro ao desinscrever aluno.');
   }
 };
+
 exports.listarPacotes = async (req, res) => {
   try {
     const alunoId = req.session.user?.id;
@@ -328,7 +329,7 @@ exports.listarPacotes = async (req, res) => {
       WHERE p.aluno_id = ?
     `, [alunoId]);
 
-    pacotes.forEach(pacote => {
+    for (const pacote of pacotes) {
       const aulasTotal = parseInt(pacote.aulas_total, 10) || 0;
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
@@ -368,7 +369,22 @@ exports.listarPacotes = async (req, res) => {
         pacote.status_validade = 'Sem validade';
         pacote.validade = '-';
       }
-    });
+
+      // ✅ Buscar créditos usados do pacote com data, horário e categoria
+      const [usos] = await db.query(`
+        SELECT 
+          DATE_FORMAT(u.data_utilizacao, '%d/%m/%Y') AS data,
+          af.horario,
+          c.nome AS categoria
+        FROM uso_creditos u
+        LEFT JOIN aulas_fixas af ON af.id = u.aula_fixa_id
+        LEFT JOIN categorias c ON c.categoria_id = af.categoria_id
+        WHERE u.pacote_id = ?
+        ORDER BY u.data_utilizacao DESC
+      `, [pacote.id]);
+
+      pacote.usos = usos;
+    }
 
     res.render('aluno/pacotes', { pacotes });
   } catch (err) {
@@ -514,7 +530,6 @@ exports.inscreverNaAulaFixa = async (req, res) => {
   const aulaFixaId = req.params.id;
 
   try {
-    // 1. Buscar a aula fixa e categoria dela
     const [[aula]] = await db.query(
       `SELECT categoria_id, vagas FROM aulas_fixas WHERE id = ?`,
       [aulaFixaId]
@@ -528,7 +543,6 @@ exports.inscreverNaAulaFixa = async (req, res) => {
       return res.status(400).send('Não há vagas disponíveis nessa aula.');
     }
 
-    // 2. Verificar se aluno já está inscrito na aula fixa
     const [[inscrito]] = await db.query(
       `SELECT * FROM alunos_aulas_fixas WHERE aluno_id = ? AND aula_fixa_id = ?`,
       [alunoId, aulaFixaId]
@@ -538,8 +552,7 @@ exports.inscreverNaAulaFixa = async (req, res) => {
       return res.status(400).send('Você já está inscrito nessa aula.');
     }
 
-    // 3. Verificar se aluno tem pacote válido e com créditos para essa categoria
-    const hoje = new Date().toISOString().slice(0, 10); // formato 'YYYY-MM-DD'
+    const hoje = new Date().toISOString().slice(0, 10);
     const [pacotes] = await db.query(
       `SELECT * FROM pacotes_aluno
        WHERE aluno_id = ?
@@ -552,7 +565,6 @@ exports.inscreverNaAulaFixa = async (req, res) => {
     );
 
     if (pacotes.length === 0) {
-      // Se não tem pacote válido, recarrega a lista de aulas com flag para mensagem
       const [aulas] = await db.query(`
         SELECT af.id, af.dia_semana, af.horario, af.vagas, af.categoria_id,
                c.nome AS categoria_nome,
@@ -565,10 +577,7 @@ exports.inscreverNaAulaFixa = async (req, res) => {
         WHERE af.vagas > 0
       `, [alunoId]);
 
-      // Configura temPacote para cada aula:
       aulas.forEach(aulaItem => {
-        // Para a aula que tentou inscrever e falhou: false
-        // Para as outras: true (assumindo que tem pacote para as outras)
         aulaItem.temPacote = aulaItem.id !== parseInt(aulaFixaId);
       });
 
@@ -581,19 +590,17 @@ exports.inscreverNaAulaFixa = async (req, res) => {
 
     const pacote = pacotes[0];
 
-    // 4. Inserir inscrição na aula fixa
+    // ✅ Insere com eh_fixo = 0
     await db.query(
-      `INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id) VALUES (?, ?)`,
+      `INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo) VALUES (?, ?, 0)`,
       [alunoId, aulaFixaId]
     );
 
-    // 5. Diminuir uma aula disponível no pacote
     await db.query(
       `UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?`,
       [pacote.id]
     );
 
-    // 6. Diminuir a vaga da aula fixa
     await db.query(
       `UPDATE aulas_fixas SET vagas = vagas - 1 WHERE id = ?`,
       [aulaFixaId]
