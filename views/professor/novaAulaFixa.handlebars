@@ -75,14 +75,24 @@
         <p class="text-muted">Nenhum aluno cadastrado.</p>
         {{/if}}
 
-        <form method="POST" action="/professor/aulas-fixas/{{this.id}}/adicionar-aluno" class="mb-3 d-flex gap-2">
-          <select name="aluno_id" class="form-select" required>
-            {{#each ../alunos}}
-            <option value="{{this.id}}">{{this.nome}}</option>
-            {{/each}}
-          </select>
-          <button type="submit" class="btn btn-outline-custom">Adicionar Aluno</button>
-        </form>
+        <form method="POST" action="/professor/aulas-fixas/{{this.id}}/adicionar-aluno" class="mb-3">
+  <div class="mb-2">
+    <input 
+      type="text" 
+      class="form-control" 
+      placeholder="Buscar aluno pelo nome..." 
+      oninput="filtrarAlunos(this, 'aluno-select-{{this.id}}')">
+  </div>
+
+  <div class="d-flex gap-2">
+    <select id="aluno-select-{{this.id}}" name="aluno_id" class="form-select" required>
+      {{#each (sortBy ../alunos "nome")}}
+        <option value="{{this.id}}">{{this.nome}}</option>
+      {{/each}}
+    </select>
+    <button type="submit" class="btn btn-outline-custom">Adicionar Aluno</button>
+  </div>
+</form>
 
         <form method="POST" action="/professor/aulas-fixas/deletar/{{this.id}}">
           <button class="btn btn-outline-danger w-100">Deletar Aula</button>
@@ -96,4 +106,21 @@
 
     </div>
   </div>
+  <script>
+  function filtrarAlunos(input, selectId) {
+    const filtro = input.value.toLowerCase();
+    const select = document.getElementById(selectId);
+
+    for (const option of select.options) {
+      const nome = option.textContent.toLowerCase();
+      option.style.display = nome.includes(filtro) ? 'block' : 'none';
+    }
+
+    // Seleciona a primeira opção visível automaticamente (opcional)
+    const visiveis = [...select.options].filter(opt => opt.style.display !== 'none');
+    if (visiveis.length > 0) {
+      select.value = visiveis[0].value;
+    }
+  }
+</script>
 </div>

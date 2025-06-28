@@ -90,6 +90,14 @@ const hbs = handlebars.create({
         return a === b;
       }
     },
+    sortBy: function (array, field) {
+      if (!Array.isArray(array)) return [];
+      return array.slice().sort((a, b) => {
+        const valA = (a[field] || '').toString().toLowerCase();
+        const valB = (b[field] || '').toString().toLowerCase();
+        return valA.localeCompare(valB);
+      });
+   },
     ifCond: function (v1, operator, v2, options) {
       switch (operator) {
         case '==':
