@@ -531,6 +531,17 @@ router.post('/pacotes/editar/:id', professorController.editarPacote);
 
 
 
+/////////////////////////////////////////TESTE////////////////////////////////////
+
+
+router.get('/simular-desconto', async (req, res) => {
+  const diasAdiante = parseInt(req.query.dias || '7');
+  const dataSimulada = new Date();
+  dataSimulada.setDate(dataSimulada.getDate() + diasAdiante);
+  await professorController.limparAlunosTemporarios();
+  await professorController.simularDescontoNaData(dataSimulada.toISOString());
+  res.send(`✅ Simulação feita para ${dataSimulada.toLocaleDateString('pt-BR')}`);
+});
 
 
 module.exports = router;

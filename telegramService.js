@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const token = '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8';
-const bot = new TelegramBot(token); // ❌ sem polling aqui!
+const bot = new TelegramBot(token, { polling: false });
 
 const CHAT_ID_ADMIN = -1002656604822;
 

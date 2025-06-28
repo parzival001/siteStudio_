@@ -11,6 +11,7 @@
           <div class="mb-3">
             <label for="aluno_id" class="form-label">Aluno</label>
             <select name="aluno_id" id="aluno_id" class="form-select" required>
+              <option value="">-- Selecione o aluno --</option>
               {{#each alunos}}
               <option value="{{this.id}}">{{this.nome}}</option>
               {{/each}}
@@ -94,5 +95,5 @@
     }
   }
 
-  
+
 </script>

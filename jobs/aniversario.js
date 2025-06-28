@@ -17,7 +17,7 @@ cron.schedule('00 07 * * *', async () => {
 
     if (aniversariantes.length > 0) {
       for (const { aluno_nome } of aniversariantes) {
-        const mensagem = `🎉 Hoje é aniversário do aluno${aluno_nome}!`;
+        const mensagem = `🎉 Hoje é aniversário do aluno ${aluno_nome}!`;
         await enviarMensagem(mensagem);
       }
       console.log(`[Aniversários] Mensagens enviadas: ${aniversariantes.length}`);

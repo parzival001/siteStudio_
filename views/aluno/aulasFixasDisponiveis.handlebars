@@ -14,7 +14,7 @@
             {{#if inscrito}}
               <p>
                 <span class="badge {{#if ehFixo}}bg-primary{{else}}bg-success{{/if}}">
-                  {{#if ehFixo}}Inscrito (fixo){{else}}Inscrito (temporário){{/if}}
+                  {{#if ehFixo}}Inscrito{{else}}Inscrito{{/if}}
                 </span>
               </p>
 
@@ -23,32 +23,28 @@
                   <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
                     <button class="btn btn-danger">Desmarcar</button>
                   </form>
-                {{else}}
-                  <button class="btn btn-secondary" disabled>Você já desistiu desta semana</button>
                 {{/unless}}
               {{else}}
-                <button class="btn btn-secondary" disabled>Desistência indisponível (menos de 2h)</button>
+                <div class="alert alert-warning p-2 mt-2" style="font-size: 0.9em;">
+                  Desistência indisponível. Só é permitida com no mínimo {{limite_desistencia_horas}} horas de antecedência.
+                </div>
               {{/if}}
 
             {{else}}
-              {{#if desistiu}}
-                <button class="btn btn-outline-warning" disabled>Você desistiu desta semana</button>
+              {{#if temPacote}}
+                <form action="/aluno/aulas-fixas/inscrever/{{id}}" method="POST" class="d-inline">
+                  <button class="btn btn-outline-custom">Inscrever</button>
+                </form>
               {{else}}
-                {{#if temPacote}}
-                  <form action="/aluno/aulas-fixas/inscrever/{{id}}" method="POST" class="d-inline">
-                    <button class="btn btn-outline-custom">Inscrever</button>
-                  </form>
+                {{#eq ../mensagemErroId id}}
+                  <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
+                    {{../mensagemErroTexto}}
+                  </div>
                 {{else}}
-                  {{#eq ../mensagemErroId id}}
-                    <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
-                      {{../mensagemErroTexto}}
-                    </div>
-                  {{else}}
-                    <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
-                      Você não possui pacote válido com aulas disponíveis para essa categoria.
-                    </div>
-                  {{/eq}}
-                {{/if}}
+                  <div class="alert alert-warning mt-2 p-2" role="alert" style="font-size: 0.9em;">
+                    Você não possui pacote válido com aulas disponíveis para essa categoria.
+                  </div>
+                {{/eq}}
               {{/if}}
             {{/if}}
 

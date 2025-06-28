@@ -6,6 +6,7 @@ const router = express.Router();
 const { enviarMensagem } = require('../utils/telegram');
 
 
+
 // Controller para rotas de 'professor'
 
 exports.home = (req, res) => {
@@ -255,8 +256,6 @@ exports.deletarAula = async (req, res) => {
 };
 
 
-//const { enviarMensagem } = require('../utils/telegram');
-
 
 exports.concluirAula = async (req, res) => {
   const aulaId = req.params.id;
@@ -306,7 +305,6 @@ exports.concluirAula = async (req, res) => {
     // Enviar mensagem para o Telegram
     const nomes = alunos.map(a => a.nome).join(', ') || 'Nenhum participante';
     const mensagem = `✅ *Aula Concluída*\n👨‍🏫 Professor: ${aula.professor_nome}\n📅 Data: ${dataFormatada}\n🕒 Hora: ${horaFormatada}\n👥 Participantes: ${nomes}`;
-    await enviarMensagem(mensagem, 'Markdown');
 
     res.redirect('/professor/aulas');
   } catch (err) {
@@ -404,26 +402,53 @@ exports.listaAlunos = async (req, res) => {
 
 
 /////////////////////////////////////////////////AULAS FIXAS///////////////////////////////////////////
+// Exibe form para criar nova aula fixa
 exports.listarAulasFixas = async (req, res) => {
+  console.log('🚀 Função listarAulasFixas foi chamada!');
   try {
     const [aulasFixas] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
       JOIN categorias c ON af.categoria_id = c.categoria_id
       JOIN professores p ON af.professor_id = p.id
-      ORDER BY af.dia_semana, af.horario
     `);
+
+    const ordemDias = {
+      segunda: 1, Seg: 1,
+      Ter: 2, terca: 2, terça: 2,
+      Qua: 3, quarta: 3,
+      quinta: 4, Qui: 4,
+      sexta: 5, Sex: 5,
+      sabado: 6, Sab: 6, sábado: 6,
+      Dom: 7, domingo: 7,
+    };
+
+    function normalizar(dia) {
+      if (!dia) return '';
+      return dia
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    aulasFixas.sort((a, b) => {
+      const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
+      const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
+      if (diaA !== diaB) return diaA - diaB;
+      return a.horario.localeCompare(b.horario);
+    });
 
     for (const aula of aulasFixas) {
       const [alunosFixo] = await db.query(`
-        SELECT aaf.aluno_id, a.nome 
+        SELECT aaf.aluno_id, a.nome
         FROM alunos_aulas_fixas aaf
         JOIN alunos a ON a.id = aaf.aluno_id
         WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = true
       `, [aula.id]);
 
       const [alunosTemporarios] = await db.query(`
-        SELECT aaf.aluno_id, a.nome 
+        SELECT aaf.aluno_id, a.nome
         FROM alunos_aulas_fixas aaf
         JOIN alunos a ON a.id = aaf.aluno_id
         WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = false
@@ -431,27 +456,26 @@ exports.listarAulasFixas = async (req, res) => {
 
       aula.alunosFixo = alunosFixo;
       aula.alunosTemporarios = alunosTemporarios;
+
+      const todosAlunos = [...alunosFixo, ...alunosTemporarios];
+
+      const nomes = todosAlunos.length > 0
+  ? todosAlunos.map(a => `- ${a.nome}`).join('\n')
+  : '_Nenhum participante._';
+
+const mensagem = 
+  `📚 *Aula fixa finalizada!*\n` +
+  `👨‍🏫 *Professor:* ${aula.professor_nome}\n` +
+  `📘 *Categoria:* ${aula.categoria_nome}\n` +
+  `👥 *Participantes de hoje:*\n${nomes}`;
+
+console.log('[DEBUG] Enviando mensagem ao grupo:\n', mensagem);
+await enviarMensagem(mensagem);
     }
 
     res.render('professor/novaAulaFixa', { aulasFixas });
   } catch (err) {
     console.error('Erro ao listar aulas fixas:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
-};
-
-// Exibe form para criar nova aula fixa
-exports.formNovaAulaFixa = async (req, res) => {
-  try {
-    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
-    const [professores] = await db.query('SELECT id, nome FROM professores');
-
-    console.log('Categorias:', categorias); // Verifique as categorias retornadas
-    console.log('Professores:', professores); // Verifique os professores retornados
-
-    res.render('professor/novaAulaFixa', { categorias, professores });
-  } catch (err) {
-    console.error('Erro ao buscar dados para aula fixa:', err);
     res.status(500).send('Erro interno no servidor');
   }
 };
@@ -503,8 +527,20 @@ exports.removerAlunoAulaFixa = async (req, res) => {
 // Remove uma aula fixa
 exports.deletarAulaFixa = async (req, res) => {
   const id = parseInt(req.params.id, 10);
+
   try {
+    // Excluir registros relacionados na tabela uso_creditos
+    await db.query('DELETE FROM uso_creditos WHERE aula_fixa_id = ?', [id]);
+
+    // Excluir também desistências (se sua tabela de desistência usar foreign key)
+    await db.query('DELETE FROM aulas_fixas_desistencias WHERE aula_fixa_id = ?', [id]);
+
+    // Excluir também alunos inscritos (evita orphan rows)
+    await db.query('DELETE FROM alunos_aulas_fixas WHERE aula_fixa_id = ?', [id]);
+
+    // Por fim, excluir a aula fixa
     await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);
+
     res.redirect('/professor/aulas-fixas/nova');
   } catch (err) {
     console.error('Erro ao deletar aula fixa:', err);
@@ -1543,5 +1579,143 @@ exports.editarPacote = async (req, res) => {
     res.status(500).send('Erro ao atualizar o pacote.');
   }
 };
+
+
+
+////////////////////////////////////////////////TESTE///////////////////////////
+
+exports.simularDescontoNaData = async (dataSimulada) => {
+  try {
+    const dataForcada = new Date(dataSimulada);
+    const diaSemanaTexto = dataForcada.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
+    const hojeISO = dataForcada.toISOString().slice(0, 10);
+
+    const [aulas] = await db.query(`
+      SELECT af.*, c.nome AS categoria_nome
+      FROM aulas_fixas af
+      JOIN categorias c ON c.categoria_id = af.categoria_id
+      WHERE af.dia_semana = ?
+    `, [diaSemanaTexto]);
+
+    for (const aula of aulas) {
+      const [alunosFixo] = await db.query(`
+        SELECT aaf.aluno_id FROM alunos_aulas_fixas aaf
+        WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = true
+      `, [aula.id]);
+
+      for (const aluno of alunosFixo) {
+        // Verifica se desistiu para essa data
+        const [desistiu] = await db.query(`
+          SELECT 1 FROM aulas_fixas_desistencias
+          WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
+        `, [aluno.aluno_id, aula.id, hojeISO]);
+
+        if (desistiu.length > 0) continue;
+
+        // Já foi descontado?
+        const [usoExistente] = await db.query(`
+          SELECT 1 FROM uso_creditos
+          WHERE aluno_id = ? AND aula_fixa_id = ? AND data_utilizacao = ?
+        `, [aluno.aluno_id, aula.id, hojeISO]);
+
+        if (usoExistente.length > 0) continue;
+
+        const [pacote] = await db.query(`
+          SELECT id FROM pacotes_aluno
+          WHERE aluno_id = ?
+          AND (categoria_id = ? OR passe_livre = 1)
+          AND (data_validade IS NULL OR data_validade >= ?)
+          AND aulas_utilizadas < quantidade_aulas
+          ORDER BY data_validade ASC
+          LIMIT 1
+        `, [aluno.aluno_id, aula.categoria_id, hojeISO]);
+
+        if (pacote.length === 0) continue;
+
+        await db.query(`
+          UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1
+          WHERE id = ?
+        `, [pacote[0].id]);
+
+        await db.query(`
+          INSERT INTO uso_creditos (aluno_id, pacote_id, aula_fixa_id, data_utilizacao)
+          VALUES (?, ?, ?, ?)
+        `, [aluno.aluno_id, pacote[0].id, aula.id, hojeISO]);
+
+        console.log(`✅ Descontado para aluno ${aluno.aluno_id} na aula ${aula.id} em ${hojeISO}`);
+      }
+    }
+
+    console.log(`🧪 Simulação concluída para o dia ${hojeISO}`);
+  } catch (err) {
+    console.error('Erro na simulação de desconto:', err);
+  }
+};
+
+////////////////////////////////////////////////////////////////////////
+
+
+exports.limparAlunosTemporarios = async () => {
+  try {
+    const [aulas] = await db.query(`SELECT id, dia_semana, horario FROM aulas_fixas`);
+
+    const diasSemanaMap = {
+      domingo: 0,
+      segunda: 1,
+      terca: 2,
+      terça: 2,
+      quarta: 3,
+      quinta: 4,
+      sexta: 5,
+      sabado: 6,
+      sábado: 6
+    };
+
+    function getProximaDataAula(diaSemana, horario) {
+      const hoje = new Date();
+      const diaAtual = hoje.getDay();
+
+      const diaSemanaNum = diasSemanaMap[diaSemana.toLowerCase()];
+      if (diaSemanaNum === undefined) return null;
+
+      let diasAteAula = diaSemanaNum - diaAtual;
+      if (diasAteAula < 0) diasAteAula += 7;
+
+      const proximaAula = new Date(hoje);
+      proximaAula.setDate(hoje.getDate() + diasAteAula);
+
+      const [hora, minuto] = horario.split(':').map(Number);
+      proximaAula.setHours(hora, minuto, 0, 0);
+
+      return proximaAula;
+    }
+
+    for (const aula of aulas) {
+      const proximaData = getProximaDataAula(aula.dia_semana, aula.horario);
+      if (!proximaData) continue;
+
+      const hoje = new Date();
+
+      // Se a próxima data for depois de hoje, significa que a última aula já passou
+      if (proximaData > hoje) {
+        // Remover temporários dessa aula (que são da semana anterior)
+        await db.query(`
+          DELETE FROM alunos_aulas_fixas 
+          WHERE aula_fixa_id = ? AND eh_fixo = false
+        `, [aula.id]);
+      }
+    }
+
+    console.log('✅ Alunos temporários removidos com sucesso.');
+  } catch (err) {
+    console.error('Erro ao limpar alunos temporários:', err);
+  }
+};
+
+
+
+
+
+
 
 module.exports = exports;
