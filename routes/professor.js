@@ -255,17 +255,13 @@ router.post('/alunos/:id/editar', authProfessor, async (req, res) => {
   }
 });
 
-
+//////////////////////////////////////////////////////AULAS FIXAS///////////////////////////////
 
 router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
   try {
-    // Busca categorias de aula
     const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
-
-    // Busca professores
     const [professores] = await db.query('SELECT id, nome FROM professores');
 
-    // Busca todas as aulas fixas com nome da categoria e do professor
     const [aulasFixas] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
@@ -273,24 +269,49 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
       JOIN professores p ON af.professor_id = p.id
     `);
 
+    // Dicionário para ordenação dos dias
+    const ordemDias = {
+      segunda: 1, seg: 1,
+      terca: 2, terça: 2, ter: 2,
+      quarta: 3, qua: 3,
+      quinta: 4, qui: 4,
+      sexta: 5, sex: 5,
+      sabado: 6, sábado: 6, sab: 6,
+      domingo: 7, dom: 7
+    };
+
+    function normalizar(dia) {
+      if (!dia) return '';
+      return dia.toLowerCase().trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
     // Formata e anexa os alunos de cada aula
     for (const aula of aulasFixas) {
       aula.dia_semana = aula.dia_semana.charAt(0).toUpperCase() + aula.dia_semana.slice(1);
       aula.horario = aula.horario.slice(0, 5);
 
-      const [alunosAula] = await db.query(
-        `SELECT a.id, a.nome FROM alunos a
-         JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
-         WHERE aaf.aula_fixa_id = ?`,
-        [aula.id]
-      );
+      const [alunosAula] = await db.query(`
+        SELECT a.id, a.nome
+        FROM alunos a
+        JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
+        WHERE aaf.aula_fixa_id = ?
+      `, [aula.id]);
+
       aula.alunos = alunosAula;
     }
 
-    // Busca todos os alunos para o formulário
+    // 🔽 Ordena por dia e horário
+    aulasFixas.sort((a, b) => {
+      const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
+      const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
+      if (diaA !== diaB) return diaA - diaB;
+      return a.horario.localeCompare(b.horario);
+    });
+
     const [alunos] = await db.query('SELECT id, nome FROM alunos');
 
-    // Renderiza tudo
     res.render('professor/novaAulaFixa', {
       categorias,
       professores,
@@ -347,7 +368,6 @@ router.post('/aulas-fixas/nova', authProfessor, async (req, res) => {
     res.status(500).send('Erro ao salvar aula fixa');
   }
 });
-
 
 
 router.post('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
@@ -448,7 +468,7 @@ router.post('/aulas-fixas/deletar/:id', authProfessor, async (req, res) => {
   }
 });
 
-
+router.get('/aulas-fixas', professorController.listarAulasFixas);
 
 ///////////////////////////////////////////////////ANAMNASE////////////////////////////////////////////////////
 

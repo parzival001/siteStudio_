@@ -404,15 +404,13 @@ exports.listaAlunos = async (req, res) => {
 /////////////////////////////////////////////////AULAS FIXAS///////////////////////////////////////////
 // Exibe form para criar nova aula fixa
 exports.listarAulasFixas = async (req, res) => {
-  console.log('🚀 Função listarAulasFixas foi chamada!');
   try {
     const [aulasFixas] = await db.query(`
-  SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
-  FROM aulas_fixas af
-  LEFT JOIN categorias c ON af.categoria_id = c.categoria_id
-  LEFT JOIN professores p ON af.professor_id = p.id
-`);
-      
+      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
+      FROM aulas_fixas af
+      LEFT JOIN categorias c ON af.categoria_id = c.categoria_id
+      LEFT JOIN professores p ON af.professor_id = p.id
+    `);
 
     const ordemDias = {
       segunda: 1, seg: 1,
@@ -433,25 +431,48 @@ exports.listarAulasFixas = async (req, res) => {
         .replace(/[\u0300-\u036f]/g, '');
     }
 
-    // 🔽 Ordena primeiro pelo dia da semana, depois pelo horário
+    function aulaConcluida(diaSemana, horario) {
+      const diasMap = { domingo: 0, seg: 1, segunda: 1, ter: 2, terca: 2, terça: 2, qua: 3, quarta: 3, qui: 4, quinta: 4, sex: 5, sexta: 5, sab: 6, sabado: 6, sábado: 6 };
+      const hoje = new Date();
+      const hojeDia = hoje.getDay(); // 0(dom) a 6(sab)
+      const diaAula = diasMap[normalizar(diaSemana)] ?? -1;
+      if (diaAula === -1) return false;
+
+      // Diferença em dias entre hoje e dia da aula
+      let diffDias = hojeDia - diaAula;
+      if (diffDias < 0) diffDias += 7;
+
+      if (diffDias > 0) return true; // aula já passou nessa semana
+
+      if (diffDias === 0) {
+        // comparar horário atual com horário da aula
+        if (!horario) return false;
+        const [horaAula, minAula] = horario.split(':').map(Number);
+        const agora = hoje.getHours() * 60 + hoje.getMinutes();
+        const aulaMinutos = horaAula * 60 + minAula;
+        return agora >= aulaMinutos;
+      }
+
+      return false;
+    }
+
+    // Ordena primeiro pelo dia da semana, depois pelo horário
     aulasFixas.sort((a, b) => {
-  const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
-  const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
-  const horaA = (a.horario || '00:00').slice(0, 5);
-  const horaB = (b.horario || '00:00').slice(0, 5);
+      const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
+      const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
+      const horaA = (a.horario || '00:00').slice(0, 5);
+      const horaB = (b.horario || '00:00').slice(0, 5);
 
-  if (diaA !== diaB) return diaA - diaB;
-  return horaA.localeCompare(horaB);
-});
-
-// Verifica ordenação no terminal
-console.table(aulasFixas.map(a => ({
-  dia: a.dia_semana,
-  horario: (a.horario || '').slice(0, 5),
-  professor: a.professor_nome
-})));
+      if (diaA !== diaB) return diaA - diaB;
+      return horaA.localeCompare(horaB);
+    });
 
     for (const aula of aulasFixas) {
+      // Só envia mensagem se a aula já foi concluída (já ocorreu)
+      if (!aulaConcluida(aula.dia_semana, aula.horario)) {
+        continue; // pula o envio
+      }
+
       const [alunosFixo] = await db.query(`
         SELECT aaf.aluno_id, a.nome
         FROM alunos_aulas_fixas aaf
@@ -486,7 +507,7 @@ console.table(aulasFixas.map(a => ({
     }
 
     console.log('[DEBUG] Total de aulas fixas retornadas:', aulasFixas.length);
-      console.log('[DEBUG] Primeira aula fixa:', aulasFixas[0]);
+    console.log('[DEBUG] Primeira aula fixa:', aulasFixas[0]);
 
     res.render('professor/novaAulaFixa', { aulasFixas });
   } catch (err) {
@@ -612,39 +633,10 @@ exports.gerarAulasFixas = async () => {
   try {
     console.log('⏳ Gerando aulas fixas da semana...');
 
-    const [aulasFixasRaw] = await db.query(`
+    const [aulasFixas] = await db.query(`
       SELECT af.id, af.categoria_id, af.professor_id, af.dia_semana, af.horario
       FROM aulas_fixas af
     `);
-
-    const ordemDias = {
-      segunda: 1, seg: 1,
-      terca: 2, terça: 2, ter: 2,
-      quarta: 3, qua: 3,
-      quinta: 4, qui: 4,
-      sexta: 5, sex: 5,
-      sabado: 6, sábado: 6, sab: 6,
-      domingo: 7, dom: 7
-    };
-
-    function normalizar(dia) {
-      if (!dia) return '';
-      return dia
-        .toLowerCase()
-        .trim()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, '');
-    }
-
-    // Ordenar por dia da semana e horário
-    const aulasFixas = aulasFixasRaw.sort((a, b) => {
-      const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
-      const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
-      const horaA = (a.horario || '00:00').slice(0, 5);
-      const horaB = (b.horario || '00:00').slice(0, 5);
-      if (diaA !== diaB) return diaA - diaB;
-      return horaA.localeCompare(horaB);
-    });
 
     for (const aula of aulasFixas) {
       const dataAula = proximaDataSemana(aula.dia_semana);
