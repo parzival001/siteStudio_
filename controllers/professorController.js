@@ -407,20 +407,21 @@ exports.listarAulasFixas = async (req, res) => {
   console.log('🚀 Função listarAulasFixas foi chamada!');
   try {
     const [aulasFixas] = await db.query(`
-      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
-      FROM aulas_fixas af
-      JOIN categorias c ON af.categoria_id = c.categoria_id
-      JOIN professores p ON af.professor_id = p.id
-    `);
+  SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
+  FROM aulas_fixas af
+  LEFT JOIN categorias c ON af.categoria_id = c.categoria_id
+  LEFT JOIN professores p ON af.professor_id = p.id
+`);
+      
 
     const ordemDias = {
-      segunda: 1, Seg: 1,
-      Ter: 2, terca: 2, terça: 2,
-      Qua: 3, quarta: 3,
-      quinta: 4, Qui: 4,
-      sexta: 5, Sex: 5,
-      sabado: 6, Sab: 6, sábado: 6,
-      Dom: 7, domingo: 7,
+      segunda: 1, seg: 1,
+      terca: 2, terça: 2, ter: 2,
+      quarta: 3, qua: 3,
+      quinta: 4, qui: 4,
+      sexta: 5, sex: 5,
+      sabado: 6, sábado: 6, sab: 6,
+      domingo: 7, dom: 7
     };
 
     function normalizar(dia) {
@@ -432,12 +433,23 @@ exports.listarAulasFixas = async (req, res) => {
         .replace(/[\u0300-\u036f]/g, '');
     }
 
+    // 🔽 Ordena primeiro pelo dia da semana, depois pelo horário
     aulasFixas.sort((a, b) => {
-      const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
-      const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
-      if (diaA !== diaB) return diaA - diaB;
-      return a.horario.localeCompare(b.horario);
-    });
+  const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
+  const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
+  const horaA = (a.horario || '00:00').slice(0, 5);
+  const horaB = (b.horario || '00:00').slice(0, 5);
+
+  if (diaA !== diaB) return diaA - diaB;
+  return horaA.localeCompare(horaB);
+});
+
+// Verifica ordenação no terminal
+console.table(aulasFixas.map(a => ({
+  dia: a.dia_semana,
+  horario: (a.horario || '').slice(0, 5),
+  professor: a.professor_nome
+})));
 
     for (const aula of aulasFixas) {
       const [alunosFixo] = await db.query(`
@@ -460,18 +472,21 @@ exports.listarAulasFixas = async (req, res) => {
       const todosAlunos = [...alunosFixo, ...alunosTemporarios];
 
       const nomes = todosAlunos.length > 0
-  ? todosAlunos.map(a => `- ${a.nome}`).join('\n')
-  : '_Nenhum participante._';
+        ? todosAlunos.map(a => `- ${a.nome}`).join('\n')
+        : '_Nenhum participante._';
 
-const mensagem = 
-  `📚 *Aula fixa finalizada!*\n` +
-  `👨‍🏫 *Professor:* ${aula.professor_nome}\n` +
-  `📘 *Categoria:* ${aula.categoria_nome}\n` +
-  `👥 *Participantes de hoje:*\n${nomes}`;
+      const mensagem = 
+        `📚 *Aula fixa finalizada!*\n` +
+        `👨‍🏫 *Professor:* ${aula.professor_nome}\n` +
+        `📘 *Categoria:* ${aula.categoria_nome}\n` +
+        `👥 *Participantes de hoje:*\n${nomes}`;
 
-console.log('[DEBUG] Enviando mensagem ao grupo:\n', mensagem);
-await enviarMensagem(mensagem);
+      console.log('[DEBUG] Enviando mensagem ao grupo:\n', mensagem);
+      await enviarMensagem(mensagem);
     }
+
+    console.log('[DEBUG] Total de aulas fixas retornadas:', aulasFixas.length);
+      console.log('[DEBUG] Primeira aula fixa:', aulasFixas[0]);
 
     res.render('professor/novaAulaFixa', { aulasFixas });
   } catch (err) {
@@ -597,10 +612,39 @@ exports.gerarAulasFixas = async () => {
   try {
     console.log('⏳ Gerando aulas fixas da semana...');
 
-    const [aulasFixas] = await db.query(`
+    const [aulasFixasRaw] = await db.query(`
       SELECT af.id, af.categoria_id, af.professor_id, af.dia_semana, af.horario
       FROM aulas_fixas af
     `);
+
+    const ordemDias = {
+      segunda: 1, seg: 1,
+      terca: 2, terça: 2, ter: 2,
+      quarta: 3, qua: 3,
+      quinta: 4, qui: 4,
+      sexta: 5, sex: 5,
+      sabado: 6, sábado: 6, sab: 6,
+      domingo: 7, dom: 7
+    };
+
+    function normalizar(dia) {
+      if (!dia) return '';
+      return dia
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    // Ordenar por dia da semana e horário
+    const aulasFixas = aulasFixasRaw.sort((a, b) => {
+      const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
+      const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
+      const horaA = (a.horario || '00:00').slice(0, 5);
+      const horaB = (b.horario || '00:00').slice(0, 5);
+      if (diaA !== diaB) return diaA - diaB;
+      return horaA.localeCompare(horaB);
+    });
 
     for (const aula of aulasFixas) {
       const dataAula = proximaDataSemana(aula.dia_semana);
