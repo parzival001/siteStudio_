@@ -505,28 +505,62 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         AND (quantidade_aulas - aulas_utilizadas) > 0
     `, [alunoId, hoje]);
 
+    const [desistenciasHistorico] = await db.query(`
+      SELECT data FROM aulas_fixas_desistencias 
+      WHERE aluno_id = ?
+    `, [alunoId]);
+
     function temPacoteParaCategoria(categoriaId) {
       return pacotes.some(pacote =>
         pacote.passe_livre === 1 || pacote.categoria_id === categoriaId
       );
     }
 
-    // Consulta todas as desistências do aluno
-    const [desistenciasHistorico] = await db.query(`
-      SELECT aula_fixa_id FROM aulas_fixas_desistencias WHERE aluno_id = ?
-    `, [alunoId]);
+    function proximaDataDoDiaSemana(diaSemana, horario) {
+      const diasSemanaMap = {
+        domingo: 0, segunda: 1, terca: 2, terça: 2,
+        quarta: 3, quinta: 4, sexta: 5,
+        sabado: 6, sábado: 6
+      };
 
-    const idsDesistenciasAnteriores = desistenciasHistorico.map(d => d.aula_fixa_id);
+      const hoje = new Date();
+      const diaAtual = hoje.getDay();
+      const diaAula = diasSemanaMap[diaSemana.toLowerCase()];
+      let diasAteAula = diaAula - diaAtual;
+      if (diasAteAula < 0) diasAteAula += 7;
+
+      const dataAula = new Date(hoje);
+      dataAula.setDate(hoje.getDate() + diasAteAula);
+      const [hora, minuto] = horario.split(':').map(Number);
+      dataAula.setHours(hora, minuto, 0, 0);
+
+      return dataAula;
+    }
 
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
       const agora = new Date();
 
-      const jaDesistiuAntes = idsDesistenciasAnteriores.includes(aula.id);
-      const limiteHoras = jaDesistiuAntes ? 12 : 2;
+      // Verifica se já houve alguma desistência na semana da aula
+      const inicioSemana = new Date(dataHoraAula);
+      inicioSemana.setDate(dataHoraAula.getDate() - dataHoraAula.getDay());
+      const fimSemana = new Date(inicioSemana);
+      fimSemana.setDate(inicioSemana.getDate() + 6);
 
+      const jaDesistiuNaSemana = desistenciasHistorico.some(d => {
+        const dataDesistencia = new Date(d.data);
+        return dataDesistencia >= inicioSemana && dataDesistencia <= fimSemana;
+      });
+
+      const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
       const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
       const podeDesistir = diffHoras >= limiteHoras;
+
+      const mensagemDesistencia = podeDesistir
+        ? null
+        : jaDesistiuNaSemana
+          ? 'Desistências adicionais na semana precisam de pelo menos 12 horas de antecedência.'
+          : 'Desistência da primeira aula da semana precisa de pelo menos 2 horas de antecedência.';
 
       return {
         ...aula,
@@ -535,7 +569,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         pode_desistir: podeDesistir,
         ehFixo: aula.eh_fixo === 1,
         limite_desistencia_horas: limiteHoras,
-        desistiu: idsDesistenciasAnteriores.includes(aula.id)
+        mensagem_desistencia: mensagemDesistencia
       };
     });
 
@@ -545,7 +579,6 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
     res.status(500).send('Erro interno ao buscar aulas fixas');
   }
 };
-
 exports.inscreverNaAulaFixa = async (req, res) => {
   const alunoId = req.session.user?.id;
   const aulaFixaId = req.params.id;
@@ -609,17 +642,10 @@ exports.inscreverNaAulaFixa = async (req, res) => {
       });
     }
 
-    const pacote = pacotes[0];
-
     // ✅ Insere com eh_fixo = 0
     await db.query(
       `INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo) VALUES (?, ?, 0)`,
       [alunoId, aulaFixaId]
-    );
-
-    await db.query(
-      `UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1 WHERE id = ?`,
-      [pacote.id]
     );
 
     await db.query(
@@ -687,22 +713,51 @@ exports.desistirAulaFixa = async (req, res) => {
     const agora = new Date();
     const diffHoras = (dataAula - agora) / (1000 * 60 * 60);
 
-    if (diffHoras < 2) {
-      return res.status(400).send('Desistência só permitida com no mínimo 2 horas de antecedência.');
+    // Semana atual (baseada em hoje, não na data da aula)
+    const inicioSemana = new Date(agora);
+    inicioSemana.setDate(agora.getDate() - agora.getDay());
+    inicioSemana.setHours(0, 0, 0, 0);
+
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(inicioSemana.getDate() + 6);
+    fimSemana.setHours(23, 59, 59, 999);
+
+    const inicioSemanaStr = inicioSemana.toISOString().slice(0, 10);
+    const fimSemanaStr = fimSemana.toISOString().slice(0, 10);
+
+    // Conta desistências já feitas nesta semana
+    const [desistenciasSemana] = await db.query(`
+      SELECT COUNT(*) AS total FROM aulas_fixas_desistencias
+      WHERE aluno_id = ?
+        AND data BETWEEN ? AND ?
+    `, [alunoId, inicioSemanaStr, fimSemanaStr]);
+
+    const totalDesistencias = desistenciasSemana[0].total;
+
+    // Aplicar as regras de antecedência
+    if (totalDesistencias === 0 && diffHoras < 2) {
+      return res.status(400).send('Desistência da primeira aula da semana precisa de pelo menos 2 horas de antecedência.');
+    }
+
+    if (totalDesistencias >= 1 && diffHoras < 12) {
+      return res.status(400).send('Desistências adicionais na semana precisam de pelo menos 12 horas de antecedência.');
     }
 
     const dataAulaStr = dataAula.toISOString().slice(0, 10);
 
+    // Remove possíveis registros duplicados
     await db.query(`
       DELETE FROM aulas_fixas_desistencias 
       WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
     `, [alunoId, aulaId, dataAulaStr]);
 
+    // Registra a nova desistência
     await db.query(`
       INSERT INTO aulas_fixas_desistencias (aluno_id, aula_fixa_id, data)
       VALUES (?, ?, ?)
     `, [alunoId, aulaId, dataAulaStr]);
 
+    // Remove da lista de participantes e libera a vaga
     await db.query(`
       DELETE FROM alunos_aulas_fixas 
       WHERE aluno_id = ? AND aula_fixa_id = ?
@@ -713,30 +768,11 @@ exports.desistirAulaFixa = async (req, res) => {
       WHERE id = ?
     `, [aulaId]);
 
-    const hojeISO = new Date().toISOString().slice(0, 10);
-    const [pacotes] = await db.query(`
-      SELECT id FROM pacotes_aluno
-      WHERE aluno_id = ?
-        AND (categoria_id = ? OR passe_livre = 1)
-        AND (data_validade IS NULL OR data_validade >= ?)
-        AND aulas_utilizadas > 0
-      ORDER BY data_validade ASC
-      LIMIT 1
-    `, [alunoId, aula.categoria_id, hojeISO]);
-
-    if (pacotes.length > 0) {
-      const pacote = pacotes[0];
-      await db.query(`
-        UPDATE pacotes_aluno 
-        SET aulas_utilizadas = aulas_utilizadas - 1 
-        WHERE id = ?
-      `, [pacote.id]);
-    }
-
     const [[alunoInfo]] = await db.query(`
       SELECT nome FROM alunos WHERE id = ?
     `, [alunoId]);
 
+    // Envia mensagens
     if (aula && alunoInfo) {
       const mensagem =
         `⚠️ *Cancelamento de Aula*\n\n` +
@@ -747,17 +783,6 @@ exports.desistirAulaFixa = async (req, res) => {
         `👨‍🏫 Professor: ${aula.professor_nome}`;
 
       await enviarMensagem(mensagem);
-      
-    }
-
-     if (aula && alunoInfo) {
-      const mensagem =
-        `⚠️ *Cancelamento de Aula*\n\n` +
-        `👤 Aluno: ${alunoInfo.nome}\n` +
-        `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
-        `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
-        `🏷️ Categoria: ${aula.categoria_nome}\n` +
-        `👨‍🏫 Professor: ${aula.professor_nome}`;
       await enviarMensagemAluno(mensagem);
     }
 
@@ -768,7 +793,6 @@ exports.desistirAulaFixa = async (req, res) => {
     res.status(500).send('Erro interno no servidor');
   }
 };
-
 
 
 ////////////////////////////////////////////////ANAMNESE////////////////////////////////////////////

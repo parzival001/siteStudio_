@@ -5,7 +5,14 @@ async function reinserirAlunosFixos() {
 
   try {
     // Pega todas as aulas fixas
-    const [aulasFixas] = await db.query(`SELECT id FROM aulas_fixas`);
+    const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+const hoje = new Date();
+const diaHoje = diasSemana[hoje.getDay()];
+
+const [aulasFixas] = await db.query(`
+  SELECT id FROM aulas_fixas
+  WHERE dia_semana = ?
+`, [diaHoje]);
 
     for (const aula of aulasFixas) {
       const aulaId = aula.id;

@@ -19,14 +19,12 @@
               </p>
 
               {{#if pode_desistir}}
-                {{#unless desistiu}}
-                  <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
-                    <button class="btn btn-danger">Desmarcar</button>
-                  </form>
-                {{/unless}}
+                <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
+                  <button class="btn btn-danger">Desmarcar</button>
+                </form>
               {{else}}
                 <div class="alert alert-warning p-2 mt-2" style="font-size: 0.9em;">
-                  Desistência indisponível. Só é permitida com no mínimo {{limite_desistencia_horas}} horas de antecedência.
+                  {{mensagem_desistencia}}
                 </div>
               {{/if}}
 
@@ -60,4 +58,3 @@
 
     </div>
   </div>
-</div>
