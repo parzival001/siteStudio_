@@ -24,7 +24,7 @@ console.log('Cron job iniciado e agendado para rodar todo dia às 21h46.');
 
 
 // Rodar todo dia às 3h da manhã, por exemplo
-cron.schedule('10 22 * * *', () => {
+cron.schedule('13 21 * * *', () => {
   console.log('🔁 Executando rotina de reinserção de alunos fixos às 03:00...');
   reinserirAlunosFixos();
 });
