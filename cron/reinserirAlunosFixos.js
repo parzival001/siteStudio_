@@ -1,35 +1,32 @@
 const db = require('../config/db');
 
 async function reinserirAlunosFixos() {
-  console.log('🔁 Atualizando presença dos alunos fixos nas aulas...');
+  console.log('🔁 Atualizando presença dos alunos fixos nas aulas do dia...');
 
   try {
-    // Pega todas as aulas fixas
     const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-const hoje = new Date();
-const diaHoje = diasSemana[hoje.getDay()];
+    const hoje = new Date();
+    const diaHoje = diasSemana[hoje.getDay()];
 
-const [aulasFixas] = await db.query(`
-  SELECT id FROM aulas_fixas
-  WHERE dia_semana = ?
-`, [diaHoje]);
+    const [aulasFixas] = await db.query(`
+      SELECT id FROM aulas_fixas
+      WHERE dia_semana = ?
+    `, [diaHoje]);
 
     for (const aula of aulasFixas) {
       const aulaId = aula.id;
 
-      // Conta quantos alunos temporários serão removidos
+      // Remove alunos temporários
       const [temporarios] = await db.query(`
         SELECT aluno_id FROM alunos_aulas_fixas
-        WHERE aula_fixa_id = ? AND eh_fixo = false
+        WHERE aula_fixa_id = ? AND eh_fixo = 0
       `, [aulaId]);
 
-      // Remove os alunos temporários
       await db.query(`
         DELETE FROM alunos_aulas_fixas
-        WHERE aula_fixa_id = ? AND eh_fixo = false
+        WHERE aula_fixa_id = ? AND eh_fixo = 0
       `, [aulaId]);
 
-      // Aumenta vagas conforme o número de temporários removidos
       if (temporarios.length > 0) {
         await db.query(`
           UPDATE aulas_fixas
@@ -38,21 +35,32 @@ const [aulasFixas] = await db.query(`
         `, [temporarios.length, aulaId]);
       }
 
-      // Seleciona os alunos fixos
+      // Seleciona todos os alunos fixos da aula
       const [alunosFixos] = await db.query(`
         SELECT aluno_id
         FROM alunos_aulas_fixas
-        WHERE aula_fixa_id = ? AND eh_fixo = true
+        WHERE aula_fixa_id = ? AND eh_fixo = 1
       `, [aulaId]);
 
       for (const aluno of alunosFixos) {
-        // Tenta inserir o aluno fixo (ignora se já está)
-        const [result] = await db.query(`
-          INSERT IGNORE INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo)
-          VALUES (?, ?, true)
-        `, [aluno.aluno_id, aulaId]);
+        const alunoId = aluno.aluno_id;
 
-        // Se foi realmente inserido (não estava antes), diminui a vaga
+        // Verifica se já está na aula (não reinsere)
+        const [[jaInscrito]] = await db.query(`
+          SELECT 1 FROM alunos_aulas_fixas
+          WHERE aluno_id = ? AND aula_fixa_id = ?
+        `, [alunoId, aulaId]);
+
+        if (jaInscrito) {
+          continue;
+        }
+
+        // Insere o aluno fixo novamente
+        const [result] = await db.query(`
+          INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo)
+          VALUES (?, ?, 1)
+        `, [alunoId, aulaId]);
+
         if (result.affectedRows > 0) {
           await db.query(`
             UPDATE aulas_fixas
