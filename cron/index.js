@@ -4,7 +4,7 @@ const reinserirAlunosFixos = require('../cron/reinserirAlunosFixos');
 const db = require('../config/db'); // importe seu db se necessário
 const notificarAulasEncerradasHoje = require('../cron/notificarAulasEncerradasHoje');
 
-cron.schedule('33 14 * * *', () => {
+cron.schedule('00 21 * * *', () => {
   console.log('🔔 Enviando lista de participantes das aulas fixas...');
   notificarAulasEncerradasHoje();
 });
