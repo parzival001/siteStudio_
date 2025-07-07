@@ -477,15 +477,15 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
 
   try {
     const [aulas] = await db.query(`
-      SELECT 
-        af.id, 
-        c.nome AS categoria_nome, 
+      SELECT
+        af.id,
+        c.nome AS categoria_nome,
         p.nome AS professor_nome,
-        af.dia_semana, 
-        af.horario, 
+        af.dia_semana,
+        af.horario,
         af.vagas,
         af.categoria_id,
-        CASE 
+        CASE
           WHEN aaf.aluno_id IS NOT NULL THEN 1
           ELSE 0
         END AS inscrito,
@@ -495,6 +495,19 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       JOIN professores p ON af.professor_id = p.id
       LEFT JOIN alunos_aulas_fixas aaf
         ON af.id = aaf.aula_fixa_id AND aaf.aluno_id = ?
+      ORDER BY
+        CASE
+          WHEN af.dia_semana = 'domingo' THEN 0
+          WHEN af.dia_semana = 'segunda' THEN 1
+          WHEN af.dia_semana = 'terca' THEN 2
+          WHEN af.dia_semana = 'terça' THEN 2
+          WHEN af.dia_semana = 'quarta' THEN 3
+          WHEN af.dia_semana = 'quinta' THEN 4
+          WHEN af.dia_semana = 'sexta' THEN 5
+          WHEN af.dia_semana = 'sabado' THEN 6
+          WHEN af.dia_semana = 'sábado' THEN 6
+        END,
+        af.horario
     `, [alunoId]);
 
     const [pacotes] = await db.query(`
@@ -506,7 +519,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
     `, [alunoId, hoje]);
 
     const [desistenciasHistorico] = await db.query(`
-      SELECT data FROM aulas_fixas_desistencias 
+      SELECT data FROM aulas_fixas_desistencias
       WHERE aluno_id = ?
     `, [alunoId]);
 
@@ -579,6 +592,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
     res.status(500).send('Erro interno ao buscar aulas fixas');
   }
 };
+
 exports.inscreverNaAulaFixa = async (req, res) => {
   const alunoId = req.session.user?.id;
   const aulaFixaId = req.params.id;

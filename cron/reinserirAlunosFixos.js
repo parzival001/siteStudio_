@@ -8,6 +8,7 @@ async function reinserirAlunosFixos() {
     const hoje = new Date();
     const diaHoje = diasSemana[hoje.getDay()];
 
+    // Seleciona somente as aulas do dia
     const [aulasFixas] = await db.query(`
       SELECT id FROM aulas_fixas
       WHERE dia_semana = ?
@@ -16,7 +17,7 @@ async function reinserirAlunosFixos() {
     for (const aula of aulasFixas) {
       const aulaId = aula.id;
 
-      // Remove alunos temporários
+      // Remove os alunos temporários
       const [temporarios] = await db.query(`
         SELECT aluno_id FROM alunos_aulas_fixas
         WHERE aula_fixa_id = ? AND eh_fixo = 0
@@ -35,38 +36,36 @@ async function reinserirAlunosFixos() {
         `, [temporarios.length, aulaId]);
       }
 
-      // Seleciona todos os alunos fixos da aula
+      // Busca os alunos fixos pela nova tabela
       const [alunosFixos] = await db.query(`
         SELECT aluno_id
-        FROM alunos_aulas_fixas
-        WHERE aula_fixa_id = ? AND eh_fixo = 1
+        FROM alunos_fixos_aulas_fixas
+        WHERE aula_fixa_id = ?
       `, [aulaId]);
 
       for (const aluno of alunosFixos) {
         const alunoId = aluno.aluno_id;
 
-        // Verifica se já está na aula (não reinsere)
+        // Verifica se já está na aula (evita duplicidade)
         const [[jaInscrito]] = await db.query(`
           SELECT 1 FROM alunos_aulas_fixas
           WHERE aluno_id = ? AND aula_fixa_id = ?
         `, [alunoId, aulaId]);
 
-        if (jaInscrito) {
-          continue;
-        }
+        if (!jaInscrito) {
+          // Reinsere o aluno fixo na aula do dia
+          const [result] = await db.query(`
+            INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo)
+            VALUES (?, ?, 1)
+          `, [alunoId, aulaId]);
 
-        // Insere o aluno fixo novamente
-        const [result] = await db.query(`
-          INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo)
-          VALUES (?, ?, 1)
-        `, [alunoId, aulaId]);
-
-        if (result.affectedRows > 0) {
-          await db.query(`
-            UPDATE aulas_fixas
-            SET vagas = vagas - 1
-            WHERE id = ?
-          `, [aulaId]);
+          if (result.affectedRows > 0) {
+            await db.query(`
+              UPDATE aulas_fixas
+              SET vagas = vagas - 1
+              WHERE id = ?
+            `, [aulaId]);
+          }
         }
       }
     }

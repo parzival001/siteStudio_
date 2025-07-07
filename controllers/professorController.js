@@ -541,9 +541,15 @@ exports.removerAlunoAulaFixa = async (req, res) => {
   const { aulaId, alunoId } = req.params;
 
   try {
-    // Remove o aluno da aula fixa
+    // Remove o aluno da aula fixa do dia (presença)
     await db.query(
       'DELETE FROM alunos_aulas_fixas WHERE aula_fixa_id = ? AND aluno_id = ?',
+      [aulaId, alunoId]
+    );
+
+    // Remove o vínculo fixo permanente
+    await db.query(
+      'DELETE FROM alunos_fixos_aulas_fixas WHERE aula_fixa_id = ? AND aluno_id = ?',
       [aulaId, alunoId]
     );
 
@@ -562,26 +568,27 @@ exports.removerAlunoAulaFixa = async (req, res) => {
 
 // Remove uma aula fixa
 exports.deletarAulaFixa = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
+const id = parseInt(req.params.id, 10);
 
-  try {
-    // Excluir registros relacionados na tabela uso_creditos
-    await db.query('DELETE FROM uso_creditos WHERE aula_fixa_id = ?', [id]);
+try {
+// Excluir registros relacionados na tabela uso_creditos
+await db.query('DELETE FROM uso_creditos WHERE aula_fixa_id = ?', [id]);
 
-    // Excluir também desistências (se sua tabela de desistência usar foreign key)
-    await db.query('DELETE FROM aulas_fixas_desistencias WHERE aula_fixa_id = ?', [id]);
+// Excluir também desistências (se sua tabela de desistência usar foreign key)  
+await db.query('DELETE FROM aulas_fixas_desistencias WHERE aula_fixa_id = ?', [id]);  
 
-    // Excluir também alunos inscritos (evita orphan rows)
-    await db.query('DELETE FROM alunos_aulas_fixas WHERE aula_fixa_id = ?', [id]);
+// Excluir também alunos inscritos (evita orphan rows)  
+await db.query('DELETE FROM alunos_aulas_fixas WHERE aula_fixa_id = ?', [id]);  
 
-    // Por fim, excluir a aula fixa
-    await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);
+// Por fim, excluir a aula fixa  
+await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);  
 
-    res.redirect('/professor/aulas-fixas/nova');
-  } catch (err) {
-    console.error('Erro ao deletar aula fixa:', err);
-    res.status(500).send('Erro interno no servidor');
-  }
+res.redirect('/professor/aulas-fixas/nova');
+
+} catch (err) {
+console.error('Erro ao deletar aula fixa:', err);
+res.status(500).send('Erro interno no servidor');
+}
 };
 
 exports.adicionarAlunoAulaFixa = async (req, res) => {
