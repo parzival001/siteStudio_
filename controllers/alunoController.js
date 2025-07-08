@@ -558,12 +558,15 @@ const agora = new Date();
 const dataBase = new Date(dataHoraAula);
 const inicioSemana = new Date(dataBase);
 inicioSemana.setDate(dataBase.getDate() - dataBase.getDay());
+inicioSemana.setHours(0, 0, 0, 0);
 
 const fimSemana = new Date(inicioSemana);
 fimSemana.setDate(inicioSemana.getDate() + 6);
+fimSemana.setHours(0, 0, 0, 0);
 
 const jaDesistiuNaSemana = desistenciasHistorico.some(d => {
   const dataDesistencia = new Date(d.data);
+  dataDesistencia.setHours(0, 0, 0, 0);
   return dataDesistencia >= inicioSemana && dataDesistencia <= fimSemana;
 });
 
