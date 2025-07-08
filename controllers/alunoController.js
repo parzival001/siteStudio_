@@ -552,22 +552,24 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
 
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
-      const agora = new Date();
+const agora = new Date();
 
-      // Verifica se já houve alguma desistência na semana da aula
-      const inicioSemana = new Date(dataHoraAula);
-      inicioSemana.setDate(dataHoraAula.getDate() - dataHoraAula.getDay());
-      const fimSemana = new Date(inicioSemana);
-      fimSemana.setDate(inicioSemana.getDate() + 6);
+// Cópia segura para calcular a semana
+const dataBase = new Date(dataHoraAula);
+const inicioSemana = new Date(dataBase);
+inicioSemana.setDate(dataBase.getDate() - dataBase.getDay());
 
-      const jaDesistiuNaSemana = desistenciasHistorico.some(d => {
-        const dataDesistencia = new Date(d.data);
-        return dataDesistencia >= inicioSemana && dataDesistencia <= fimSemana;
-      });
+const fimSemana = new Date(inicioSemana);
+fimSemana.setDate(inicioSemana.getDate() + 6);
 
-      const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
-      const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
-      const podeDesistir = diffHoras >= limiteHoras;
+const jaDesistiuNaSemana = desistenciasHistorico.some(d => {
+  const dataDesistencia = new Date(d.data);
+  return dataDesistencia >= inicioSemana && dataDesistencia <= fimSemana;
+});
+
+const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
+const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
+const podeDesistir = diffHoras >= limiteHoras;
 
       const mensagemDesistencia = podeDesistir
         ? null
