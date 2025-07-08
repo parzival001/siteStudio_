@@ -1140,7 +1140,7 @@ exports.verPacotesPorAluno = async (req, res) => {
     const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
 
     const [pacotes] = await db.query(`
-      SELECT 
+      SELECT
         p.id,
         p.quantidade_aulas,
         p.aulas_utilizadas,
@@ -1156,16 +1156,28 @@ exports.verPacotesPorAluno = async (req, res) => {
     `, [alunoId]);
 
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // zera horas para evitar problemas de comparação
 
     pacotes.forEach(p => {
-      const validade = new Date(p.data_validade);
-      const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
-      p.status_validade = diasRestantes <= 0
-        ? 'Vencido'
-        : diasRestantes <= 7
-          ? 'Vence em breve'
-          : `Válido (${diasRestantes} dias)`;
-      p.creditos_restantes = (p.quantidade_aulas || 0) - (p.aulas_utilizadas || 0);
+      // Calcula créditos restantes
+      const total = parseInt(p.quantidade_aulas, 10) || 0;
+      const usados = parseInt(p.aulas_utilizadas, 10) || 0;
+      p.creditos_restantes = total - usados;
+
+      // Calcula status da validade
+      if (!p.data_validade || p.data_validade === '0000-00-00') {
+        p.status_validade = 'Sem validade';
+      } else {
+        const validade = new Date(p.data_validade);
+        validade.setHours(0, 0, 0, 0);
+
+        const diasRestantes = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+        p.status_validade = diasRestantes <= 0
+          ? 'Vencido'
+          : diasRestantes <= 7
+            ? 'Vence em breve'
+            : `Válido (${diasRestantes} dias)`;
+      }
     });
 
     res.render('professor/pacotesPorAluno', { aluno, pacotes });
@@ -1174,7 +1186,6 @@ exports.verPacotesPorAluno = async (req, res) => {
     res.status(500).send('Erro ao buscar pacotes.');
   }
 };
-
 exports.adicionarPacote = async (req, res) => {
   const {
     aluno_id,
@@ -1229,12 +1240,13 @@ exports.verPacotesAluno = async (req, res) => {
     // Buscar dados do aluno
     const [[aluno]] = await db.query('SELECT id, nome FROM alunos WHERE id = ?', [alunoId]);
 
-    // Buscar pacotes do aluno com nome da categoria
+    // Buscar pacotes do aluno com nome da categoria, ordenado por data de início (mais novo primeiro)
     const [pacotes] = await db.query(`
       SELECT p.*, c.nome AS categoria_nome
       FROM pacotes_aluno p
       LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
       WHERE p.aluno_id = ?
+      ORDER BY p.data_inicio DESC
     `, [alunoId]);
 
     function isValidDate(d) {
@@ -1242,17 +1254,18 @@ exports.verPacotesAluno = async (req, res) => {
     }
 
     for (const pacote of pacotes) {
-      // Cálculo de aulas restantes
-      const aulasTotal = parseInt(pacote.quantidade_aulas, 10) || 0;
-      const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
-      pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
+      // Aulas restantes
+      const total = parseInt(pacote.quantidade_aulas, 10) || 0;
+      const usadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
+      pacote.aulas_restantes = total - usadas;
 
-      // Datas formatadas
+      // Formata data de início
       if (pacote.data_inicio) {
-        const dataInicio = new Date(pacote.data_inicio);
-        pacote.data_inicio_formatada = `${String(dataInicio.getDate()).padStart(2, '0')}/${String(dataInicio.getMonth() + 1).padStart(2, '0')}/${dataInicio.getFullYear()}`;
+        const data = new Date(pacote.data_inicio);
+        pacote.data_inicio_formatada = `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}/${data.getFullYear()}`;
       }
 
+      // Formata validade e status
       if (!pacote.data_validade || pacote.data_validade === '0000-00-00' || pacote.tipo === 'avulsa') {
         pacote.data_validade_formatada = '—';
         pacote.status_validade = 'Sem validade';
@@ -1266,6 +1279,7 @@ exports.verPacotesAluno = async (req, res) => {
         } else {
           const hoje = new Date();
           hoje.setHours(0, 0, 0, 0);
+
           const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
 
           pacote.status_validade = diasRestantes < 0
@@ -1280,7 +1294,7 @@ exports.verPacotesAluno = async (req, res) => {
 
       pacote.pago = !!pacote.pago;
 
-      // 📌 Buscar uso de créditos deste pacote
+      // Buscar uso de créditos do pacote
       const [usos] = await db.query(`
         SELECT uc.data_utilizacao, af.dia_semana, af.horario, c.nome AS categoria
         FROM uso_creditos uc
@@ -1290,7 +1304,6 @@ exports.verPacotesAluno = async (req, res) => {
         ORDER BY uc.data_utilizacao DESC
       `, [pacote.id]);
 
-      // Mapear resultado com dia da semana e horário
       pacote.usos = usos.map(uso => {
         const data = new Date(uso.data_utilizacao);
         const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -1303,18 +1316,10 @@ exports.verPacotesAluno = async (req, res) => {
       });
     }
 
-    // Buscar todas categorias (se necessário na view)
-    const [categorias] = await db.query('SELECT * FROM categorias');
-
-    res.render('professor/pacotesAluno', {
-      aluno,
-      pacotes,
-      categorias
-    });
-
+    res.render('professor/pacotesAluno', { aluno, pacotes });
   } catch (err) {
-    console.error('Erro ao carregar pacotes do aluno:', err);
-    res.status(500).send('Erro interno');
+    console.error('Erro ao buscar pacotes do aluno:', err);
+    res.status(500).send('Erro ao buscar pacotes do aluno.');
   }
 };
 
@@ -1467,6 +1472,7 @@ exports.listarPacotesPorAluno = async (req, res) => {
       JOIN alunos a ON a.id = p.aluno_id
       LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
       WHERE p.aluno_id = ?
+      ORDER BY p.data_inicio DESC
     `, [aluno_id]);
 
     const [dadosAluno] = await db.query('SELECT * FROM alunos WHERE id = ?', [aluno_id]);
