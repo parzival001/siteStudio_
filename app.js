@@ -83,10 +83,8 @@ const hbs = handlebars.create({
   helpers: {
     eq: function (a, b, options) {
       if (typeof options === 'object' && typeof options.fn === 'function') {
-        // Uso como block helper
         return a === b ? options.fn(this) : options.inverse(this);
       } else {
-        // Uso inline: retorna booleano
         return a === b;
       }
     },
@@ -97,31 +95,20 @@ const hbs = handlebars.create({
         const valB = (b[field] || '').toString().toLowerCase();
         return valA.localeCompare(valB);
       });
-   },
+    },
     ifCond: function (v1, operator, v2, options) {
       switch (operator) {
-        case '==':
-          return (v1 == v2) ? options.fn(this) : options.inverse(this);
-        case '===':
-          return (v1 === v2) ? options.fn(this) : options.inverse(this);
-        case '!=':
-          return (v1 != v2) ? options.fn(this) : options.inverse(this);
-        case '!==':
-          return (v1 !== v2) ? options.fn(this) : options.inverse(this);
-        case '<':
-          return (v1 < v2) ? options.fn(this) : options.inverse(this);
-        case '<=':
-          return (v1 <= v2) ? options.fn(this) : options.inverse(this);
-        case '>':
-          return (v1 > v2) ? options.fn(this) : options.inverse(this);
-        case '>=':
-          return (v1 >= v2) ? options.fn(this) : options.inverse(this);
-        case '&&':
-          return (v1 && v2) ? options.fn(this) : options.inverse(this);
-        case '||':
-          return (v1 || v2) ? options.fn(this) : options.inverse(this);
-        default:
-          return options.inverse(this);
+        case '==': return (v1 == v2) ? options.fn(this) : options.inverse(this);
+        case '===': return (v1 === v2) ? options.fn(this) : options.inverse(this);
+        case '!=': return (v1 != v2) ? options.fn(this) : options.inverse(this);
+        case '!==': return (v1 !== v2) ? options.fn(this) : options.inverse(this);
+        case '<': return (v1 < v2) ? options.fn(this) : options.inverse(this);
+        case '<=': return (v1 <= v2) ? options.fn(this) : options.inverse(this);
+        case '>': return (v1 > v2) ? options.fn(this) : options.inverse(this);
+        case '>=': return (v1 >= v2) ? options.fn(this) : options.inverse(this);
+        case '&&': return (v1 && v2) ? options.fn(this) : options.inverse(this);
+        case '||': return (v1 || v2) ? options.fn(this) : options.inverse(this);
+        default: return options.inverse(this);
       }
     },
     array: (...args) => args.slice(0, -1),
@@ -144,10 +131,17 @@ const hbs = handlebars.create({
       const hoje = new Date();
       const diff = (validade - hoje) / (1000 * 60 * 60 * 24);
       return diff <= 7 && diff > 0;
+    },
+
+    // ✅ Adicionados:
+    subtract: function (a, b) {
+      return a - b;
+    },
+    lte: function (a, b) {
+      return a <= b;
     }
   }
 });
-
 
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');

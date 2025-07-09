@@ -471,6 +471,7 @@ function proximaDataDoDiaSemana(diaSemana, horario) {
 }
 
 // Controller listar aulas fixas disponíveis
+// Controller listar aulas fixas disponíveis
 exports.listarAulasFixasDisponiveis = async (req, res) => {
   const alunoId = req.session.user?.id;
   const hoje = new Date().toISOString().slice(0, 10);
@@ -546,33 +547,40 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       dataAula.setDate(hoje.getDate() + diasAteAula);
       const [hora, minuto] = horario.split(':').map(Number);
       dataAula.setHours(hora, minuto, 0, 0);
-
       return dataAula;
     }
 
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
-const agora = new Date();
+      const agora = new Date();
 
-// Cópia segura para calcular a semana
-const dataBase = new Date(dataHoraAula);
-const inicioSemana = new Date(dataBase);
-inicioSemana.setDate(dataBase.getDate() - dataBase.getDay());
-inicioSemana.setHours(0, 0, 0, 0);
+      const dataBase = new Date(dataHoraAula);
+      const inicioSemana = new Date(dataBase);
+      inicioSemana.setDate(dataBase.getDate() - dataBase.getDay());
+      inicioSemana.setHours(0, 0, 0, 0);
 
-const fimSemana = new Date(inicioSemana);
-fimSemana.setDate(inicioSemana.getDate() + 6);
-fimSemana.setHours(0, 0, 0, 0);
+      const fimSemana = new Date(inicioSemana);
+      fimSemana.setDate(inicioSemana.getDate() + 6);
+      fimSemana.setHours(23, 59, 59, 999);
 
-const jaDesistiuNaSemana = desistenciasHistorico.some(d => {
-  const dataDesistencia = new Date(d.data);
-  dataDesistencia.setHours(0, 0, 0, 0);
-  return dataDesistencia >= inicioSemana && dataDesistencia <= fimSemana;
-});
 
-const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
-const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
-const podeDesistir = diffHoras >= limiteHoras;
+
+      const desistenciasSemana = desistenciasHistorico.filter(d => {
+        const dataDes = new Date(d.data);
+        dataDes.setHours(0, 0, 0, 0);
+        return dataDes >= inicioSemana && dataDes <= fimSemana;
+      });
+
+      const jaDesistiuNaSemana = desistenciasSemana.length > 0;
+      const primeiraDesistencia = desistenciasSemana.length > 0 ? desistenciasSemana[0].data : null;
+
+      const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
+      const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
+      const podeDesistir = diffHoras >= limiteHoras;
+
+      const dataHoraLimite = new Date(dataHoraAula);
+      dataHoraLimite.setHours(dataHoraAula.getHours() - limiteHoras);
+
 
       const mensagemDesistencia = podeDesistir
         ? null
@@ -592,6 +600,7 @@ const podeDesistir = diffHoras >= limiteHoras;
     });
 
     res.render('aluno/aulasFixasDisponiveis', { aulas: aulasComExtras });
+
   } catch (err) {
     console.error('Erro ao listar aulas fixas:', err);
     res.status(500).send('Erro interno ao buscar aulas fixas');

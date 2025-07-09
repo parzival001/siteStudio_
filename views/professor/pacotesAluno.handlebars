@@ -1,7 +1,6 @@
 <div class="container py-5 text-white">
   <div class="row justify-content-center">
     <div class="col-12 col-lg-10">
-
       <h2 class="text-center mb-4">Pacotes de {{aluno.nome}}</h2>
 
       <div class="d-flex justify-content-center justify-content-md-start flex-wrap gap-2 mb-4">
@@ -39,8 +38,7 @@
                     <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
                       value="{{this.aulas_utilizadas}}" class="form-control form-control-sm" required>
                     <input type="hidden" name="aluno_id" value="{{../aluno.id}}">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas</button>
                   </form>
                 </td>
                 <td>{{formatDate this.data_inicio}}</td>
@@ -76,6 +74,12 @@
                     </ul>
                   {{else}}
                     <span class="text-muted">Nenhum uso</span>
+                  {{/if}}
+
+                  {{#if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}
+                    <div class="mt-2">
+                      <span class="badge bg-warning text-dark">⚠  Aulas Acabando</span>
+                    </div>
                   {{/if}}
                 </td>
                 <td>
@@ -129,7 +133,6 @@
               <span class="badge bg-danger">Não</span>
             {{/if}}
           </p>
-
           <p class="mb-1"><strong>Créditos:</strong></p>
           {{#if this.usos}}
             <div style="max-height: 120px; overflow-y: auto; font-size: 0.9em; margin-bottom: 10px;">
@@ -141,6 +144,10 @@
             </div>
           {{else}}
             <p class="text-muted mb-2">Nenhum crédito usado</p>
+          {{/if}}
+
+          {{#if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}
+            <span class="badge bg-warning text-dark">⚠ Aulas Acabando</span>
           {{/if}}
 
           <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">
@@ -167,7 +174,6 @@
         <p>Nenhum pacote encontrado para este aluno.</p>
       </div>
       {{/if}}
-
     </div>
   </div>
 </div>
