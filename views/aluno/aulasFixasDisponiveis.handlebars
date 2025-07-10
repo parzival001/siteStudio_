@@ -20,7 +20,9 @@
 
               {{#if pode_desistir}}
                 <form action="/aluno/aulas-fixas/desistir/{{id}}" method="POST" class="d-inline">
-                  <button class="btn btn-danger">Desmarcar</button>
+                  <button type="submit" class="btn btn-danger" onclick="this.disabled=true; this.innerText='Aguarde...'; this.form.submit();">
+                    Desmarcar
+                  </button>
                 </form>
               {{else}}
                 <div class="alert alert-warning p-2 mt-2" style="font-size: 0.9em;">
@@ -58,3 +60,4 @@
 
     </div>
   </div>
+</div>

@@ -694,6 +694,16 @@ exports.desistirAulaFixa = async (req, res) => {
   const aulaId = req.params.aulaId;
 
   try {
+    // Verificar se o aluno está inscrito na aula
+    const [[inscricao]] = await db.query(`
+      SELECT * FROM alunos_aulas_fixas
+      WHERE aluno_id = ? AND aula_fixa_id = ?
+    `, [alunoId, aulaId]);
+
+    if (!inscricao) {
+      return res.status(400).send('Você não está inscrito nesta aula fixa.');
+    }
+
     const [[aula]] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
@@ -707,15 +717,8 @@ exports.desistirAulaFixa = async (req, res) => {
     }
 
     const diasSemanaMap = {
-      domingo: 0,
-      segunda: 1,
-      terca: 2,
-      terça: 2,
-      quarta: 3,
-      quinta: 4,
-      sexta: 5,
-      sabado: 6,
-      sábado: 6
+      domingo: 0, segunda: 1, terca: 2, terça: 2, quarta: 3,
+      quinta: 4, sexta: 5, sabado: 6, sábado: 6
     };
 
     function getProximaDataAula(diaSemana, horario) {
@@ -729,7 +732,6 @@ exports.desistirAulaFixa = async (req, res) => {
 
       const proximaAula = new Date(hoje);
       proximaAula.setDate(hoje.getDate() + diasAteAula);
-
       const [hora, minuto] = horario.split(':').map(Number);
       proximaAula.setHours(hora, minuto, 0, 0);
 
@@ -741,7 +743,7 @@ exports.desistirAulaFixa = async (req, res) => {
     const agora = new Date();
     const diffHoras = (dataAula - agora) / (1000 * 60 * 60);
 
-    // Semana atual (baseada em hoje, não na data da aula)
+    // Semana atual (domingo a sábado)
     const inicioSemana = new Date(agora);
     inicioSemana.setDate(agora.getDate() - agora.getDay());
     inicioSemana.setHours(0, 0, 0, 0);
@@ -753,66 +755,59 @@ exports.desistirAulaFixa = async (req, res) => {
     const inicioSemanaStr = inicioSemana.toISOString().slice(0, 10);
     const fimSemanaStr = fimSemana.toISOString().slice(0, 10);
 
-    // Conta desistências já feitas nesta semana
     const [desistenciasSemana] = await db.query(`
       SELECT COUNT(*) AS total FROM aulas_fixas_desistencias
-      WHERE aluno_id = ?
-        AND data BETWEEN ? AND ?
+      WHERE aluno_id = ? AND data BETWEEN ? AND ?
     `, [alunoId, inicioSemanaStr, fimSemanaStr]);
 
     const totalDesistencias = desistenciasSemana[0].total;
 
-    // Aplicar as regras de antecedência
+    // Aplicar regras
     if (totalDesistencias === 0 && diffHoras < 2) {
       return res.status(400).send('Desistência da primeira aula da semana precisa de pelo menos 2 horas de antecedência.');
     }
-
     if (totalDesistencias >= 1 && diffHoras < 12) {
       return res.status(400).send('Desistências adicionais na semana precisam de pelo menos 12 horas de antecedência.');
     }
 
     const dataAulaStr = dataAula.toISOString().slice(0, 10);
 
-    // Remove possíveis registros duplicados
+    // Evita duplicidade
     await db.query(`
-      DELETE FROM aulas_fixas_desistencias 
+      DELETE FROM aulas_fixas_desistencias
       WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
     `, [alunoId, aulaId, dataAulaStr]);
 
-    // Registra a nova desistência
+    // Registra desistência
     await db.query(`
       INSERT INTO aulas_fixas_desistencias (aluno_id, aula_fixa_id, data)
       VALUES (?, ?, ?)
     `, [alunoId, aulaId, dataAulaStr]);
 
-    // Remove da lista de participantes e libera a vaga
+    // Remove da lista de participantes
     await db.query(`
-      DELETE FROM alunos_aulas_fixas 
+      DELETE FROM alunos_aulas_fixas
       WHERE aluno_id = ? AND aula_fixa_id = ?
     `, [alunoId, aulaId]);
 
+    // Libera a vaga
     await db.query(`
-      UPDATE aulas_fixas SET vagas = vagas + 1 
-      WHERE id = ?
+      UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?
     `, [aulaId]);
 
-    const [[alunoInfo]] = await db.query(`
-      SELECT nome FROM alunos WHERE id = ?
-    `, [alunoId]);
+    // Envia notificação
+    const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
 
-    // Envia mensagens
-    if (aula && alunoInfo) {
-      const mensagem =
-        `⚠️ *Cancelamento de Aula*\n\n` +
-        `👤 Aluno: ${alunoInfo.nome}\n` +
-        `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
-        `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
-        `🏷️ Categoria: ${aula.categoria_nome}\n` +
-        `👨‍🏫 Professor: ${aula.professor_nome}`;
+    const mensagem =
+      `⚠️ *Cancelamento de Aula*\n\n` +
+      `👤 Aluno: ${alunoInfo.nome}\n` +
+      `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
+      `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
+      `🏷️ Categoria: ${aula.categoria_nome}\n` +
+      `👨‍🏫 Professor: ${aula.professor_nome}`;
 
-      await enviarMensagem(mensagem);
-      await enviarMensagemAluno(mensagem);
-    }
+    await enviarMensagem(mensagem);
+    await enviarMensagemAluno(mensagem);
 
     res.redirect('/aluno/aulas-fixas');
 
