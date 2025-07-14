@@ -1,179 +1,185 @@
-<div class="container py-5 text-white">
-  <div class="row justify-content-center">
-    <div class="col-12 col-lg-10">
-      <h2 class="text-center mb-4">Pacotes de {{aluno.nome}}</h2>
+<div class="container py-5 text-white">  
+  <div class="row justify-content-center">  
+    <div class="col-12 col-lg-10">  
+      <h2 class="text-center mb-4">Pacotes de {{aluno.nome}}</h2>  
 
-      <div class="d-flex justify-content-center justify-content-md-start flex-wrap gap-2 mb-4">
-        <a href="/professor/alunos" class="btn btn-outline-custom">← Voltar</a>
-        <a href="/professor/pacotes/novo/{{aluno.id}}" class="btn btn-outline-custom">+ Novo Pacote</a>
-      </div>
+      <div class="d-flex justify-content-center justify-content-md-start flex-wrap gap-2 mb-4">  
+        <a href="/professor/alunos" class="btn btn-outline-custom">← Voltar</a>  
+        <a href="/professor/pacotes/novo/{{aluno.id}}" class="btn btn-outline-custom">+ Novo Pacote</a>  
+      </div>  
 
-      {{#if pacotes.length}}
-      <!-- VISUALIZAÇÃO EM TABELA (DESKTOP) -->
-      <div class="card p-4 text-dark d-none d-md-block" style="background-color: #B395C0;">
-        <div class="table-responsive">
-          <table class="table table-bordered table-hover align-middle mb-0">
-            <thead class="table-dark">
-              <tr>
-                <th>Tipo</th>
-                <th>Categoria</th>
-                <th>Qtd Aulas</th>
-                <th>Usadas</th>
-                <th>Início</th>
-                <th>Validade</th>
-                <th>Status</th>
-                <th>Pago</th>
-                <th>Créditos</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{#each pacotes}}
-              <tr>
-                <td>{{this.tipo}}</td>
-                <td>{{this.categoria_nome}}</td>
-                <td>{{this.quantidade_aulas}}</td>
-                <td>
-                  <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="d-flex gap-1">
-                    <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
-                      value="{{this.aulas_utilizadas}}" class="form-control form-control-sm" required>
-                    <input type="hidden" name="aluno_id" value="{{../aluno.id}}">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas</button>
-                  </form>
-                </td>
-                <td>{{formatDate this.data_inicio}}</td>
-                <td>
-                  {{#if this.data_validade}}
-                    {{formatDate this.data_validade}}
-                  {{else}}
-                    Sem validade
-                  {{/if}}
-                </td>
-                <td>
-                  {{#if (eq this.status_validade "Vencido")}}
-                    <span class="badge bg-danger">Vencido</span>
-                  {{else if (eq this.status_validade "Vence em breve")}}
-                    <span class="badge bg-warning text-dark">Vence em breve</span>
-                  {{else}}
-                    <span class="badge bg-success">{{this.status_validade}}</span>
-                  {{/if}}
-                </td>
-                <td>
-                  {{#if this.pago}}
-                    <span class="badge bg-success">Sim</span>
-                  {{else}}
-                    <span class="badge bg-danger">Não</span>
-                  {{/if}}
-                </td>
-                <td>
-                  {{#if this.usos}}
-                    <ul style="list-style:none; padding-left:0; max-height: 100px; overflow-y:auto; font-size: 0.85em;">
-                      {{#each this.usos}}
-                        <li>{{this.data}} ({{this.diaSemana}} {{this.horario}}) - {{this.categoria}}</li>
-                      {{/each}}
-                    </ul>
-                  {{else}}
-                    <span class="text-muted">Nenhum uso</span>
-                  {{/if}}
+      {{#if pacotes.length}}  
+      <!-- VISUALIZAÇÃO EM TABELA (DESKTOP) -->  
+      <div class="card p-4 text-dark d-none d-md-block" style="background-color: #B395C0;">  
+        <div class="table-responsive">  
+          <table class="table table-bordered table-hover align-middle mb-0">  
+            <thead class="table-dark">  
+              <tr>  
+                <th>Tipo</th>  
+                <th>Categoria</th>  
+                <th>Qtd Aulas</th>  
+                <th>Usadas</th>  
+                <th>Início</th>  
+                <th>Validade</th>  
+                <th>Status</th>  
+                <th>Pago</th>  
+                <th>Créditos</th>  
+                <th>Ações</th>  
+              </tr>  
+            </thead>  
+            <tbody>  
+              {{#each pacotes}}  
+              <tr>  
+                <td>{{this.tipo}}</td>  
+                <td>{{this.categoria_nome}}</td>  
+                <td>{{this.quantidade_aulas}}</td>  
+                <td>  
+                  <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="d-flex gap-1">  
+                    <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"  
+                      value="{{this.aulas_utilizadas}}" class="form-control form-control-sm" required>  
+                    <input type="hidden" name="aluno_id" value="{{../aluno.id}}">  
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas</button>  
+                  </form>  
+                </td>  
+                <td>{{formatDate this.data_inicio}}</td>  
+                <td>  
+                  {{#if this.data_validade}}  
+                    {{formatDate this.data_validade}}  
+                  {{else}}  
+                    Sem validade  
+                  {{/if}}  
+                </td>  
+                <td>  
+                  {{#if (eq this.status_validade "Vencido")}}  
+                    <span class="badge bg-danger">Vencido</span>  
+                  {{else if (eq this.status_validade "Vence em breve")}}  
+                    <span class="badge bg-warning text-dark">Vence em breve</span>  
+                  {{else}}  
+                    <span class="badge bg-success">{{this.status_validade}}</span>  
+                  {{/if}}  
+                </td>  
+                <td>  
+                  {{#if this.pago}}  
+                    <span class="badge bg-success">Sim</span>  
+                  {{else}}  
+                    <span class="badge bg-danger">Não</span>  
+                  {{/if}}  
+                </td>  
+                <td>  
+                  {{#if this.usos}}  
+                    <ul style="list-style:none; padding-left:0; max-height: 100px; overflow-y:auto; font-size: 0.85em;">  
+                      {{#each this.usos}}  
+                        <li>{{this.data}} ({{this.diaSemana}} {{this.horario}}) - {{this.categoria}}</li>  
+                      {{/each}}  
+                    </ul>  
+                  {{else}}  
+                    <span class="text-muted">Nenhum uso</span>  
+                  {{/if}}  
 
-                  {{#if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}
-                    <div class="mt-2">
-                      <span class="badge bg-warning text-dark">⚠  Aulas Acabando</span>
-                    </div>
-                  {{/if}}
-                </td>
-                <td>
-                  <div class="d-flex flex-column gap-1">
-                    <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                    <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"
-                      onsubmit="return confirm('Deseja excluir este pacote?');">
-                      <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  {{#if (eq this.quantidade_aulas this.aulas_utilizadas)}}  
+                    <div class="mt-2">  
+                      <span class="badge bg-secondary">Pacote Acabou</span>  
+                    </div>  
+                  {{else if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}  
+                    <div class="mt-2">  
+                      <span class="badge bg-warning text-dark">⚠ Aulas Acabando</span>  
+                    </div>  
+                  {{/if}}  
+                </td>  
+                <td>  
+                  <div class="d-flex flex-column gap-1">  
+                    <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary">Editar</a>  
+                    <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"  
+                      onsubmit="return confirm('Deseja excluir este pacote?');">  
+                      <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>  
+                    </form>  
+                  </div>  
+                </td>  
+              </tr>  
+              {{/each}}  
+            </tbody>  
+          </table>  
+        </div>  
+      </div>  
 
-      <!-- VISUALIZAÇÃO EM CARDS (MOBILE) -->
-      <div class="d-md-none">
-        {{#each pacotes}}
-        <div class="card text-dark p-3 mb-3" style="background-color: #B395C0;">
-          <h5 class="mb-2">Tipo: {{this.tipo}}</h5>
-          <p class="mb-1"><strong>Categoria:</strong> {{this.categoria_nome}}</p>
-          <p class="mb-1"><strong>Qtd Aulas:</strong> {{this.quantidade_aulas}}</p>
-          <p class="mb-1"><strong>Usadas:</strong> {{this.aulas_utilizadas}}</p>
-          <p class="mb-1"><strong>Início:</strong> {{formatDate this.data_inicio}}</p>
-          <p class="mb-1">
-            <strong>Validade:</strong>
-            {{#if this.data_validade}}
-              {{formatDate this.data_validade}}
-            {{else}}
-              Sem validade
-            {{/if}}
-          </p>
-          <p class="mb-1">
-            <strong>Status:</strong>
-            {{#if (eq this.status_validade "Vencido")}}
-              <span class="badge bg-danger">Vencido</span>
-            {{else if (eq this.status_validade "Vence em breve")}}
-              <span class="badge bg-warning text-dark">Vence em breve</span>
-            {{else}}
-              <span class="badge bg-success">{{this.status_validade}}</span>
-            {{/if}}
-          </p>
-          <p class="mb-1">
-            <strong>Pago:</strong>
-            {{#if this.pago}}
-              <span class="badge bg-success">Sim</span>
-            {{else}}
-              <span class="badge bg-danger">Não</span>
-            {{/if}}
-          </p>
-          <p class="mb-1"><strong>Créditos:</strong></p>
-          {{#if this.usos}}
-            <div style="max-height: 120px; overflow-y: auto; font-size: 0.9em; margin-bottom: 10px;">
-              <ul style="list-style:none; padding-left:0; margin-top: 4px;">
-                {{#each this.usos}}
-                  <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
-                {{/each}}
-              </ul>
-            </div>
-          {{else}}
-            <p class="text-muted mb-2">Nenhum crédito usado</p>
-          {{/if}}
+      <!-- VISUALIZAÇÃO EM CARDS (MOBILE) -->  
+      <div class="d-md-none">  
+        {{#each pacotes}}  
+        <div class="card text-dark p-3 mb-3" style="background-color: #B395C0;">  
+          <h5 class="mb-2">Tipo: {{this.tipo}}</h5>  
+          <p class="mb-1"><strong>Categoria:</strong> {{this.categoria_nome}}</p>  
+          <p class="mb-1"><strong>Qtd Aulas:</strong> {{this.quantidade_aulas}}</p>  
+          <p class="mb-1"><strong>Usadas:</strong> {{this.aulas_utilizadas}}</p>  
+          <p class="mb-1"><strong>Início:</strong> {{formatDate this.data_inicio}}</p>  
+          <p class="mb-1">  
+            <strong>Validade:</strong>  
+            {{#if this.data_validade}}  
+              {{formatDate this.data_validade}}  
+            {{else}}  
+              Sem validade  
+            {{/if}}  
+          </p>  
+          <p class="mb-1">  
+            <strong>Status:</strong>  
+            {{#if (eq this.status_validade "Vencido")}}  
+              <span class="badge bg-danger">Vencido</span>  
+            {{else if (eq this.status_validade "Vence em breve")}}  
+              <span class="badge bg-warning text-dark">Vence em breve</span>  
+            {{else}}  
+              <span class="badge bg-success">{{this.status_validade}}</span>  
+            {{/if}}  
+          </p>  
+          <p class="mb-1">  
+            <strong>Pago:</strong>  
+            {{#if this.pago}}  
+              <span class="badge bg-success">Sim</span>  
+            {{else}}  
+              <span class="badge bg-danger">Não</span>  
+            {{/if}}  
+          </p>  
+          <p class="mb-1"><strong>Créditos:</strong></p>  
+          {{#if this.usos}}  
+            <div style="max-height: 120px; overflow-y: auto; font-size: 0.9em; margin-bottom: 10px;">  
+              <ul style="list-style:none; padding-left:0; margin-top: 4px;">  
+                {{#each this.usos}}  
+                  <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>  
+                {{/each}}  
+              </ul>  
+            </div>  
+          {{else}}  
+            <p class="text-muted mb-2">Nenhum crédito usado</p>  
+          {{/if}}  
 
-          {{#if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}
-            <span class="badge bg-warning text-dark">⚠ Aulas Acabando</span>
-          {{/if}}
+          {{#if (eq this.quantidade_aulas this.aulas_utilizadas)}}  
+            <span class="badge bg-secondary">Pacote Acabou</span>  
+          {{else if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}  
+            <span class="badge bg-warning text-dark">⚠ Aulas Acabando</span>  
+          {{/if}}  
 
-          <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">
-            <div class="input-group input-group-sm">
-              <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"
-                value="{{this.aulas_utilizadas}}" class="form-control" required>
-              <input type="hidden" name="aluno_id" value="{{../aluno.id}}">
-              <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas</button>
-            </div>
-          </form>
-          <div class="d-flex flex-column gap-1">
-            <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"
-              onsubmit="return confirm('Deseja excluir este pacote?');">
-              <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
-            </form>
-          </div>
-          <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary mb-2">Editar</a>
-        </div>
-        {{/each}}
-      </div>
+          <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">  
+            <div class="input-group input-group-sm">  
+              <input type="number" name="aulas_utilizadas" min="0" max="{{this.quantidade_aulas}}"  
+                value="{{this.aulas_utilizadas}}" class="form-control" required>  
+              <input type="hidden" name="aluno_id" value="{{../aluno.id}}">  
+              <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas</button>  
+            </div>  
+          </form>  
+          <div class="d-flex flex-column gap-1">  
+            <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"  
+              onsubmit="return confirm('Deseja excluir este pacote?');">  
+              <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>  
+            </form>  
+          </div>  
+          <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary mb-2">Editar</a>  
+        </div>  
+        {{/each}}  
+      </div>  
 
-      {{else}}
-      <div class="card text-dark p-4 text-center" style="background-color: #B395C0;">
-        <p>Nenhum pacote encontrado para este aluno.</p>
-      </div>
-      {{/if}}
-    </div>
-  </div>
+      {{else}}  
+      <div class="card text-dark p-4 text-center" style="background-color: #B395C0;">  
+        <p>Nenhum pacote encontrado para este aluno.</p>  
+      </div>  
+      {{/if}}  
+    </div>  
+  </div>  
 </div>
