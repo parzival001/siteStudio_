@@ -471,7 +471,6 @@ function proximaDataDoDiaSemana(diaSemana, horario) {
 }
 
 // Controller listar aulas fixas disponíveis
-// Controller listar aulas fixas disponíveis
 exports.listarAulasFixasDisponiveis = async (req, res) => {
   const alunoId = req.session.user?.id;
   const hoje = new Date().toISOString().slice(0, 10);
@@ -574,7 +573,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       const jaDesistiuNaSemana = desistenciasSemana.length > 0;
       const primeiraDesistencia = desistenciasSemana.length > 0 ? desistenciasSemana[0].data : null;
 
-      const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
+      const limiteHoras = jaDesistiuNaSemana ? 12 : 3;
       const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
       const podeDesistir = diffHoras >= limiteHoras;
 
