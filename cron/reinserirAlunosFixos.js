@@ -23,12 +23,12 @@ async function reinserirAlunosFixos() {
         WHERE aula_fixa_id = ? AND eh_fixo = 0
       `, [aulaId]);
 
-      await db.query(`
-        DELETE FROM alunos_aulas_fixas
-        WHERE aula_fixa_id = ? AND eh_fixo = 0
-      `, [aulaId]);
-
       if (temporarios.length > 0) {
+        await db.query(`
+          DELETE FROM alunos_aulas_fixas
+          WHERE aula_fixa_id = ? AND eh_fixo = 0
+        `, [aulaId]);
+
         await db.query(`
           UPDATE aulas_fixas
           SET vagas = vagas + ?
@@ -53,7 +53,6 @@ async function reinserirAlunosFixos() {
         `, [alunoId, aulaId]);
 
         if (!jaInscrito) {
-          // Reinsere o aluno fixo na aula do dia
           const [result] = await db.query(`
             INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo)
             VALUES (?, ?, 1)
