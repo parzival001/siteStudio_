@@ -1,24 +1,36 @@
 const db = require('../config/db');
 
-
 async function descontarCreditosAulasFixas() {
   console.log('📆 Processando aulas fixas do dia para desconto de crédito...');
 
   const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
   const hoje = new Date();
-  const diaSemanaStr = diasSemana[hoje.getDay()];  // pega o nome do dia
+  const diaSemanaStr = diasSemana[hoje.getDay()];
 
   const dataHoje = hoje.toISOString().split('T')[0];
 
   try {
     const [aulas] = await db.query(`
-      SELECT af.id AS aula_id, af.categoria_id, af.horario, af.professor_id, p.nome AS professor_nome
+      SELECT
+        af.id AS aula_id,
+        af.categoria_id,
+        c.nome AS categoria_nome,
+        af.horario,
+        af.professor_id,
+        p.nome AS professor_nome
       FROM aulas_fixas af
       JOIN professores p ON af.professor_id = p.id
+      JOIN categorias c ON af.categoria_id = c.categoria_id
       WHERE af.dia_semana = ?
     `, [diaSemanaStr]);
 
     for (const aula of aulas) {
+      // Ignora se for da categoria "Treino Livre"
+      if (aula.categoria_nome.trim().toLowerCase() === 'treino livre') {
+        console.log(`⏭ Aula ${aula.aula_id} ignorada (categoria: Treino Livre)`);
+        continue;
+      }
+
       const [alunos] = await db.query(`
         SELECT a.id AS aluno_id, a.nome, a.telegram_chat_id
         FROM alunos_aulas_fixas aaf
@@ -41,7 +53,7 @@ async function descontarCreditosAulasFixas() {
           const pacoteSelecionado = pacote[0];
 
           await db.query(`
-            UPDATE pacotes_aluno 
+            UPDATE pacotes_aluno
             SET aulas_utilizadas = aulas_utilizadas + 1
             WHERE id = ?
           `, [pacoteSelecionado.id]);
@@ -66,6 +78,5 @@ async function descontarCreditosAulasFixas() {
     console.error('Erro ao processar créditos em aulas fixas:', err);
   }
 }
-
 
 module.exports = descontarCreditosAulasFixas;

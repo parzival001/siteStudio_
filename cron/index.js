@@ -11,7 +11,7 @@ cron.schedule('10 23 * * *', () => {
 
 });
 
-// Agenda para rodar todo dia às 22:00
+// Agenda para rodar todo dia às 23:30
 cron.schedule('30 23 * * *', () => {
   console.log('🕣 Iniciando desconto automático de créditos das aulas fixas às 10h59...');
   descontarCreditosAulasFixas()
@@ -23,8 +23,8 @@ cron.schedule('30 23 * * *', () => {
 console.log('Cron job iniciado e agendado para rodar todo dia às 21h46.');
 
 
-// Rodar todo dia às 13h23, por exemplo
-cron.schedule('43 14 * * *', () => {
+// Rodar todo dia às 23h40, por exemplo
+cron.schedule('40 23 * * *', () => {
   console.log('🔁 Executando rotina de reinserção de alunos fixos às 13:23...');
   reinserirAlunosFixos();
    }, { 
