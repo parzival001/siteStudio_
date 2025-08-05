@@ -1542,12 +1542,14 @@ exports.listarPacotesPorAluno = async (req, res) => {
 
 ///////////////////////////////////////////////////EDITAR PACOTE///////////////////////////////////////
 
-// GET editar pacote
 exports.editarPacoteForm = async (req, res) => {
   const pacoteId = req.params.id;
   const [[pacote]] = await db.query(`
-    SELECT * FROM pacotes_aluno WHERE id = ?
-  `, [pacoteId]);
+  SELECT p.*, c.nome AS categoria_nome
+  FROM pacotes_aluno p
+  LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+  WHERE p.id = ?
+`, [pacoteId]);
 
   const [categorias] = await db.query(`SELECT * FROM categorias`);
   if (!pacote) return res.status(404).send('Pacote não encontrado');
@@ -1555,18 +1557,17 @@ exports.editarPacoteForm = async (req, res) => {
   res.render('professor/editarPacote', { pacote, categorias });
 };
 
-// POST editar pacote
 exports.editarPacote = async (req, res) => {
-  console.log('Entrou no editarPacote')
+  console.log('Entrou no editarPacote');
   const {
-    categoria_id,
+    categoria_nome,
     quantidade_aulas,
     data_inicio,
     tipo,
     pago,
     passe_livre,
     aluno_id,
-    modalidades_passe_livre // array[]
+    modalidades_passe_livre // array de nomes das categorias
   } = req.body;
 
   if (!aluno_id || !quantidade_aulas || !tipo || !data_inicio) {
@@ -1592,10 +1593,23 @@ exports.editarPacote = async (req, res) => {
       throw new Error('Tipo de pacote inválido');
     }
 
-    // Se for passe livre, zera categoria
-    const categoriaFinal = passe_livre ? null : categoria_id;
+    // Obter categoria_id a partir do nome, se não for passe livre
+    let categoriaFinal = null;
+    let passeLivreFinal = passe_livre ? 1 : 0;
+
+    if (!passe_livre && categoria_nome) {
+      const [[categoria]] = await db.query(`SELECT categoria_id FROM categorias WHERE nome = ?`, [categoria_nome]);
+      if (!categoria) return res.status(400).send('Categoria não encontrada.');
+      categoriaFinal = categoria.categoria_id;
+    }
+
+    // Se categoriaFinal for null, considerar como passe livre
+    if (!categoriaFinal) {
+      passeLivreFinal = 1;
+    }
 
     console.log('Data validade calculada:', data_validade);
+
     // Atualizar pacote
     await db.query(`
       UPDATE pacotes_aluno
@@ -1608,18 +1622,20 @@ exports.editarPacote = async (req, res) => {
       data_inicio_formatada,
       data_validade,
       pago ? 1 : 0,
-      passe_livre ? 1 : 0,
+      passeLivreFinal,
       req.params.id
     ]);
 
     // Atualizar modalidades se for passe livre
-    if (passe_livre) {
-      // Limpa antigas
+    if (passeLivreFinal) {
       await db.query(`DELETE FROM pacotes_modalidades WHERE pacote_id = ?`, [req.params.id]);
 
       if (Array.isArray(modalidades_passe_livre)) {
-        for (const cat_id of modalidades_passe_livre) {
-          await db.query(`INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`, [req.params.id, cat_id]);
+        for (const nome_categoria of modalidades_passe_livre) {
+          const [[cat]] = await db.query(`SELECT categoria_id FROM categorias WHERE nome = ?`, [nome_categoria]);
+          if (cat) {
+            await db.query(`INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`, [req.params.id, cat.categoria_id]);
+          }
         }
       }
     }

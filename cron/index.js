@@ -27,8 +27,6 @@ console.log('Cron job iniciado e agendado para rodar todo dia às 21h46.');
 cron.schedule('40 23 * * *', () => {
   console.log('🔁 Executando rotina de reinserção de alunos fixos às 13:23...');
   reinserirAlunosFixos();
-   }, { 
-    timezone: "America/Sao_Paulo"
 });
 
 

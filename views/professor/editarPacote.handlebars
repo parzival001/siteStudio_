@@ -13,15 +13,11 @@
     </select>
   </div>
 
-  <!-- Categoria -->
+  <!-- Categoria (somente leitura) -->
   <div class="mb-3">
     <label class="form-label">Categoria:</label>
-    <select name="categoria_id" class="form-select" required>
-      {{#each categorias}}
-      <option value="{{categoria_id}}" {{#ifCond ../pacote.categoria_id '==' categoria_id}}selected{{/ifCond}}>{{nome}}
-      </option>
-      {{/each}}
-    </select>
+    <input class="form-control" value="{{pacote.categoria_nome}}" disabled>
+    <input type="hidden" name="categoria_id" value="{{pacote.categoria_id}}">
   </div>
 
   <!-- Quantidade -->
