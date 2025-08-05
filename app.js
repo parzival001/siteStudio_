@@ -8,7 +8,7 @@ const upload = require('./utils/upload');
 const app = express();
 require('./jobs/aniversario');
 require('./cron/index');
-
+require('dotenv').config();
 
 cron.schedule('*/1 * * * *', async () => {
   console.log('🧹 Executando limpeza de aulas expiradas...');

@@ -1,15 +1,22 @@
 const axios = require('axios');
+require('dotenv').config();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8';
+// Valida se a variável de ambiente está definida
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID_ADMIN = -1002656604822;
 
-async function enviarMensagem(mensagem, parseMode = 'Markdown') {
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+if (!BOT_TOKEN) {
+  console.error("❌ ERRO: TELEGRAM_BOT_TOKEN não definido nas variáveis de ambiente.");
+  process.exit(1); // Encerra o processo se o token não estiver definido
+}
 
+async function enviarMensagem(mensagem, parseMode = 'Markdown') {
   if (!mensagem || mensagem.trim() === '') {
     console.warn('⚠️ Mensagem vazia. Nada foi enviado ao Telegram.');
     return;
   }
+
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
   try {
     const response = await axios.post(url, {
@@ -17,10 +24,18 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
       text: mensagem,
       parse_mode: parseMode
     });
+
     console.log('✅ Mensagem enviada ao grupo via utils/telegram.js');
     return response.data;
+
   } catch (error) {
-    console.error('❌ Erro ao enviar mensagem para o Telegram:', error.response?.data || error.message);
+    console.error('❌ Erro ao enviar mensagem para o Telegram:');
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Data:', error.response.data);
+    } else {
+      console.error('Mensagem:', error.message);
+    }
   }
 }
 

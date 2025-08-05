@@ -17,6 +17,7 @@
     "bootstrap": "^5.3.6",
     "connect-session-sequelize": "^7.1.7",
     "dayjs": "^1.11.13",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-handlebars": "^8.0.2",
     "express-session": "^1.18.1",

@@ -1,10 +1,22 @@
+require('dotenv').config(); // Garante que as variáveis do .env sejam carregadas
 const axios = require('axios');
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7923011749:AAHSw03IwnhwY19AFdMAZDAhlNhFsvAFSPo';
+// Bot e grupo configurados com fallback (apenas para testes, ideal é usar sempre as variáveis)
+const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO || '7923011749:AAHSw03IwnhwY19AFdMAZDAhlNhFsvAFSPo';
 const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID || -1002543104429;
 
+/**
+ * Envia uma mensagem para o grupo de alunos no Telegram
+ * @param {string} mensagem - Texto da mensagem
+ * @param {string} parseMode - Formatação (ex: 'Markdown', 'HTML')
+ */
 async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  const url = `https://api.telegram.org/bot${BOT_TOKEN_ALUNO}/sendMessage`;
+
+  if (!mensagem || mensagem.trim() === '') {
+    console.warn('⚠️ Mensagem vazia. Nada foi enviado ao grupo de alunos.');
+    return;
+  }
 
   try {
     const response = await axios.post(url, {
@@ -13,6 +25,7 @@ async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
       parse_mode: parseMode
     });
     console.log('✅ Mensagem enviada ao grupo dos alunos:', response.data);
+    return response.data;
   } catch (error) {
     console.error('❌ Erro ao enviar mensagem para grupo de alunos:', error.response?.data || error.message);
   }
