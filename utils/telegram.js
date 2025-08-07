@@ -45,4 +45,23 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
   }
 }
 
+
+async function enviarMensagemTeste() {
+  try {
+    const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      chat_id: CHAT_ID_ADMIN,
+      text: 'Teste de mensagem com IPv4 forçado',
+      parse_mode: 'Markdown'
+    }, {
+      httpsAgent: agent
+    });
+    console.log('Mensagem enviada:', response.data);
+  } catch (error) {
+    console.error('Erro no teste:', error.message);
+  }
+}
+
+
+
+
 module.exports = { enviarMensagem };
