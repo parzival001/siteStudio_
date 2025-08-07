@@ -1,4 +1,5 @@
 const axios = require('axios');
+const https = require('https'); // Necessário para forçar IPv4
 require('dotenv').config();
 
 // Valida se a variável de ambiente está definida
@@ -18,11 +19,16 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
+  // Força uso de IPv4
+  const agent = new https.Agent({ family: 4 });
+
   try {
     const response = await axios.post(url, {
       chat_id: CHAT_ID_ADMIN,
       text: mensagem,
       parse_mode: parseMode
+    }, {
+      httpsAgent: agent
     });
 
     console.log('✅ Mensagem enviada ao grupo via utils/telegram.js');

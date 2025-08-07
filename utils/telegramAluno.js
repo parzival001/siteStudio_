@@ -1,7 +1,8 @@
 require('dotenv').config(); // Garante que as variáveis do .env sejam carregadas
 const axios = require('axios');
+const https = require('https'); // Para forçar IPv4
 
-// Bot e grupo configurados com fallback (apenas para testes, ideal é usar sempre as variáveis)
+// Bot e grupo configurados com fallback (ideal é usar sempre variáveis de ambiente)
 const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO || '7923011749:AAHSw03IwnhwY19AFdMAZDAhlNhFsvAFSPo';
 const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID || -1002543104429;
 
@@ -18,11 +19,16 @@ async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
     return;
   }
 
+  // Força uso de IPv4
+  const agent = new https.Agent({ family: 4 });
+
   try {
     const response = await axios.post(url, {
       chat_id: GRUPO_ALUNOS_ID,
       text: mensagem,
       parse_mode: parseMode
+    }, {
+      httpsAgent: agent
     });
     console.log('✅ Mensagem enviada ao grupo dos alunos:', response.data);
     return response.data;
