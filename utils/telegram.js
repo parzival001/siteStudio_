@@ -1,8 +1,8 @@
 const axios = require('axios');
-const https = require('https'); // Necessário para forçar IPv4
+const https = require('https'); // Para forçar uso de IPv4
 require('dotenv').config();
 
-// Valida se a variável de ambiente está definida
+// Pega o token do bot do arquivo .env
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID_ADMIN = -1002656604822;
 
@@ -19,7 +19,7 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
-  // Força uso de IPv4
+  // Cria um agente HTTPS que força conexão IPv4
   const agent = new https.Agent({ family: 4 });
 
   try {

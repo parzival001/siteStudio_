@@ -12,12 +12,12 @@ const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID || -1002543104429;
  * @param {string} parseMode - Formatação (ex: 'Markdown', 'HTML')
  */
 async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
-  const url = `https://api.telegram.org/bot${BOT_TOKEN_ALUNO}/sendMessage`;
-
   if (!mensagem || mensagem.trim() === '') {
     console.warn('⚠️ Mensagem vazia. Nada foi enviado ao grupo de alunos.');
     return;
   }
+
+  const url = `https://api.telegram.org/bot${BOT_TOKEN_ALUNO}/sendMessage`;
 
   // Força uso de IPv4
   const agent = new https.Agent({ family: 4 });
