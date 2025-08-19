@@ -1077,8 +1077,28 @@ exports.deletarPacote = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Buscar aluno_id para redirecionar depois
+    const [pacote] = await db.query(
+      'SELECT aluno_id FROM pacotes_aluno WHERE id = ?',
+      [id]
+    );
+
+    if (pacote.length === 0) {
+      return res.status(404).send('Pacote não encontrado.');
+    }
+
+    const alunoId = pacote[0].aluno_id;
+
+    // 🔴 Apagar primeiro dependências
+    await db.query('DELETE FROM uso_creditos WHERE pacote_id = ?', [id]);
+    await db.query('DELETE FROM pacotes_modalidades WHERE pacote_id = ?', [id]);
+
+    // Agora pode apagar o pacote
     await db.query('DELETE FROM pacotes_aluno WHERE id = ?', [id]);
-    res.redirect('/professor/pacotes'); // ou para a rota certa da listagem
+
+    console.log(`✅ Pacote ${id} deletado com sucesso.`);
+
+    res.redirect(`/professor/pacotes/${alunoId}`);
   } catch (error) {
     console.error('Erro ao deletar pacote:', error);
     res.status(500).send('Erro ao deletar pacote.');

@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { enviarMensagem } = require('../utils/telegram');
 
 async function descontarCreditosAulasFixas() {
   console.log('📆 Processando aulas fixas do dia para desconto de crédito...');
@@ -25,11 +26,7 @@ async function descontarCreditosAulasFixas() {
     `, [diaSemanaStr]);
 
     for (const aula of aulas) {
-      // Ignora se for da categoria "Treino Livre"
-      if (aula.categoria_nome.trim().toLowerCase() === 'treino livre') {
-        console.log(`⏭ Aula ${aula.aula_id} ignorada (categoria: Treino Livre)`);
-        continue;
-      }
+      const categoria = aula.categoria_nome?.trim().toLowerCase();
 
       const [alunos] = await db.query(`
         SELECT a.id AS aluno_id, a.nome, a.telegram_chat_id
@@ -39,15 +36,36 @@ async function descontarCreditosAulasFixas() {
       `, [aula.aula_id]);
 
       for (const aluno of alunos) {
-        const [pacote] = await db.query(`
-          SELECT * FROM pacotes_aluno
-          WHERE aluno_id = ?
-            AND (passe_livre = 1 OR categoria_id = ?)
-            AND data_validade >= ?
-            AND (quantidade_aulas - aulas_utilizadas) > 0
-          ORDER BY data_validade ASC, id ASC
-          LIMIT 1
-        `, [aluno.aluno_id, aula.categoria_id, dataHoje]);
+        let queryPacote;
+        let params;
+
+        if (categoria === 'treino livre') {
+          // 🚫 Não permite passe livre para treino livre
+          queryPacote = `
+            SELECT * FROM pacotes_aluno
+            WHERE aluno_id = ?
+              AND categoria_id = ?
+              AND data_validade >= ?
+              AND (quantidade_aulas - aulas_utilizadas) > 0
+            ORDER BY data_validade ASC, id ASC
+            LIMIT 1
+          `;
+          params = [aluno.aluno_id, aula.categoria_id, dataHoje];
+        } else {
+          // ✅ Aqui passe livre pode ser usado
+          queryPacote = `
+            SELECT * FROM pacotes_aluno
+            WHERE aluno_id = ?
+              AND (passe_livre = 1 OR categoria_id = ?)
+              AND data_validade >= ?
+              AND (quantidade_aulas - aulas_utilizadas) > 0
+            ORDER BY data_validade ASC, id ASC
+            LIMIT 1
+          `;
+          params = [aluno.aluno_id, aula.categoria_id, dataHoje];
+        }
+
+        const [pacote] = await db.query(queryPacote, params);
 
         if (pacote.length > 0) {
           const pacoteSelecionado = pacote[0];
@@ -64,8 +82,10 @@ async function descontarCreditosAulasFixas() {
           `, [pacoteSelecionado.id, aluno.aluno_id, aula.aula_id, dataHoje]);
 
           if (aluno.telegram_chat_id) {
-            await enviarMensagem(aluno.telegram_chat_id,
-              `💳 Um crédito foi usado hoje (${dataHoje}) para sua aula fixa com o professor *${aula.professor_nome}*.`);
+            await enviarMensagem(
+              aluno.telegram_chat_id,
+              `💳 Um crédito foi usado hoje (${dataHoje}) para sua aula fixa com o professor *${aula.professor_nome}*.`
+            );
           }
 
           console.log(`✔ Crédito descontado: Aluno ${aluno.nome} (ID ${aluno.aluno_id}) na aula ${aula.aula_id}`);
