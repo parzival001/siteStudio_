@@ -693,7 +693,7 @@ exports.desistirAulaFixa = async (req, res) => {
   const aulaId = req.params.aulaId;
 
   try {
-    // Verificar se o aluno está inscrito na aula
+    // 1) Verifica se o aluno está inscrito na aula
     const [[inscricao]] = await db.query(`
       SELECT * FROM alunos_aulas_fixas
       WHERE aluno_id = ? AND aula_fixa_id = ?
@@ -703,6 +703,7 @@ exports.desistirAulaFixa = async (req, res) => {
       return res.status(400).send('Você não está inscrito nesta aula fixa.');
     }
 
+    // 2) Busca dados da aula (categoria e professor)
     const [[aula]] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
@@ -715,6 +716,7 @@ exports.desistirAulaFixa = async (req, res) => {
       return res.status(404).send('Aula fixa não encontrada.');
     }
 
+    // --- Mantemos o cálculo da próxima data da aula apenas para registro/notificação ---
     const diasSemanaMap = {
       domingo: 0, segunda: 1, terca: 2, terça: 2, quarta: 3,
       quinta: 4, sexta: 5, sabado: 6, sábado: 6
@@ -731,7 +733,7 @@ exports.desistirAulaFixa = async (req, res) => {
 
       const proximaAula = new Date(hoje);
       proximaAula.setDate(hoje.getDate() + diasAteAula);
-      const [hora, minuto] = horario.split(':').map(Number);
+      const [hora, minuto] = aula.horario.split(':').map(Number);
       proximaAula.setHours(hora, minuto, 0, 0);
 
       if (proximaAula <= hoje) proximaAula.setDate(proximaAula.getDate() + 7);
@@ -739,39 +741,14 @@ exports.desistirAulaFixa = async (req, res) => {
     }
 
     const dataAula = getProximaDataAula(aula.dia_semana, aula.horario);
-    const agora = new Date();
-    const diffHoras = (dataAula - agora) / (1000 * 60 * 60);
-
-    // Semana atual (domingo a sábado)
-    const inicioSemana = new Date(agora);
-    inicioSemana.setDate(agora.getDate() - agora.getDay());
-    inicioSemana.setHours(0, 0, 0, 0);
-
-    const fimSemana = new Date(inicioSemana);
-    fimSemana.setDate(inicioSemana.getDate() + 6);
-    fimSemana.setHours(23, 59, 59, 999);
-
-    const inicioSemanaStr = inicioSemana.toISOString().slice(0, 10);
-    const fimSemanaStr = fimSemana.toISOString().slice(0, 10);
-
-    const [desistenciasSemana] = await db.query(`
-      SELECT COUNT(*) AS total FROM aulas_fixas_desistencias
-      WHERE aluno_id = ? AND data BETWEEN ? AND ?
-    `, [alunoId, inicioSemanaStr, fimSemanaStr]);
-
-    const totalDesistencias = desistenciasSemana[0].total;
-
-    // Aplicar regras
-    if (totalDesistencias === 0 && diffHoras < 2) {
-      return res.status(400).send('Desistência da primeira aula da semana precisa de pelo menos 2 horas de antecedência.');
-    }
-    if (totalDesistencias >= 1 && diffHoras < 12) {
-      return res.status(400).send('Desistências adicionais na semana precisam de pelo menos 12 horas de antecedência.');
-    }
-
     const dataAulaStr = dataAula.toISOString().slice(0, 10);
 
-    // Evita duplicidade
+    // -----------------------------------------------------------------------------------
+    // REMOVIDO: Regras de bloqueio por 2h/12h no back-end.
+    // Agora a prevenção é 100% feita pela UI (sumir botão / mostrar mensagem).
+    // -----------------------------------------------------------------------------------
+
+    // Evita duplicidade de registro para a mesma aula/data
     await db.query(`
       DELETE FROM aulas_fixas_desistencias
       WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
@@ -794,7 +771,7 @@ exports.desistirAulaFixa = async (req, res) => {
       UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?
     `, [aulaId]);
 
-    // Envia notificação
+    // Notificações
     const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
 
     const mensagem =
@@ -805,14 +782,16 @@ exports.desistirAulaFixa = async (req, res) => {
       `🏷️ Categoria: ${aula.categoria_nome}\n` +
       `👨‍🏫 Professor: ${aula.professor_nome}`;
 
+    // Se você usa essas funções, mantenha os imports no topo do arquivo:
+    // const { enviarMensagem } = require('../utils/telegram');
+    // const { enviarMensagemAluno } = require('../utils/telegramAlunos');
     await enviarMensagem(mensagem);
     await enviarMensagemAluno(mensagem);
 
-    res.redirect('/aluno/aulas-fixas');
-
+    return res.redirect('/aluno/aulas-fixas');
   } catch (error) {
     console.error('Erro ao desistir da aula fixa:', error);
-    res.status(500).send('Erro interno no servidor');
+    return res.status(500).send('Erro interno no servidor');
   }
 };
 
