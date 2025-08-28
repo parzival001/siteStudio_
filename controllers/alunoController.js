@@ -535,7 +535,6 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         quarta: 3, quinta: 4, sexta: 5,
         sabado: 6, sábado: 6
       };
-
       const hoje = new Date();
       const diaAtual = hoje.getDay();
       const diaAula = diasSemanaMap[diaSemana.toLowerCase()];
@@ -553,6 +552,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
       const agora = new Date();
 
+      // Semana de referência
       const dataBase = new Date(dataHoraAula);
       const inicioSemana = new Date(dataBase);
       inicioSemana.setDate(dataBase.getDate() - dataBase.getDay());
@@ -562,8 +562,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       fimSemana.setDate(inicioSemana.getDate() + 6);
       fimSemana.setHours(23, 59, 59, 999);
 
-
-
+      // Filtra desistências do aluno nessa semana
       const desistenciasSemana = desistenciasHistorico.filter(d => {
         const dataDes = new Date(d.data);
         dataDes.setHours(0, 0, 0, 0);
@@ -571,15 +570,12 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       });
 
       const jaDesistiuNaSemana = desistenciasSemana.length > 0;
-      const primeiraDesistencia = desistenciasSemana.length > 0 ? desistenciasSemana[0].data : null;
 
-      const limiteHoras = jaDesistiuNaSemana ? 12 : -1;
+      // ✅ Regra corrigida
+      const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
+
       const diffHoras = (dataHoraAula - agora) / (1000 * 60 * 60);
       const podeDesistir = diffHoras >= limiteHoras;
-
-      const dataHoraLimite = new Date(dataHoraAula);
-      dataHoraLimite.setHours(dataHoraAula.getHours() - limiteHoras);
-
 
       const mensagemDesistencia = podeDesistir
         ? null
