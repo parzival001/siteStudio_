@@ -704,25 +704,6 @@ exports.gerarAulasFixas = async () => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 exports.listarAlunos = async (req, res) => {
   try {
     const [alunos] = await db.query('SELECT * FROM alunos');
