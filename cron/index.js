@@ -12,7 +12,7 @@ cron.schedule('10 23 * * *', () => {
 });
 
 // Agenda para rodar todo dia às 23:30
-cron.schedule('30 23 * * *', () => {
+cron.schedule('48 19 * * *', () => {
   console.log('🕣 Iniciando desconto automático de créditos das aulas fixas às 10h59...');
   descontarCreditosAulasFixas()
     .then(() => console.log('✅ Desconto de créditos concluído.'))

@@ -38,7 +38,7 @@ async function descontarCreditosAulasFixas() {
         let queryPacote;
         let params;
 
-        if (categoria === 'treino livre') {
+        if (categoria === 'Treino Livre') {
           // 🚫 Treino livre só pode usar pacotes específicos dessa categoria
           queryPacote = `
             SELECT * FROM pacotes_aluno
@@ -70,7 +70,7 @@ async function descontarCreditosAulasFixas() {
           const pacoteSelecionado = pacote[0];
 
           // 🚫 Garante que treino livre nunca usa passe livre
-          if (categoria === 'treino livre' && pacoteSelecionado.passe_livre === 1) {
+          if (categoria === 'Treino Livre' && pacoteSelecionado.passe_livre === 1) {
             console.log(`⚠ Passe livre ignorado para treino livre: Aluno ${aluno.nome} (ID ${aluno.aluno_id})`);
             continue;
           }
