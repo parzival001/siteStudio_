@@ -5,8 +5,30 @@ async function reinserirAlunosFixos() {
 
   try {
     const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
+    // Força sempre usar horário de Brasília
     const hoje = new Date();
-    const diaHoje = diasSemana[hoje.getDay()];
+    const diaSemanaIndex = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      weekday: "short"
+    }).formatToParts(hoje).find(p => p.type === "weekday").value.toLowerCase();
+
+    // Ajusta para bater com seu array de diasSemana
+    let diaHoje;
+    switch (diaSemanaIndex) {
+      case "dom": diaHoje = "domingo"; break;
+      case "seg": diaHoje = "segunda"; break;
+      case "ter": diaHoje = "terca"; break;
+      case "qua": diaHoje = "quarta"; break;
+      case "qui": diaHoje = "quinta"; break;
+      case "sex": diaHoje = "sexta"; break;
+      case "sáb": case "sab": diaHoje = "sabado"; break;
+      default: diaHoje = diasSemana[hoje.getDay()];
+    }
+
+    console.log("Hora atual do servidor:", hoje.toString());
+    console.log("Hora forçada Brasília:", new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }));
+    console.log("Dia da semana detectado:", diaHoje);
 
     // Seleciona somente as aulas do dia
     const [aulasFixas] = await db.query(`

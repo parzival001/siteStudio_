@@ -7,7 +7,12 @@ async function descontarCreditosAulasFixas() {
   const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
   const hoje = new Date();
   const diaSemanaStr = diasSemana[hoje.getDay()];
-  const dataHoje = hoje.toISOString().split('T')[0];
+
+  // 📌 Data local (sem UTC)
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  const dataHoje = `${ano}-${mes}-${dia}`;
 
   try {
     const [aulas] = await db.query(`
@@ -38,7 +43,7 @@ async function descontarCreditosAulasFixas() {
         let queryPacote;
         let params;
 
-        if (categoria === 'Treino Livre') {
+        if (categoria === 'treino livre') {
           // 🚫 Treino livre só pode usar pacotes específicos dessa categoria
           queryPacote = `
             SELECT * FROM pacotes_aluno
@@ -70,7 +75,7 @@ async function descontarCreditosAulasFixas() {
           const pacoteSelecionado = pacote[0];
 
           // 🚫 Garante que treino livre nunca usa passe livre
-          if (categoria === 'Treino Livre' && pacoteSelecionado.passe_livre === 1) {
+          if (categoria === 'treino livre' && pacoteSelecionado.passe_livre === 1) {
             console.log(`⚠ Passe livre ignorado para treino livre: Aluno ${aluno.nome} (ID ${aluno.aluno_id})`);
             continue;
           }

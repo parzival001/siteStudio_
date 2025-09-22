@@ -473,7 +473,26 @@ function proximaDataDoDiaSemana(diaSemana, horario) {
 // Controller listar aulas fixas disponíveis
 exports.listarAulasFixasDisponiveis = async (req, res) => {
   const alunoId = req.session.user?.id;
-  const hoje = new Date().toISOString().slice(0, 10);
+
+  // 🔹 Helper para sempre pegar hora de São Paulo
+  function getNowSP() {
+    const agora = new Date();
+    const formatado = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }).format(agora);
+
+    // formatado vem como "MM/DD/YYYY, HH:MM:SS"
+    return new Date(formatado);
+  }
+
+  const hojeSP = getNowSP();
+  const hoje = hojeSP.toISOString().slice(0, 10);
 
   try {
     const [aulas] = await db.query(`
@@ -535,14 +554,15 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
         quarta: 3, quinta: 4, sexta: 5,
         sabado: 6, sábado: 6
       };
-      const hoje = new Date();
-      const diaAtual = hoje.getDay();
+
+      const hojeSP = getNowSP();
+      const diaAtual = hojeSP.getDay();
       const diaAula = diasSemanaMap[diaSemana.toLowerCase()];
       let diasAteAula = diaAula - diaAtual;
       if (diasAteAula < 0) diasAteAula += 7;
 
-      const dataAula = new Date(hoje);
-      dataAula.setDate(hoje.getDate() + diasAteAula);
+      const dataAula = new Date(hojeSP);
+      dataAula.setDate(hojeSP.getDate() + diasAteAula);
       const [hora, minuto] = horario.split(':').map(Number);
       dataAula.setHours(hora, minuto, 0, 0);
       return dataAula;
@@ -550,7 +570,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
 
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
-      const agora = new Date();
+      const agora = getNowSP();
 
       // Semana de referência
       const dataBase = new Date(dataHoraAula);

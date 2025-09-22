@@ -10,6 +10,11 @@ require('./jobs/aniversario');
 require('./cron/index');
 require('dotenv').config();
 
+console.log("Timezone do servidor:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+console.log("Hora atual:", new Date().toString());
+console.log("Hora ISO:", new Date().toISOString());
+
+
 cron.schedule('*/1 * * * *', async () => {
   console.log('🧹 Executando limpeza de aulas expiradas...');
 
