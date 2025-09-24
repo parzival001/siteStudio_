@@ -243,7 +243,7 @@ exports.desinscreverAluno = async (req, res) => {
       [aulaId, alunoId]
     );
 
-    // Buscar dados da aula e do aluno
+    // Buscar dados da aula e do aluno para compor a mensagem
     const [[aulaInfo]] = await db.query(`
       SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas a
@@ -278,9 +278,9 @@ exports.desinscreverAluno = async (req, res) => {
       );
     }
 
-    // Monta mensagem para Telegram
+    // Enviar mensagem ao admin e ao grupo de alunos
     if (aulaInfo && alunoInfo) {
-      const mensagem = 
+      const mensagem =
         `⚠️ *Cancelamento de Aula*\n\n` +
         `👤 Aluno: ${alunoInfo.nome || ''}\n` +
         `📅 Data: ${new Date(aulaInfo.data).toLocaleDateString('pt-BR')}\n` +
@@ -288,17 +288,17 @@ exports.desinscreverAluno = async (req, res) => {
         `🏷️ Categoria: ${aulaInfo.categoria_nome || ''}\n` +
         `👨‍🏫 Professor: ${aulaInfo.professor_nome || ''}`;
 
-      // Envia mensagem para admin
+      // Envia para o admin
       await enviarMensagem(mensagem);
 
-      // Envia mensagem para grupo de alunos
+      // Envia para o grupo de alunos
       await enviarMensagemAluno(mensagem);
     }
 
     res.redirect('/aluno/aulas');
 
   } catch (error) {
-    console.error('Erro ao desinscrever aluno:', error);
+    console.error('❌ Erro ao desinscrever aluno:', error);
     res.status(500).send('Erro ao desinscrever aluno.');
   }
 };
