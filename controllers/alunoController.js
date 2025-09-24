@@ -228,77 +228,102 @@ exports.inscreverAluno = async (req, res) => {
   }
 };
 // Desinscrever aluno de uma aula
-exports.desinscreverAluno = async (req, res) => {
-  // Verifica se há usuário na sessão
-  if (!req.session.user || !req.session.user.id) {
-    return res.status(401).send('Sessão expirada ou usuário não autenticado.');
-  }
-
-  const aulaId = req.params.id;
+exports.desistirAulaFixa = async (req, res) => {
   const alunoId = req.session.user.id;
+  const aulaId = req.params.aulaId;
 
   try {
-    // Buscar info do pacote (se existir)
-    const [[registro]] = await db.query(
-      `SELECT pacote_id FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
-      [aulaId, alunoId]
-    );
+    // 1) Verifica inscrição
+    const [[inscricao]] = await db.query(`
+      SELECT * FROM alunos_aulas_fixas
+      WHERE aluno_id = ? AND aula_fixa_id = ?
+    `, [alunoId, aulaId]);
 
-    // Buscar dados da aula e do aluno para compor a mensagem
-    const [[aulaInfo]] = await db.query(`
-      SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
-      FROM aulas a
-      JOIN categorias c ON a.categoria_id = c.categoria_id
-      JOIN professores p ON a.professor_id = p.id
-      WHERE a.id = ?
+    if (!inscricao) return res.status(400).send('Você não está inscrito nesta aula fixa.');
+
+    // 2) Busca dados da aula
+    const [[aula]] = await db.query(`
+      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
+      FROM aulas_fixas af
+      JOIN categorias c ON af.categoria_id = c.categoria_id
+      JOIN professores p ON af.professor_id = p.id
+      WHERE af.id = ?
     `, [aulaId]);
 
-    const [[alunoInfo]] = await db.query(`
-      SELECT nome FROM alunos WHERE id = ?
-    `, [alunoId]);
+    if (!aula) return res.status(404).send('Aula fixa não encontrada.');
 
-    // Remover aluno da aula
-    await db.query(
-      `DELETE FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?`,
-      [aulaId, alunoId]
-    );
+    // 3) Calcula próxima data da aula
+    const diasSemanaMap = { domingo: 0, segunda: 1, terca: 2, terça: 2, quarta: 3, quinta: 4, sexta: 5, sabado: 6, sábado: 6 };
+    function getProximaDataAula(diaSemana, horario) {
+      const hoje = new Date();
+      const diaAtual = hoje.getDay();
+      const diaSemanaNum = diasSemanaMap[diaSemana.toLowerCase()];
+      let diasAteAula = diaSemanaNum - diaAtual;
+      if (diasAteAula < 0) diasAteAula += 7;
 
-    // Incrementar vaga da aula
-    await db.query(
-      `UPDATE aulas SET vagas = vagas + 1 WHERE id = ?`,
-      [aulaId]
-    );
+      const proximaAula = new Date(hoje);
+      proximaAula.setDate(hoje.getDate() + diasAteAula);
+      const [hora, minuto] = horario.split(':').map(Number);
+      proximaAula.setHours(hora, minuto, 0, 0);
 
-    // Repor crédito ao pacote, se houver
-    if (registro && registro.pacote_id) {
-      await db.query(
-        `UPDATE pacotes_aluno
-         SET aulas_utilizadas = GREATEST(aulas_utilizadas - 1, 0)
-         WHERE id = ?`,
-        [registro.pacote_id]
-      );
+      if (proximaAula <= hoje) proximaAula.setDate(proximaAula.getDate() + 7);
+      return proximaAula;
     }
 
-    // Compor mensagem
-    // Notificações
+    const dataAula = getProximaDataAula(aula.dia_semana, aula.horario);
+    const dataAulaStr = dataAula.toISOString().slice(0, 10);
 
-const mensagem =
-  `⚠️ *Cancelamento de Aula*\n\n` +
-  `👤 Aluno: ${alunoInfo.nome}\n` +
-  `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
-  `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
-  `🏷️ Categoria: ${aula.categoria_nome}\n` +
-  `👨‍🏫 Professor: ${aula.professor_nome}`;
+    // 4) Evita duplicidade e registra desistência
+    await db.query(`
+      DELETE FROM aulas_fixas_desistencias
+      WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
+    `, [alunoId, aulaId, dataAulaStr]);
 
-// Chamada das funções do novo módulo
-await enviarMensagem(mensagem);
-await enviarMensagemAluno(mensagem);
+    await db.query(`
+      INSERT INTO aulas_fixas_desistencias (aluno_id, aula_fixa_id, data)
+      VALUES (?, ?, ?)
+    `, [alunoId, aulaId, dataAulaStr]);
 
-    res.redirect('/aluno/aulas');
+    // 5) Remove da lista de participantes e libera vaga
+    await db.query(`
+      DELETE FROM alunos_aulas_fixas
+      WHERE aluno_id = ? AND aula_fixa_id = ?
+    `, [alunoId, aulaId]);
+
+    await db.query(`
+      UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?
+    `, [aulaId]);
+
+    // 6) Busca info do aluno
+    const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
+
+    // 7) Monta mensagem
+    const mensagem =
+      `⚠️ *Cancelamento de Aula*\n\n` +
+      `👤 Aluno: ${alunoInfo.nome}\n` +
+      `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
+      `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
+      `🏷️ Categoria: ${aula.categoria_nome}\n` +
+      `👨‍🏫 Professor: ${aula.professor_nome}`;
+
+    // 8) Envia mensagens com tratamento de erro
+    try {
+      await enviarMensagem(mensagem);
+    } catch (err) {
+      console.error('❌ Falha ao enviar mensagem para admin, mas desistência registrada:', err);
+    }
+
+    try {
+      await enviarMensagemAluno(mensagem);
+    } catch (err) {
+      console.error('❌ Falha ao enviar mensagem para grupo de alunos, mas desistência registrada:', err);
+    }
+
+    return res.redirect('/aluno/aulas-fixas');
 
   } catch (error) {
-    console.error('Erro ao desinscrever aluno:', error);
-    res.status(500).send('Erro ao desinscrever aluno.');
+    console.error('Erro ao processar desistência de aula fixa:', error);
+    return res.status(500).send('Erro interno no servidor');
   }
 };
 
