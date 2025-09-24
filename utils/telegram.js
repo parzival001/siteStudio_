@@ -30,7 +30,11 @@ async function enviarTelegram(botToken, chatId, mensagem, parseMode = 'Markdown'
       const res = await axios.post(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
         { chat_id: chatId, text: mensagem, parse_mode: parseMode },
-        { httpsAgent: agent, timeout: 10000 } // timeout de 10s
+        {
+          httpsAgent: agent,
+          timeout: 10000,
+          family: 4 // Adicione esta linha
+        }
       );
 
       console.log(`✅ Mensagem enviada (tentativa ${tentativa}):`, res.data);
