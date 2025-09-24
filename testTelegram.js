@@ -1,24 +1,25 @@
-require('dotenv').config();
+const TelegramBot = require('node-telegram-bot-api');
 const https = require('https');
-const axios = require('axios');
 
+// Token do seu bot (idealmente usar variável de ambiente)
+const token = process.env.TELEGRAM_BOT_TOKEN_ALUNO || '7923011749:AAHSw03IwnhwY19AFdMAZDAhlNhFsvAFSPo';
+
+// Cria um agente HTTPS que força IPv4
 const agent = new https.Agent({ family: 4 });
 
-axios.defaults.httpsAgent = agent;
-const { enviarMensagem, enviarMensagemAluno } = require('./utils/telegram');
+// Inicializa o bot com polling e agente IPv4
+const bot = new TelegramBot(token, {
+  polling: true,
+  request: { agent }
+});
 
-async function testeTelegram() {
-  try {
-    console.log("📤 Testando envio de mensagem para o admin...");
-    await enviarMensagem("✅ Mensagem de teste para o admin - IPv4");
+bot.on('message', (msg) => {
+  console.log("📩 Mensagem recebida no bot:");
+  console.log(JSON.stringify(msg, null, 2));
+});
 
-    console.log("📤 Testando envio de mensagem para o grupo de alunos...");
-    await enviarMensagemAluno("✅ Mensagem de teste para o grupo de alunos - IPv4");
+bot.on('polling_error', (error) => {
+  console.error('❌ Erro de polling:', error.message);
+});
 
-    console.log("🎉 Teste concluído!");
-  } catch (err) {
-    console.error("❌ Erro no teste:", err);
-  }
-}
-
-testeTelegram();
+console.log('✅ Bot iniciado e ouvindo mensagens (IPv4 forçado)');
