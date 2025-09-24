@@ -1,24 +1,28 @@
-const axios = require('axios');
-const https = require('https'); // Para forçar uso de IPv4
 require('dotenv').config();
+const axios = require('axios');
+const https = require('https');
 
-// Pega o token do bot do arquivo .env
+// --- Configurações do Bot ---
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHAT_ID_ADMIN = -1002656604822;
+const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO || BOT_TOKEN;
+const CHAT_ID_ADMIN = process.env.TELEGRAM_CHAT_ID_ADMIN;
+const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID;
 
-// Cria um agente HTTPS que força conexão IPv4 (reutilizável)
-const agent = new https.Agent({ family: 4 });
-
-if (!BOT_TOKEN) {
-  console.error("❌ ERRO: TELEGRAM_BOT_TOKEN não definido nas variáveis de ambiente.");
-  process.exit(1); // Encerra o processo se o token não estiver definido
+if (!BOT_TOKEN || !CHAT_ID_ADMIN) {
+  console.error('❌ ERRO: BOT_TOKEN ou CHAT_ID_ADMIN não definido nas variáveis de ambiente.');
+  process.exit(1);
 }
 
+/**
+ * Cria agente HTTPS com IPv4 e timeout
+ */
+const httpsAgent = new https.Agent({ family: 4 });
+
+/**
+ * Envia mensagem para o admin
+ */
 async function enviarMensagem(mensagem, parseMode = 'Markdown') {
-  if (!mensagem || mensagem.trim() === '') {
-    console.warn('⚠️ Mensagem vazia. Nada foi enviado ao Telegram.');
-    return;
-  }
+  if (!mensagem || mensagem.trim() === '') return;
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
@@ -28,31 +32,55 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
       text: mensagem,
       parse_mode: parseMode
     }, {
-      httpsAgent: agent
+      httpsAgent,
+      timeout: 10000 // 10 segundos
     });
 
-    console.log('✅ Mensagem enviada ao grupo via utils/telegram.js');
+    console.log('✅ Mensagem enviada ao admin:', response.data.ok);
     return response.data;
-
   } catch (error) {
     console.error('❌ Erro ao enviar mensagem para o Telegram:');
-    if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Data:', error.response.data);
-    } else {
-      console.error('Mensagem:', error.message);
-    }
+    console.error(error.response?.data || error.message);
   }
 }
 
-// Função de teste simples
-async function enviarMensagemTeste() {
+/**
+ * Envia mensagem para o grupo de alunos
+ */
+async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
+  if (!mensagem || mensagem.trim() === '' || !GRUPO_ALUNOS_ID) return;
+
+  const url = `https://api.telegram.org/bot${BOT_TOKEN_ALUNO}/sendMessage`;
+
   try {
-    const response = await enviarMensagem('Teste de mensagem com IPv4 forçado');
-    console.log('Mensagem de teste enviada:', response);
+    const response = await axios.post(url, {
+      chat_id: GRUPO_ALUNOS_ID,
+      text: mensagem,
+      parse_mode: parseMode
+    }, {
+      httpsAgent,
+      timeout: 10000
+    });
+
+    console.log('✅ Mensagem enviada ao grupo de alunos:', response.data.ok);
+    return response.data;
   } catch (error) {
-    console.error('Erro no teste:', error.message);
+    console.error('❌ Erro ao enviar mensagem para o grupo de alunos:');
+    console.error(error.response?.data || error.message);
   }
 }
 
-module.exports = { enviarMensagem, enviarMensagemTeste };
+/**
+ * Função de teste para enviar mensagem
+ */
+async function enviarMensagemTeste() {
+  console.log('🔹 Enviando mensagem de teste...');
+  await enviarMensagem('Teste de envio ao admin');
+  await enviarMensagemAluno('Teste de envio ao grupo de alunos');
+}
+
+module.exports = {
+  enviarMensagem,
+  enviarMensagemAluno,
+  enviarMensagemTeste
+};
