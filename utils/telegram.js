@@ -11,10 +11,10 @@ const agent = new https.Agent({
 });
 
 // Tokens e IDs do Telegram
-const BOT_TOKEN_ADMIN = process.env.TELEGRAM_BOT_TOKEN_ADMIN || '7858384013:AAGsYcXDgMjKS_JyUC_WKqFLydSuDLR7eS8';
-const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO || '7923011749:AAHSw03IwnhwY19AFdMAZDAhlNhFsvAFSPo';
-const CHAT_ID_ADMIN = process.env.TELEGRAM_CHAT_ID_ADMIN || -1002656604822;
-const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID || -1002543104429;
+const BOT_TOKEN_ADMIN = process.env.TELEGRAM_BOT_TOKEN_ADMIN;
+const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO;
+const CHAT_ID_ADMIN = process.env.TELEGRAM_CHAT_ID_ADMIN;
+const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID;
 
 /**
  * Envia mensagem ao Telegram com retry automático
@@ -30,11 +30,7 @@ async function enviarTelegram(botToken, chatId, mensagem, parseMode = 'Markdown'
       const res = await axios.post(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
         { chat_id: chatId, text: mensagem, parse_mode: parseMode },
-        {
-          httpsAgent: agent,
-          timeout: 10000,
-          family: 4 // Adicione esta linha
-        }
+        { httpsAgent: agent, timeout: 10000, family: 4 } // timeout de 10s e força IPv4
       );
 
       console.log(`✅ Mensagem enviada (tentativa ${tentativa}):`, res.data);
@@ -43,7 +39,7 @@ async function enviarTelegram(botToken, chatId, mensagem, parseMode = 'Markdown'
     } catch (err) {
       if (err.response) {
         console.error(`❌ Erro Telegram (resposta do servidor) [tentativa ${tentativa}]:`, err.response.status, err.response.data);
-        break; // erro do Telegram (ex: chat_id inválido), não adianta tentar de novo
+        break; 
       } else if (err.request) {
         console.error(`⚠️ Erro Telegram (sem resposta) [tentativa ${tentativa}]:`, err.code || err.message);
       } else {
@@ -70,16 +66,8 @@ async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
   return enviarTelegram(BOT_TOKEN_ALUNO, GRUPO_ALUNOS_ID, mensagem, parseMode);
 }
 
-// Função de teste definitiva
-async function testeTelegram() {
-  console.log('🚀 Testando envio de mensagens...');
-  await enviarMensagem('Teste admin IPv4 com retry');
-  await enviarMensagemAluno('Teste grupo de alunos IPv4 com retry');
-}
-
 // Exporta funções
 module.exports = {
   enviarMensagem,
-  enviarMensagemAluno,
-  testeTelegram
+  enviarMensagemAluno
 };
