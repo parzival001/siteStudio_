@@ -1,6 +1,10 @@
 require('dotenv').config();
-const axios = require('axios');
 const https = require('https');
+const axios = require('axios');
+
+const agent = new https.Agent({ family: 4 });
+
+axios.defaults.httpsAgent = agent;
 
 // --- Configurações do Bot ---
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;

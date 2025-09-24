@@ -1,4 +1,10 @@
 require('dotenv').config();
+const https = require('https');
+const axios = require('axios');
+
+const agent = new https.Agent({ family: 4 });
+
+axios.defaults.httpsAgent = agent;
 const { enviarMensagem, enviarMensagemAluno } = require('./utils/telegram');
 
 async function testeTelegram() {
