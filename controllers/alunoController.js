@@ -226,6 +226,7 @@ exports.inscreverAluno = async (req, res) => {
     res.status(500).send("Erro ao processar inscrição.");
   }
 };
+// Desinscrever aluno de uma aula
 exports.desinscreverAluno = async (req, res) => {
   // Verifica se há usuário na sessão
   if (!req.session.user || !req.session.user.id) {
@@ -242,7 +243,7 @@ exports.desinscreverAluno = async (req, res) => {
       [aulaId, alunoId]
     );
 
-    // Buscar dados da aula e do aluno para compor a mensagem
+    // Buscar dados da aula e do aluno
     const [[aulaInfo]] = await db.query(`
       SELECT a.data, a.horario, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas a
@@ -270,16 +271,16 @@ exports.desinscreverAluno = async (req, res) => {
     // Repor crédito ao pacote, se houver
     if (registro && registro.pacote_id) {
       await db.query(
-        `UPDATE pacotes_aluno 
+        `UPDATE pacotes_aluno
          SET aulas_utilizadas = GREATEST(aulas_utilizadas - 1, 0)
          WHERE id = ?`,
         [registro.pacote_id]
       );
     }
 
-    // Enviar mensagem ao admin via Telegram
+    // Monta mensagem para Telegram
     if (aulaInfo && alunoInfo) {
-      const mensagem =
+      const mensagem = 
         `⚠️ *Cancelamento de Aula*\n\n` +
         `👤 Aluno: ${alunoInfo.nome || ''}\n` +
         `📅 Data: ${new Date(aulaInfo.data).toLocaleDateString('pt-BR')}\n` +
@@ -287,12 +288,15 @@ exports.desinscreverAluno = async (req, res) => {
         `🏷️ Categoria: ${aulaInfo.categoria_nome || ''}\n` +
         `👨‍🏫 Professor: ${aulaInfo.professor_nome || ''}`;
 
+      // Envia mensagem para admin
       await enviarMensagem(mensagem);
+
+      // Envia mensagem para grupo de alunos
       await enviarMensagemAluno(mensagem);
     }
-  
 
     res.redirect('/aluno/aulas');
+
   } catch (error) {
     console.error('Erro ao desinscrever aluno:', error);
     res.status(500).send('Erro ao desinscrever aluno.');
