@@ -2,9 +2,22 @@ require('dotenv').config(); // Garante que as variáveis do .env sejam carregada
 const axios = require('axios');
 const https = require('https'); // Para forçar IPv4
 
-// Bot e grupo configurados com fallback (ideal é usar sempre variáveis de ambiente)
-const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO || '7923011749:AAHSw03IwnhwY19AFdMAZDAhlNhFsvAFSPo';
-const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID || -1002543104429;
+// Bot e grupo configurados via variáveis de ambiente
+const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO;
+const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID;
+
+if (!BOT_TOKEN_ALUNO) {
+  console.error("❌ ERRO: TELEGRAM_BOT_TOKEN_ALUNO não definido nas variáveis de ambiente.");
+  process.exit(1);
+}
+
+if (!GRUPO_ALUNOS_ID) {
+  console.error("❌ ERRO: TELEGRAM_GRUPO_ALUNOS_ID não definido nas variáveis de ambiente.");
+  process.exit(1);
+}
+
+// Cria um agente HTTPS reutilizável forçando IPv4
+const agent = new https.Agent({ family: 4 });
 
 /**
  * Envia uma mensagem para o grupo de alunos no Telegram
@@ -19,9 +32,6 @@ async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN_ALUNO}/sendMessage`;
 
-  // Força uso de IPv4
-  const agent = new https.Agent({ family: 4 });
-
   try {
     const response = await axios.post(url, {
       chat_id: GRUPO_ALUNOS_ID,
@@ -30,11 +40,23 @@ async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
     }, {
       httpsAgent: agent
     });
+
     console.log('✅ Mensagem enviada ao grupo dos alunos:', response.data);
     return response.data;
+
   } catch (error) {
     console.error('❌ Erro ao enviar mensagem para grupo de alunos:', error.response?.data || error.message);
   }
 }
 
-module.exports = { enviarMensagemAluno };
+// Função de teste opcional
+async function enviarMensagemAlunoTeste() {
+  try {
+    const response = await enviarMensagemAluno('Teste de mensagem para grupo de alunos');
+    console.log('Mensagem de teste enviada:', response);
+  } catch (error) {
+    console.error('Erro no teste:', error.message);
+  }
+}
+
+module.exports = { enviarMensagemAluno, enviarMensagemAlunoTeste };

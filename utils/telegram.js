@@ -6,6 +6,9 @@ require('dotenv').config();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID_ADMIN = -1002656604822;
 
+// Cria um agente HTTPS que força conexão IPv4 (reutilizável)
+const agent = new https.Agent({ family: 4 });
+
 if (!BOT_TOKEN) {
   console.error("❌ ERRO: TELEGRAM_BOT_TOKEN não definido nas variáveis de ambiente.");
   process.exit(1); // Encerra o processo se o token não estiver definido
@@ -18,9 +21,6 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
   }
 
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-
-  // Cria um agente HTTPS que força conexão IPv4
-  const agent = new https.Agent({ family: 4 });
 
   try {
     const response = await axios.post(url, {
@@ -45,23 +45,14 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
   }
 }
 
-
+// Função de teste simples
 async function enviarMensagemTeste() {
   try {
-    const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      chat_id: CHAT_ID_ADMIN,
-      text: 'Teste de mensagem com IPv4 forçado',
-      parse_mode: 'Markdown'
-    }, {
-      httpsAgent: agent
-    });
-    console.log('Mensagem enviada:', response.data);
+    const response = await enviarMensagem('Teste de mensagem com IPv4 forçado');
+    console.log('Mensagem de teste enviada:', response);
   } catch (error) {
     console.error('Erro no teste:', error.message);
   }
 }
 
-
-
-
-module.exports = { enviarMensagem };
+module.exports = { enviarMensagem, enviarMensagemTeste };
