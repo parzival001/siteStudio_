@@ -16,64 +16,64 @@ const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO || '7923011749:AAHS
 const CHAT_ID_ADMIN = process.env.TELEGRAM_CHAT_ID_ADMIN || -1002656604822;
 const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID || -1002543104429;
 
-// Função para enviar mensagem ao admin
-async function enviarMensagem(mensagem, parseMode = 'Markdown') {
-  if (!mensagem?.trim()) return console.warn('⚠️ Mensagem vazia para admin.');
+/**
+ * Envia mensagem ao Telegram com retry automático
+ */
+async function enviarTelegram(botToken, chatId, mensagem, parseMode = 'Markdown', tentativas = 3) {
+  if (!mensagem?.trim()) {
+    console.warn('⚠️ Mensagem vazia, ignorada.');
+    return;
+  }
 
-  try {
-    const res = await axios.post(
-      `https://api.telegram.org/bot${BOT_TOKEN_ADMIN}/sendMessage`,
-      { chat_id: CHAT_ID_ADMIN, text: mensagem, parse_mode: parseMode },
-      { httpsAgent: agent }
-    );
+  for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
+    try {
+      const res = await axios.post(
+        `https://api.telegram.org/bot${botToken}/sendMessage`,
+        { chat_id: chatId, text: mensagem, parse_mode: parseMode },
+        { httpsAgent: agent, timeout: 10000 } // timeout de 10s
+      );
 
-    console.log('✅ Mensagem enviada ao admin:', res.data);
-    return res.data;
+      console.log(`✅ Mensagem enviada (tentativa ${tentativa}):`, res.data);
+      return res.data;
 
-  } catch (err) {
-    if (err.response) {
-      console.error('❌ Erro Telegram admin (resposta do servidor):', err.response.status, err.response.data);
-    } else if (err.request) {
-      console.error('❌ Erro Telegram admin (nenhuma resposta recebida):', err.request);
-    } else {
-      console.error('❌ Erro Telegram admin (configuração/execução):', err.message);
+    } catch (err) {
+      if (err.response) {
+        console.error(`❌ Erro Telegram (resposta do servidor) [tentativa ${tentativa}]:`, err.response.status, err.response.data);
+        break; // erro do Telegram (ex: chat_id inválido), não adianta tentar de novo
+      } else if (err.request) {
+        console.error(`⚠️ Erro Telegram (sem resposta) [tentativa ${tentativa}]:`, err.code || err.message);
+      } else {
+        console.error(`⚠️ Erro Telegram (execução) [tentativa ${tentativa}]:`, err.message);
+      }
+
+      if (tentativa < tentativas) {
+        console.log('🔄 Tentando novamente em 2s...');
+        await new Promise(r => setTimeout(r, 2000));
+      }
     }
   }
+
+  console.error('❌ Todas as tentativas de envio falharam.');
+  return null;
 }
 
-// Função para enviar mensagem ao grupo de alunos
+// Funções específicas
+async function enviarMensagem(mensagem, parseMode = 'Markdown') {
+  return enviarTelegram(BOT_TOKEN_ADMIN, CHAT_ID_ADMIN, mensagem, parseMode);
+}
+
 async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
-  if (!mensagem?.trim()) return console.warn('⚠️ Mensagem vazia para alunos.');
-
-  try {
-    const res = await axios.post(
-      `https://api.telegram.org/bot${BOT_TOKEN_ALUNO}/sendMessage`,
-      { chat_id: GRUPO_ALUNOS_ID, text: mensagem, parse_mode: parseMode },
-      { httpsAgent: agent }
-    );
-
-    console.log('✅ Mensagem enviada ao grupo de alunos:', res.data);
-    return res.data;
-
-  } catch (err) {
-    if (err.response) {
-      console.error('❌ Erro Telegram grupo (resposta do servidor):', err.response.status, err.response.data);
-    } else if (err.request) {
-      console.error('❌ Erro Telegram grupo (nenhuma resposta recebida):', err.request);
-    } else {
-      console.error('❌ Erro Telegram grupo (configuração/execução):', err.message);
-    }
-  }
+  return enviarTelegram(BOT_TOKEN_ALUNO, GRUPO_ALUNOS_ID, mensagem, parseMode);
 }
 
 // Função de teste definitiva
 async function testeTelegram() {
   console.log('🚀 Testando envio de mensagens...');
-  await enviarMensagem('Teste admin IPv4');
-  await enviarMensagemAluno('Teste grupo de alunos IPv4');
+  await enviarMensagem('Teste admin IPv4 com retry');
+  await enviarMensagemAluno('Teste grupo de alunos IPv4 com retry');
 }
 
-// Exporta as funções
+// Exporta funções
 module.exports = {
   enviarMensagem,
   enviarMensagemAluno,
