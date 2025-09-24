@@ -9,6 +9,7 @@ const app = express();
 require('./jobs/aniversario');
 require('./cron/index');
 require('dotenv').config();
+// const db = require('./config/db')
 
 console.log("Timezone do servidor:", Intl.DateTimeFormat().resolvedOptions().timeZone);
 console.log("Hora atual:", new Date().toString());

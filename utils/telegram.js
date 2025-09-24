@@ -24,8 +24,17 @@ async function enviarMensagem(mensagem, parseMode = 'Markdown') {
     console.log('✅ Mensagem enviada ao admin:', res.data);
     return res.data;
   } catch (err) {
-    console.error('❌ Erro ao enviar mensagem para o Telegram (admin):', err.response?.data || err.message);
+  if (err.response) {
+    // O servidor respondeu com status != 2xx
+    console.error('❌ Erro Telegram (resposta do servidor):', err.response.status, err.response.data);
+  } else if (err.request) {
+    // Requisição enviada, mas sem resposta
+    console.error('❌ Erro Telegram (nenhuma resposta recebida):', err.request);
+  } else {
+    // Outro erro
+    console.error('❌ Erro Telegram (configuração/execução):', err.message);
   }
+}
 }
 
 async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
