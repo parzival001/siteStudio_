@@ -278,27 +278,26 @@ exports.desinscreverAluno = async (req, res) => {
       );
     }
 
-    // Enviar mensagem ao admin e ao grupo de alunos
-    if (aulaInfo && alunoInfo) {
-      const mensagem =
-        `⚠️ *Cancelamento de Aula*\n\n` +
-        `👤 Aluno: ${alunoInfo.nome || ''}\n` +
-        `📅 Data: ${new Date(aulaInfo.data).toLocaleDateString('pt-BR')}\n` +
-        `⏰ Horário: ${aulaInfo.horario?.slice(0, 5) || ''}\n` +
-        `🏷️ Categoria: ${aulaInfo.categoria_nome || ''}\n` +
-        `👨‍🏫 Professor: ${aulaInfo.professor_nome || ''}`;
+    // Compor mensagem
+    const mensagem = aulaInfo && alunoInfo ? 
+      `⚠️ *Cancelamento de Aula*\n\n` +
+      `👤 Aluno: ${alunoInfo.nome || ''}\n` +
+      `📅 Data: ${new Date(aulaInfo.data).toLocaleDateString('pt-BR')}\n` +
+      `⏰ Horário: ${aulaInfo.horario?.slice(0, 5) || ''}\n` +
+      `🏷️ Categoria: ${aulaInfo.categoria_nome || ''}\n` +
+      `👨‍🏫 Professor: ${aulaInfo.professor_nome || ''}`
+      : null;
 
-      // Envia para o admin
-      await enviarMensagem(mensagem);
-
-      // Envia para o grupo de alunos
-      await enviarMensagemAluno(mensagem);
+    // Enviar mensagens usando o módulo atualizado
+    if (mensagem) {
+      await enviarMensagem(mensagem);       // para admin
+      await enviarMensagemAluno(mensagem);  // para grupo de alunos
     }
 
     res.redirect('/aluno/aulas');
 
   } catch (error) {
-    console.error('❌ Erro ao desinscrever aluno:', error);
+    console.error('Erro ao desinscrever aluno:', error);
     res.status(500).send('Erro ao desinscrever aluno.');
   }
 };
