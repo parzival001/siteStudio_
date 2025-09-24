@@ -2,8 +2,9 @@ const db = require('../config/db'); // Ajuste o caminho conforme o seu projeto
 const bcrypt = require('bcryptjs');
 const moment = require('moment');
 const axios = require('axios');
-const { enviarMensagem } = require('../utils/telegram');
-const { enviarMensagemAluno } = require('../utils/telegramAluno');
+// const { enviarMensagem } = require('../utils/telegram');
+// const { enviarMensagemAluno } = require('../utils/telegramAluno');
+const { enviarMensagem, enviarMensagemAluno } = require('../utils/telegram');
 const path = require('path');
 const fs = require('fs');
 
@@ -279,20 +280,19 @@ exports.desinscreverAluno = async (req, res) => {
     }
 
     // Compor mensagem
-    const mensagem = aulaInfo && alunoInfo ? 
-      `⚠️ *Cancelamento de Aula*\n\n` +
-      `👤 Aluno: ${alunoInfo.nome || ''}\n` +
-      `📅 Data: ${new Date(aulaInfo.data).toLocaleDateString('pt-BR')}\n` +
-      `⏰ Horário: ${aulaInfo.horario?.slice(0, 5) || ''}\n` +
-      `🏷️ Categoria: ${aulaInfo.categoria_nome || ''}\n` +
-      `👨‍🏫 Professor: ${aulaInfo.professor_nome || ''}`
-      : null;
+    // Notificações
 
-    // Enviar mensagens usando o módulo atualizado
-    if (mensagem) {
-      await enviarMensagem(mensagem);       // para admin
-      await enviarMensagemAluno(mensagem);  // para grupo de alunos
-    }
+const mensagem =
+  `⚠️ *Cancelamento de Aula*\n\n` +
+  `👤 Aluno: ${alunoInfo.nome}\n` +
+  `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
+  `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
+  `🏷️ Categoria: ${aula.categoria_nome}\n` +
+  `👨‍🏫 Professor: ${aula.professor_nome}`;
+
+// Chamada das funções do novo módulo
+await enviarMensagem(mensagem);
+await enviarMensagemAluno(mensagem);
 
     res.redirect('/aluno/aulas');
 
