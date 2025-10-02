@@ -18,50 +18,7 @@ console.log("Hora ISO:", new Date().toISOString());
 
 
 
-cron.schedule('*/1 * * * *', async () => {
-  console.log('🧹 Executando limpeza de aulas expiradas...');
 
-  try {
-    // 1. Buscar aulas vencidas
-    const [aulas] = await db.query(`
-      SELECT a.id, a.data, a.horario, p.nome AS professor_nome
-      FROM aulas a
-      JOIN professores p ON a.professor_id = p.id
-      WHERE STR_TO_DATE(CONCAT(a.data, ' ', a.horario), '%Y-%m-%d %H:%i:%s') < NOW()
-    `);
-
-    for (const aula of aulas) {
-      // 2. Buscar participantes
-      const [alunos] = await db.query(`
-        SELECT al.nome FROM alunos al
-        JOIN aulas_alunos aa ON aa.aluno_id = al.id
-        WHERE aa.aula_id = ?
-      `, [aula.id]);
-
-      const nomes = alunos.map(a => a.nome).join(', ') || 'Nenhum participante';
-
-      const dataFormatada = new Date(aula.data).toLocaleDateString('pt-BR');
-      const horaFormatada = aula.horario.slice(0, 5);
-
-      // 3. Montar mensagem
-      const mensagem = `✅ *Aula Concluída (Auto)*\n👨‍🏫 Professor: ${aula.professor_nome}\n📅 Data: ${dataFormatada}\n🕒 Hora: ${horaFormatada}\n👥 Participantes: ${nomes}`;
-
-      // 4. Enviar para o Telegram
-      console.log('[TELEGRAM] Enviando mensagem para aula ID', aula.id);
-      await enviarMensagem(mensagem, 'Markdown');
-    }
-
-    // 5. Depois de enviar todas as mensagens, deletar
-    const [result] = await db.query(`
-      DELETE FROM aulas 
-      WHERE STR_TO_DATE(CONCAT(data, ' ', horario), '%Y-%m-%d %H:%i:%s') < NOW()
-    `);
-
-    console.log(`🗑️ Aulas deletadas: ${result.affectedRows}`);
-  } catch (err) {
-    console.error('❌ Erro ao processar aulas expiradas:', err);
-  }
-});
 
 const { enviarMensagem } = require('./telegramService');
 
