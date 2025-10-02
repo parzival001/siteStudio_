@@ -376,11 +376,25 @@ exports.formCadastroAluno = (req, res) => {
 exports.cadastrarAluno = async (req, res) => {
   const { nome, email, senha, telefone, data_nascimento } = req.body;
   const senhaHash = bcrypt.hashSync(senha, 10);
+
   try {
+    // Verifica se já existe aluno com esse e-mail
+    const [alunoExistente] = await db.query(
+      'SELECT id FROM alunos WHERE email = ?',
+      [email]
+    );
+
+    if (alunoExistente.length > 0) {
+      // Aluno já existe
+      return res.status(400).send('Erro: esse e-mail já está cadastrado!');
+    }
+
+    // Insere novo aluno
     await db.query(
       'INSERT INTO alunos (nome, email, senha, telefone, data_nascimento) VALUES (?, ?, ?, ?, ?)',
       [nome, email, senhaHash, telefone, data_nascimento]
     );
+
     res.redirect('/professor/alunos');
   } catch (err) {
     console.error('Erro ao cadastrar aluno:', err);
