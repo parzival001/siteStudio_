@@ -24,7 +24,6 @@ function authAluno(req, res, next) {
 
 
 router.post('/inscrever/:id', alunoController.inscreverAluno);
-router.post('/desinscrever/:id', alunoController.desinscreverAluno); // se tiver isso também
 
 router.get('/home', authAluno, alunoController.homeAluno);
 
