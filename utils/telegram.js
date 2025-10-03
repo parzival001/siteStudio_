@@ -1,14 +1,6 @@
+// Substituindo o seu código atual
+const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
-const axios = require('axios');
-const https = require('https');
-const dns = require('dns');
-
-// Cria agente HTTPS que força IPv4 via lookup
-const agent = new https.Agent({
-  lookup: (hostname, options, callback) => {
-    dns.lookup(hostname, { family: 4 }, callback); // força IPv4
-  }
-});
 
 // Tokens e IDs do Telegram
 const BOT_TOKEN_ADMIN = process.env.TELEGRAM_BOT_TOKEN_ADMIN;
@@ -16,58 +8,42 @@ const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO;
 const CHAT_ID_ADMIN = process.env.TELEGRAM_CHAT_ID_ADMIN;
 const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID;
 
+// Inicializa os bots
+// O 'polling: false' é importante para não receber mensagens, apenas enviar
+const botAdmin = new TelegramBot(BOT_TOKEN_ADMIN, { polling: false });
+const botAluno = new TelegramBot(BOT_TOKEN_ALUNO, { polling: false });
+
 /**
- * Envia mensagem ao Telegram com retry automático
+ * Envia mensagem para o Bot de Admin
  */
-async function enviarTelegram(botToken, chatId, mensagem, parseMode = 'Markdown', tentativas = 3) {
-  if (!mensagem?.trim()) {
-    console.warn('⚠️ Mensagem vazia, ignorada.');
-    return;
-  }
-
-  for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
-    try {
-      const res = await axios.post(
-        `https://api.telegram.org/bot${botToken}/sendMessage`,
-        { chat_id: chatId, text: mensagem, parse_mode: parseMode },
-        { httpsAgent: agent, timeout: 5000, family: 4 } // timeout de 5s e força IPv4
-      );
-
-      console.log(`✅ Mensagem enviada (tentativa ${tentativa}):`, res.data);
-      return res.data;
-
-    } catch (err) {
-      if (err.response) {
-        console.error(`❌ Erro Telegram (resposta do servidor) [tentativa ${tentativa}]:`, err.response.status, err.response.data);
-        break; 
-      } else if (err.request) {
-        console.error(`⚠️ Erro Telegram (sem resposta) [tentativa ${tentativa}]:`, err.code || err.message);
-      } else {
-        console.error(`⚠️ Erro Telegram (execução) [tentativa ${tentativa}]:`, err.message);
-      }
-
-      if (tentativa < tentativas) {
-        console.log('🔄 Tentando novamente em 2s...');
-        await new Promise(r => setTimeout(r, 2000));
-      }
-    }
-  }
-
-  console.error('❌ Todas as tentativas de envio falharam.');
-  return null;
-}
-
-// Funções específicas
 async function enviarMensagem(mensagem, parseMode = 'Markdown') {
-  return enviarTelegram(BOT_TOKEN_ADMIN, CHAT_ID_ADMIN, mensagem, parseMode);
+    try {
+        // A biblioteca cuida de retries e HTTP
+        const res = await botAdmin.sendMessage(CHAT_ID_ADMIN, mensagem, { parse_mode: parseMode });
+        console.log('✅ Mensagem enviada pelo Bot Admin:', res);
+        return res;
+    } catch (error) {
+        console.error('❌ Erro ao enviar mensagem do Bot Admin:', error.message);
+        return null;
+    }
 }
 
+/**
+ * Envia mensagem para o Bot de Aluno
+ */
 async function enviarMensagemAluno(mensagem, parseMode = 'Markdown') {
-  return enviarTelegram(BOT_TOKEN_ALUNO, GRUPO_ALUNOS_ID, mensagem, parseMode);
+    try {
+        const res = await botAluno.sendMessage(GRUPO_ALUNOS_ID, mensagem, { parse_mode: parseMode });
+        console.log('✅ Mensagem enviada pelo Bot Aluno:', res);
+        return res;
+    } catch (error) {
+        console.error('❌ Erro ao enviar mensagem do Bot Aluno:', error.message);
+        return null;
+    }
 }
 
 // Exporta funções
 module.exports = {
-  enviarMensagem,
-  enviarMensagemAluno
+    enviarMensagem,
+    enviarMensagemAluno
 };
