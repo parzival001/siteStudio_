@@ -10,26 +10,7 @@ const db = require('./config/db');
 // require('./jobs/aniversario');
 // require('./cron/index');
 require('dotenv').config();
-(async () => {
-    try {
-        // Agora você pode usar await aqui dentro, de forma segura
-        const { queryComLog } = require('./config/db');
-        const [rows] = await queryComLog('SELECT * FROM alunos LIMIT 10'); 
-        
-        // Se este SELECT for apenas para teste, você pode removê-lo
-        // console.log(`Início do app, Alunos encontrados: ${rows.length}`); 
 
-        // Coloque a inicialização do servidor aqui:
-        app.listen(PORT, () => {
-            console.log(`Servidor rodando na porta ${PORT}`);
-        });
-
-    } catch (err) {
-        console.error('❌ Erro FATAL ao inicializar o servidor:', err);
-        // Garante que o PM2 não tente reiniciar imediatamente em loop
-        process.exit(1); 
-    }
-})();
 
 
 // const { enviarMensagem } = require('./telegramService');
