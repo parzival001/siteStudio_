@@ -9,7 +9,7 @@ const app = express();
 require('./jobs/aniversario');
 require('./cron/index');
 require('dotenv').config();
-// const db = require('./config/db')
+
 
 
 const { enviarMensagem } = require('./telegramService');
