@@ -6,6 +6,7 @@ const cron = require('node-cron');
 const bcrypt = require('bcrypt'); // Incluído para usar no login
 const upload = require('./utils/upload');
 const app = express();
+const db = require('./config/db');
 require('./jobs/aniversario');
 require('./cron/index');
 require('dotenv').config();
@@ -122,7 +123,6 @@ const professorRoutes = require('./routes/professor');
 const alunoRoutes = require('./routes/aluno');
 const authController = require('./controllers/authController');
 
-
 app.use('/', authRoutes);
 app.use('/professor', professorRoutes);
 app.use('/aluno', alunoRoutes);
@@ -142,7 +142,7 @@ app.listen(PORT, () => {
 });
 
 // Autenticação de login
-const db = require('./config/db');
+
 
 exports.login = (req, res) => {
   const { email, senha } = req.body;
