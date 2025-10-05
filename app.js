@@ -4,11 +4,11 @@ const session = require('express-session');
 const path = require('path');
 const cron = require('node-cron');
 const bcrypt = require('bcrypt'); // Incluído para usar no login
-const upload = require('./utils/upload');
+// const upload = require('./utils/upload');
 const app = express();
 const db = require('./config/db');
-require('./jobs/aniversario');
-require('./cron/index');
+// require('./jobs/aniversario');
+// require('./cron/index');
 require('dotenv').config();
 
 
