@@ -4,8 +4,8 @@ require('dotenv').config();
 
 // Tokens e IDs do Telegram
 const BOT_TOKEN_ADMIN = process.env.TELEGRAM_BOT_TOKEN_ADMIN;
-const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO;
 const CHAT_ID_ADMIN = process.env.TELEGRAM_CHAT_ID_ADMIN;
+const BOT_TOKEN_ALUNO = process.env.TELEGRAM_BOT_TOKEN_ALUNO;
 const GRUPO_ALUNOS_ID = process.env.TELEGRAM_GRUPO_ALUNOS_ID;
 
 // Inicializa os bots
