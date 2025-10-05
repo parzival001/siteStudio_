@@ -23,7 +23,7 @@ function authAluno(req, res, next) {
 
 
 
-router.post('/inscrever/:id', alunoController.inscreverAluno);
+
 
 router.get('/home', authAluno, alunoController.homeAluno);
 
@@ -185,43 +185,6 @@ router.get('/historico', authAluno, async (req, res) => {
   } catch (err) {
     console.error('Erro ao carregar histórico:', err);
     res.render('aluno/historico', { error: 'Erro ao carregar o histórico. Tente novamente.' });
-  }
-});
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-router.post('/inscrever/:aulaId', authAluno, async (req, res) => {
-  const aulaId = req.params.aulaId;
-  const alunoId = req.session.user.id;
-
-  try {
-    // Verifica se o aluno já está inscrito
-    const [jaInscrito] = await db.query(`
-      SELECT * FROM aulas_alunos WHERE aula_id = ? AND aluno_id = ?
-    `, [aulaId, alunoId]);
-
-    if (jaInscrito.length > 0) {
-      return res.redirect('/aluno/aulas'); // já está inscrito
-    }
-
-    // Insere a inscrição
-    await db.query(`
-      INSERT INTO aulas_alunos (aula_id, aluno_id) VALUES (?, ?)
-    `, [aulaId, alunoId]);
-
-    // Atualiza o número de vagas
-    await db.query(`
-      UPDATE aulas SET vagas = vagas - 1 WHERE id = ?
-    `, [aulaId]);
-
-    res.redirect('/aluno/aulas');
-  } catch (err) {
-    console.error('Erro ao inscrever aluno:', err);
-    res.status(500).send('Erro ao inscrever o aluno na aula.');
   }
 });
 

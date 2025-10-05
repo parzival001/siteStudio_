@@ -62,8 +62,8 @@ function authProfessor(req, res, next) {
 router.get('/home', authProfessor, professorController.home);
 router.get('/pacotes/aluno/:id', professorController.verPacotesAluno);
 
-router.get('/pacotes/mover-aula/:id', professorController.selecionarAulaParaMover);
-router.post('/pacotes/mover-aula/:id', professorController.moverAulaParaPacote);
+// router.get('/pacotes/mover-aula/:id', professorController.selecionarAulaParaMover);
+// router.post('/pacotes/mover-aula/:id', professorController.moverAulaParaPacote);
 
 
 
@@ -140,12 +140,12 @@ router.post('/deletar-pacote/:id', (req, res) => {
 
 
 // Aulas avulsas
-router.get('/aulas', authProfessor, professorController.listarAulas);
-router.post('/aulas/criar', authProfessor, professorController.criarAula);
-router.post('/aulas/deletar/:id', authProfessor, professorController.deletarAula);
-router.post('/aulas/concluir/:id', authProfessor, professorController.concluirAula);
-router.get('/adicionar-aluno/:id', authProfessor, professorController.formAdicionarAluno);
-router.post('/adicionar-aluno/:id', authProfessor, professorController.adicionarAlunoNaAula);
+// router.get('/aulas', authProfessor, professorController.listarAulas);
+// router.post('/aulas/criar', authProfessor, professorController.criarAula);
+// router.post('/aulas/deletar/:id', authProfessor, professorController.deletarAula);
+// router.post('/aulas/concluir/:id', authProfessor, professorController.concluirAula);
+// router.get('/adicionar-aluno/:id', authProfessor, professorController.formAdicionarAluno);
+// router.post('/adicionar-aluno/:id', authProfessor, professorController.adicionarAlunoNaAula);
 
 
 
@@ -153,7 +153,7 @@ router.post('/adicionar-aluno/:id', authProfessor, professorController.adicionar
 router.post('/aulas-fixas/deletar/:id', authProfessor, professorController.deletarAulaFixa);
 //router.post('/aulas-fixas/remover-aluno', authProfessor, professorController.removerAlunoAulaFixa);
 router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, professorController.removerAlunoAulaFixa);
-router.post('/remover-aluno/:aulaId/:alunoId', authProfessor, professorController.removerAlunoDaAula);
+// router.post('/remover-aluno/:aulaId/:alunoId', authProfessor, professorController.removerAlunoDaAula);
 router.post('/pacotes/atualizar-utilizadas/:id', professorController.atualizarAulasUtilizadas);
 
 
@@ -554,14 +554,14 @@ router.post('/pacotes/editar/:id', professorController.editarPacote);
 /////////////////////////////////////////TESTE////////////////////////////////////
 
 
-router.get('/simular-desconto', async (req, res) => {
-  const diasAdiante = parseInt(req.query.dias || '7');
-  const dataSimulada = new Date();
-  dataSimulada.setDate(dataSimulada.getDate() + diasAdiante);
-  await professorController.limparAlunosTemporarios();
-  await professorController.simularDescontoNaData(dataSimulada.toISOString());
-  res.send(`✅ Simulação feita para ${dataSimulada.toLocaleDateString('pt-BR')}`);
-});
+// router.get('/simular-desconto', async (req, res) => {
+//   const diasAdiante = parseInt(req.query.dias || '7');
+//   const dataSimulada = new Date();
+//   dataSimulada.setDate(dataSimulada.getDate() + diasAdiante);
+//   await professorController.limparAlunosTemporarios();
+//   await professorController.simularDescontoNaData(dataSimulada.toISOString());
+//   res.send(`✅ Simulação feita para ${dataSimulada.toLocaleDateString('pt-BR')}`);
+// });
 
 
 module.exports = router;
