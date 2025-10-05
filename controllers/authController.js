@@ -1,5 +1,6 @@
 const db = require('../config/db');
-const bcrypt = require('bcrypt'); // Certifique-se de ter `npm install bcrypt`
+const bcrypt = require('bcrypt'); 
+const { queryComLog } = require('../config/db'); 
 
 exports.showLogin = (req, res) => {
   res.render('login');
