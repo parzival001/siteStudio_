@@ -1,5 +1,4 @@
 const db = require('../config/db'); // ajuste o caminho conforme seu projeto
-const { enviarMensagem } = require('../utils/telegram'); // se tiver, ou comente
 
 async function descontarCreditoTeste(alunoId, aulaFixaId) {
   const dataHoje = new Date().toISOString().slice(0, 10);

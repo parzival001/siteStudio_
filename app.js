@@ -10,7 +10,9 @@ const db = require('./config/db');
 // require('./jobs/aniversario');
 // require('./cron/index');
 require('dotenv').config();
+const { queryComLog } = require('./config/db');
 
+const [rows] = await queryComLog('SELECT * FROM alunos LIMIT 10');
 
 
 // const { enviarMensagem } = require('./telegramService');
@@ -31,6 +33,47 @@ require('dotenv').config();
 //     }
 //   }
 // }
+
+
+
+
+
+
+
+
+
+// Middleware para logar tempo de cada request
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[INÍCIO] ${req.method} ${req.url}`);
+
+  // Quando a resposta terminar, calcula tempo
+  res.on('finish', () => {
+    const tempo = Date.now() - start;
+    console.log(`[FIM] ${req.method} ${req.url} - ${tempo}ms`);
+  });
+
+  next();
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
