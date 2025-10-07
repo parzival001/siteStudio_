@@ -3,12 +3,10 @@ const handlebars = require('express-handlebars');
 const session = require('express-session');
 const path = require('path');
 const cron = require('node-cron');
-const bcrypt = require('bcrypt'); // Incluído para usar no login
-// const upload = require('./utils/upload');
+const bcrypt = require('bcrypt'); 
 const app = express();
 const db = require('./config/db');
-// require('./jobs/aniversario');
-// require('./cron/index');
+require('./cron/index');
 require('dotenv').config();
 
 
@@ -148,8 +146,17 @@ app.set('view engine', 'handlebars');
 // Middlewares
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '30d',   // define cache de 30 dias
+    etag: true,      // mantém ETag para evitar re-download se não mudou
+    lastModified: true
+}));
 app.use('/uploads/contratos', express.static('uploads/contratos'));
+const compression = require('compression');
+app.use(compression());
+
+
+
 
 // Configuração da sessão
 app.use(session({
