@@ -33,46 +33,6 @@ require('dotenv').config();
 
 
 
-
-
-
-
-
-// Middleware para logar tempo de cada request
-app.use((req, res, next) => {
-  const start = Date.now();
-  console.log(`[INÍCIO] ${req.method} ${req.url}`);
-
-  // Quando a resposta terminar, calcula tempo
-  res.on('finish', () => {
-    const tempo = Date.now() - start;
-    console.log(`[FIM] ${req.method} ${req.url} - ${tempo}ms`);
-  });
-
-  next();
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Configurar handlebars com helpers
 const hbs = handlebars.create({
   defaultLayout: 'main',
