@@ -653,7 +653,6 @@ exports.desistirAulaFixa = async (req, res) => {
 
     // // Se você usa essas funções, mantenha os imports no topo do arquivo:
      const { enviarMensagem } = require('../utils/telegram');
-     const { enviarMensagemAluno } = require('../utils/telegramAlunos');
      await enviarMensagem(mensagem);
      await enviarMensagemAluno(mensagem);
 
