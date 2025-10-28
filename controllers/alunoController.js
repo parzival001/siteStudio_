@@ -641,21 +641,21 @@ exports.desistirAulaFixa = async (req, res) => {
     `, [aulaId]);
 
     // // Notificações
-    // const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
+     const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
 
-    // const mensagem =
-    //   `⚠️ *Cancelamento de Aula*\n\n` +
-    //   `👤 Aluno: ${alunoInfo.nome}\n` +
-    //   `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
-    //   `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
-    //   `🏷️ Categoria: ${aula.categoria_nome}\n` +
-    //   `👨‍🏫 Professor: ${aula.professor_nome}`;
+     const mensagem =
+       `⚠️ *Cancelamento de Aula*\n\n` +
+       `👤 Aluno: ${alunoInfo.nome}\n` +
+      `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
+       `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
+       `🏷️ Categoria: ${aula.categoria_nome}\n` +
+       `👨‍🏫 Professor: ${aula.professor_nome}`;
 
     // // Se você usa essas funções, mantenha os imports no topo do arquivo:
-    // // const { enviarMensagem } = require('../utils/telegram');
-    // // const { enviarMensagemAluno } = require('../utils/telegramAlunos');
-    // await enviarMensagem(mensagem);
-    // await enviarMensagemAluno(mensagem);
+     const { enviarMensagem } = require('../utils/telegram');
+     const { enviarMensagemAluno } = require('../utils/telegramAlunos');
+     await enviarMensagem(mensagem);
+     await enviarMensagemAluno(mensagem);
 
     return res.redirect('/aluno/aulas-fixas');
   } catch (error) {
