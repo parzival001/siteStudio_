@@ -8,7 +8,7 @@
    const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
    const nomeDiaHoje = diasSemana[agora.getDay()];
    const dataHoje = agora.toISOString().split('T')[0];
-   const horaAtual = agora.toTimeString().slice(0, 5);  HH:mm
+   const horaAtual = agora.toTimeString().slice(0, 5); // HH:mm
 
    function horaParaMinutos(hora) {
      const [h, m] = hora.split(':').map(Number);

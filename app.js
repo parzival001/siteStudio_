@@ -3,7 +3,7 @@ const handlebars = require('express-handlebars');
 const session = require('express-session');
 const path = require('path');
 const cron = require('node-cron');
-const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcryptjs'); 
 const app = express();
 const db = require('./config/db');
 require('./cron/index');
