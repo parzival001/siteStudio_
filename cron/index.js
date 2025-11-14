@@ -3,7 +3,7 @@ const db = require('../config/db');
 const descontarCreditosAulasFixas = require('../cron/usoCreditosAulasFixas'); 
 const reinserirAlunosFixos = require('../cron/reinserirAlunosFixos');
 const notificarAulasEncerradasHoje = require('../cron/notificarAulasEncerradasHoje');
-
+const { verificarAniversarios } = require('../cron/aniversario');
 
 cron.schedule('40 23 * * *', () => {
   console.log('🔔 Enviando lista de participantes das aulas fixas...');
@@ -20,7 +20,11 @@ cron.schedule('30 23 * * *', () => {
 
 });
 
-console.log('Cron job iniciado e agendado para rodar todo dia às 21h46.');
+cron.schedule('01 08 * * *', () => {
+  console.log('🔔 Enviando lista de aniversariantes');
+  verificarAniversarios();
+
+});
 
 
 // Rodar todo dia às 23h40, por exemplo

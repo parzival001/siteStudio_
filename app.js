@@ -10,29 +10,6 @@ require('./cron/index');
 require('dotenv').config();
 
 
-
-// const { enviarMensagem } = require('./telegramService');
-
-// async function verificarAniversarios() {
-//   const hoje = new Date();
-//   const dia = hoje.getDate();
-//   const mes = hoje.getMonth() + 1;
-
-//   const [alunos] = await db.query(`
-//     SELECT nome, telegram_chat_id FROM alunos
-//     WHERE DAY(data_nascimento) = ? AND MONTH(data_nascimento) = ?
-//   `, [dia, mes]);
-
-//   for (const aluno of alunos) {
-//     if (aluno.telegram_chat_id) {
-//       await enviarMensagem(aluno.telegram_chat_id, `Feliz aniversário, ${aluno.nome}! Que seu dia seja incrível!`);
-//     }
-//   }
-// }
-
-
-
-
 // Configurar handlebars com helpers
 const hbs = handlebars.create({
   defaultLayout: 'main',
