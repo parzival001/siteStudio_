@@ -564,4 +564,23 @@ router.post('/pacotes/editar/:id', professorController.editarPacote);
 // });
 
 
+
+
+/////////////////////////////////////////////ZERAR/////////////////////////////////
+
+router.post('/limpar-tabela', async (req, res) => {
+  try {
+    // EXEMPLO
+    await db.query('TRUNCATE TABLE aulas_fixas_desistencias');
+
+    res.json({ message: 'Horário Zerado com Sucesso!' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao limpar tabela.' });
+  }
+});
+
+
+
+
 module.exports = router;

@@ -4,13 +4,10 @@
 
       <h2 class="mb-4">Bem-vindo, {{nome}}!</h2>
 
-     <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
+      <div class="card text-dark p-4 mb-4" style="background-color: #B395C0;">
         <h5 class="text-white">Gerenciamento Rápido</h5>
 
         <div class="d-grid gap-3 mt-3">
-
-          {{!-- <a href="/professor/aulas" class="btn btn-outline-custom w-auto"
-            style="color: #5A189A; border-color: #5A189A;">Criar Aula</a> --}}
 
           <a href="/professor/aulas-fixas/nova" class="btn btn-outline-custom w-auto"
             style="color: #5A189A; border-color: #5A189A;">Aulas Fixas</a>
@@ -21,8 +18,6 @@
           <a href="/professor/alunos/cadastrar" class="btn btn-outline-custom w-auto"
             style="color: #5A189A; border-color: #5A189A;">Cadastrar Aluno</a>
 
-          {{!-- <a href="/professor/pacotes" class="btn btn-outline-custom w-auto"
-            style="color: #5A189A; border-color: #5A189A;">Gerenciar Pacotes</a> --}}
 
           <a href="/professor/cadastrar" class="btn btn-outline-custom w-auto"
             style="color: #5A189A; border-color: #5A189A;">Cadastrar Professor</a>
@@ -30,10 +25,34 @@
           <a href="/professor/categorias" class="btn btn-outline-custom w-auto"
             style="color: #5A189A; border-color: #5A189A;">Categoria</a>
 
-          {{!-- <a href="/professor/dados-pessoais-alunos" class="btn btn-outline-custom w-auto"
-            style="color: #5A189A; border-color: #5A189A;">Dados Pessoais</a> --}}
+          <button class="btn btn-outline-danger w-auto" onclick="limparTabela()">
+            Zerar Contagem
+          </button>
 
           <a href="/logout" class="btn btn-outline-danger w-auto">Sair</a>
+
+          <script>
+  function limparTabela() {
+    if (!confirm("⚠️ Tem certeza que deseja zerar?.")) {
+      return;
+    }
+
+    fetch('/professor/limpar-tabela', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(data.message);
+    })
+    .catch(error => {
+      console.error(error);
+      alert("Erro ao zerar.");
+    });
+  }
+</script>
 
         </div>
       </div>

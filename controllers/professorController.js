@@ -1796,7 +1796,30 @@ exports.limparAlunosTemporarios = async () => {
 };
 
 
+////////////////////////////////////////////////////////ZERAR ////////////////////////////////
 
+
+
+function limparTabela() {
+    if (!confirm("⚠️ Tem certeza que deseja limpar a tabela? Essa ação NÃO pode ser desfeita.")) {
+      return;
+    }
+
+    fetch('/limpar-tabela', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(data.message);
+    })
+    .catch(error => {
+      console.error(error);
+      alert("Erro ao limpar a tabela.");
+    });
+  }
 
 
 
