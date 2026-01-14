@@ -586,36 +586,16 @@ exports.desistirAulaFixa = async (req, res) => {
     }
 
     // --- Mantemos o cálculo da próxima data da aula apenas para registro/notificação ---
-    const diasSemanaMap = {
-      domingo: 0, segunda: 1, terca: 2, terça: 2, quarta: 3,
-      quinta: 4, sexta: 5, sabado: 6, sábado: 6
-    };
+// --- Data real da desistência (aula de hoje) ---
+const hoje = new Date();
 
-    function getProximaDataAula(diaSemana, horario) {
-      const hoje = new Date();
-      const diaAtual = hoje.getDay();
-      const diaSemanaNum = diasSemanaMap[diaSemana.toLowerCase()];
-      if (diaSemanaNum === undefined) throw new Error(`Dia inválido: ${diaSemana}`);
+// formato para salvar no banco (YYYY-MM-DD)
+const dataAulaStr = hoje.toISOString().slice(0, 10);
 
-      let diasAteAula = diaSemanaNum - diaAtual;
-      if (diasAteAula < 0) diasAteAula += 7;
+// formato para exibir/notificação
+const dataFormatada = hoje.toLocaleDateString('pt-BR');
 
-      const proximaAula = new Date(hoje);
-      proximaAula.setDate(hoje.getDate() + diasAteAula);
-      const [hora, minuto] = aula.horario.split(':').map(Number);
-      proximaAula.setHours(hora, minuto, 0, 0);
 
-      if (proximaAula <= hoje) proximaAula.setDate(proximaAula.getDate() + 7);
-      return proximaAula;
-    }
-
-    const dataAula = getProximaDataAula(aula.dia_semana, aula.horario);
-    const dataAulaStr = dataAula.toISOString().slice(0, 10);
-
-    // -----------------------------------------------------------------------------------
-    // REMOVIDO: Regras de bloqueio por 2h/12h no back-end.
-    // Agora a prevenção é 100% feita pela UI (sumir botão / mostrar mensagem).
-    // -----------------------------------------------------------------------------------
 
     // Evita duplicidade de registro para a mesma aula/data
     await db.query(`
@@ -646,7 +626,7 @@ exports.desistirAulaFixa = async (req, res) => {
      const mensagem =
        `⚠️ *Cancelamento de Aula*\n\n` +
        `👤 Aluno: ${alunoInfo.nome}\n` +
-      `📅 Data: ${dataAula.toLocaleDateString('pt-BR')}\n` +
+      `📅 Data: ${dataFormatada}\n` +
        `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
        `🏷️ Categoria: ${aula.categoria_nome}\n` +
        `👨‍🏫 Professor: ${aula.professor_nome}`;
