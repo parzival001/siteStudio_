@@ -404,6 +404,23 @@ router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, async 
   }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Adicionar aluno à aula fixa
 router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) => {
   const aulaId = req.params.id;
@@ -427,16 +444,37 @@ router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) 
       return res.status(400).send('Não há mais vagas disponíveis para esta aula');
     }
 
+    // 🔎 DEBUG - dados da aula
+    console.log('Aula:', aula);
+
     // Verifica se o aluno possui pacote válido para esta categoria
-    const [[pacote]] = await db.query(`
-  SELECT * FROM pacotes_aluno
+    const [pacotes] = await db.query(`
+  SELECT *
+  FROM pacotes_aluno
   WHERE aluno_id = ?
     AND (categoria_id = ? OR passe_livre = 1)
-    AND quantidade_aulas > 0
-    AND data_validade >= CURDATE()
-  ORDER BY data_validade ASC
+    AND (quantidade_aulas - aulas_utilizadas) > 0
+    AND (
+      data_validade IS NULL
+      OR data_validade >= CURDATE()
+    )
+  ORDER BY 
+    CASE 
+      WHEN data_validade IS NULL THEN 1
+      ELSE 0
+    END,
+    data_validade ASC
   LIMIT 1
 `, [alunoId, aula.categoria_id]);
+
+const pacote = pacotes[0];
+
+          // 🔎 DEBUG - pacotes encontrados
+    console.log('Aluno:', alunoId);
+    console.log('Categoria da aula:', aula.categoria_id);
+    console.log('Pacotes encontrados:', pacote);
+
+
 
     if (!pacote) {
       return res.status(400).send('O aluno não possui créditos disponíveis para esta modalidade');
@@ -457,6 +495,20 @@ router.post('/aulas-fixas/:id/adicionar-aluno', authProfessor, async (req, res) 
     res.status(500).send('Erro ao adicionar aluno à aula');
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 router.post('/aulas-fixas/deletar/:id', authProfessor, async (req, res) => {
   const id = req.params.id;
