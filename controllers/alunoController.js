@@ -585,15 +585,13 @@ exports.desistirAulaFixa = async (req, res) => {
       return res.status(404).send('Aula fixa não encontrada.');
     }
 
-    // --- Mantemos o cálculo da próxima data da aula apenas para registro/notificação ---
-// --- Data real da desistência (aula de hoje) ---
-const hoje = new Date();
+const dataAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
 
-// formato para salvar no banco (YYYY-MM-DD)
-const dataAulaStr = hoje.toISOString().slice(0, 10);
+// para salvar no banco
+const dataAulaStr = dataAula.toISOString().slice(0, 10);
 
-// formato para exibir/notificação
-const dataFormatada = hoje.toLocaleDateString('pt-BR');
+// para exibir na mensagem
+const dataFormatada = dataAula.toLocaleDateString('pt-BR');
 
 
 
