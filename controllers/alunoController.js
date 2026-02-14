@@ -271,23 +271,35 @@ exports.historicoAluno = async (req, res) => {
 
 ////////////////////////////////////////////////AULAS FIXAS/////////////////////////////////////////////////
 
-// Função para calcular a próxima data da aula
+
+// 🔹 Hora oficial São Paulo
+function getNowSP() {
+  const agora = new Date();
+  const formatado = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(agora);
+
+  return new Date(formatado);
+}
+
+// 🔹 Calcula próxima data corretamente
 function proximaDataDoDiaSemana(diaSemana, horario) {
   const diasSemana = {
     'domingo': 0,
-    'segunda-feira': 1,
     'segunda': 1,
-    'terça-feira': 2,
-    'terça': 2,
     'terca': 2,
-    'quarta-feira': 3,
+    'terça': 2,
     'quarta': 3,
-    'quinta-feira': 4,
     'quinta': 4,
-    'sexta-feira': 5,
     'sexta': 5,
-    'sábado': 6,
-    'sabado': 6
+    'sabado': 6,
+    'sábado': 6
   };
 
   const diaLower = diaSemana
@@ -301,48 +313,28 @@ function proximaDataDoDiaSemana(diaSemana, horario) {
     throw new Error('Dia da semana inválido: ' + diaSemana);
   }
 
-  const agora = new Date();
+  const agora = getNowSP(); 
   const hojeDia = agora.getDay();
 
-  // Define a data da aula (sem hora ainda)
-  const proximaData = new Date(agora);
-  let diasParaAdicionar = diaAlvo - hojeDia;
+  let diasParaAdicionar = (diaAlvo - hojeDia + 7) % 7;
 
-  // Se a aula for hoje, verifica se o horário da aula já passou
   const [horaAula, minutoAula] = horario.split(':').map(Number);
-  const dataTentativa = new Date(agora);
-  dataTentativa.setHours(horaAula, minutoAula, 0, 0);
 
-  if (diasParaAdicionar < 0 || (diasParaAdicionar === 0 && dataTentativa <= agora)) {
-    diasParaAdicionar += 7;
+  const dataAula = new Date(agora);
+  dataAula.setDate(agora.getDate() + diasParaAdicionar);
+  dataAula.setHours(horaAula, minutoAula, 0, 0);
+
+  // 🔥 Se for hoje e já passou do horário, joga para próxima semana
+  if (diasParaAdicionar < 0 || (diasParaAdicionar === 0 && dataAula <= agora)) {
+    dataAula.setDate(dataAula.getDate() + 7);
   }
 
-  proximaData.setDate(agora.getDate() + diasParaAdicionar);
-  proximaData.setHours(horaAula, minutoAula, 0, 0);
-
-  return proximaData;
+  return dataAula;
 }
 
 // Controller listar aulas fixas disponíveis
 exports.listarAulasFixasDisponiveis = async (req, res) => {
   const alunoId = req.session.user?.id;
-
-  // 🔹 Helper para sempre pegar hora de São Paulo
-  function getNowSP() {
-    const agora = new Date();
-    const formatado = new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/Sao_Paulo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    }).format(agora);
-
-    // formatado vem como "MM/DD/YYYY, HH:MM:SS"
-    return new Date(formatado);
-  }
 
   const hojeSP = getNowSP();
   const hoje = hojeSP.toISOString().slice(0, 10);
@@ -401,25 +393,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       );
     }
 
-    function proximaDataDoDiaSemana(diaSemana, horario) {
-      const diasSemanaMap = {
-        domingo: 0, segunda: 1, terca: 2, terça: 2,
-        quarta: 3, quinta: 4, sexta: 5,
-        sabado: 6, sábado: 6
-      };
-
-      const hojeSP = getNowSP();
-      const diaAtual = hojeSP.getDay();
-      const diaAula = diasSemanaMap[diaSemana.toLowerCase()];
-      let diasAteAula = diaAula - diaAtual;
-      if (diasAteAula < 0) diasAteAula += 7;
-
-      const dataAula = new Date(hojeSP);
-      dataAula.setDate(hojeSP.getDate() + diasAteAula);
-      const [hora, minuto] = horario.split(':').map(Number);
-      dataAula.setHours(hora, minuto, 0, 0);
-      return dataAula;
-    }
+  
 
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
