@@ -92,7 +92,15 @@ app.use('/uploads/contratos', express.static('uploads/contratos'));
 const compression = require('compression');
 app.use(compression());
 
+app.use((req, res, next) => {
+  const hora = new Date().getHours();
 
+  if (hora >= 23 || hora < 5) {
+    return res.send("Sistema indisponível entre 23h e 5h.");
+  }
+
+  next();
+});
 
 
 // Configuração da sessão
