@@ -95,7 +95,7 @@ app.use(compression());
 app.use((req, res, next) => {
   const hora = new Date().getHours();
 
-  if (hora >= 1 || hora < 5) {
+  if (hora >= 3 || hora < 5) {
     return res.send("Sistema indisponível entre 23h e 5h.");
   }
 
