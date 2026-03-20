@@ -93,9 +93,19 @@ const compression = require('compression');
 app.use(compression());
 
 app.use((req, res, next) => {
-  const hora = new Date().getHours();
+  const agora = new Date();
 
-  if (hora >= 3 || hora < 5) {
+  const horaSP = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    hour12: false
+  }).format(agora);
+
+  const hora = parseInt(horaSP);
+
+  console.log("Hora SP:", hora); // debug
+
+  if (hora >= 23 || hora < 5) {
     return res.send("Sistema indisponível entre 23h e 5h.");
   }
 
