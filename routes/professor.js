@@ -259,17 +259,28 @@ router.post('/alunos/:id/editar', authProfessor, async (req, res) => {
 
 router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
   try {
+    const { formatarDataBR } = require('../utils/formatarData');
+
     const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias');
     const [professores] = await db.query('SELECT id, nome FROM professores');
 
+    // Pega aulas com liberação ATIVA (não arquivada). Filtra arquivadas e não-liberadas.
     const [aulasFixas] = await db.query(`
-      SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
+      SELECT
+        af.*,
+        c.nome AS categoria_nome,
+        p.nome AS professor_nome,
+        lib.id AS lib_id,
+        lib.data_aula AS data_liberada
       FROM aulas_fixas af
       JOIN categorias c ON af.categoria_id = c.categoria_id
       JOIN professores p ON af.professor_id = p.id
+      JOIN aulas_fixas_liberacoes lib
+        ON lib.aula_fixa_id = af.id
+       AND lib.arquivada = 0
+      ORDER BY lib.data_aula DESC
     `);
 
-    // Dicionário para ordenação dos dias
     const ordemDias = {
       segunda: 1, seg: 1,
       terca: 2, terça: 2, ter: 2,
@@ -282,15 +293,13 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
 
     function normalizar(dia) {
       if (!dia) return '';
-      return dia.toLowerCase().trim()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, '');
+      return dia.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
     }
 
-    // Formata e anexa os alunos de cada aula
     for (const aula of aulasFixas) {
+      aula.proxima_data_fmt = formatarDataBR(aula.data_liberada);
+      aula.horario_fmt = String(aula.horario || '').slice(0, 5);
       aula.dia_semana = aula.dia_semana.charAt(0).toUpperCase() + aula.dia_semana.slice(1);
-      aula.horario = aula.horario.slice(0, 5);
 
       const [alunosAula] = await db.query(`
         SELECT a.id, a.nome
@@ -302,12 +311,11 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
       aula.alunos = alunosAula;
     }
 
-    // 🔽 Ordena por dia e horário
     aulasFixas.sort((a, b) => {
       const diaA = ordemDias[normalizar(a.dia_semana)] || 99;
       const diaB = ordemDias[normalizar(b.dia_semana)] || 99;
       if (diaA !== diaB) return diaA - diaB;
-      return a.horario.localeCompare(b.horario);
+      return (a.horario_fmt || '').localeCompare(b.horario_fmt || '');
     });
 
     const [alunos] = await db.query('SELECT id, nome FROM alunos');
@@ -316,14 +324,18 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
       categorias,
       professores,
       aulasFixas,
-      alunos
+      alunos,
+      msg: req.query.msg,
+      arquivadas: req.query.arquivadas,
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Erro ao listar aulas fixas (nova):', err);
     res.status(500).send('Erro ao listar aulas fixas');
   }
 });
+
+
 
 router.get('/aulas-fixas/:id', authProfessor, async (req, res) => {
   const aulaId = req.params.id;
@@ -362,7 +374,7 @@ router.post('/aulas-fixas/nova', authProfessor, async (req, res) => {
       VALUES (?, ?, ?, ?, ?)`,
       [categoria_id, professor_id, dia_semana, horario, vagas]
     );
-    res.redirect('/professor/aulas-fixas/nova');
+    res.redirect(req.get('Referer') || '/professor/semana');
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao salvar aula fixa');
@@ -381,7 +393,7 @@ router.post('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
       WHERE id = ?`,
       [categoria_id, professor_id, dia_semana, horario, vagas, id]
     );
-    res.redirect('/professor/aulas-fixas/nova');
+    res.redirect(req.get('Referer') || '/professor/semana');
   } catch (err) {
     res.status(500).send('Erro ao atualizar aula fixa');
   }
@@ -514,7 +526,7 @@ router.post('/aulas-fixas/deletar/:id', authProfessor, async (req, res) => {
   const id = req.params.id;
   try {
     await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);
-    res.redirect('/professor/aulas-fixas/nova');
+    res.redirect(req.get('Referer') || '/professor/semana');  // ← MUDOU
   } catch (err) {
     res.status(500).send('Erro ao deletar aula fixa');
   }
@@ -631,6 +643,80 @@ router.post('/limpar-tabela', async (req, res) => {
     res.status(500).json({ message: 'Erro ao limpar tabela.' });
   }
 });
+
+
+
+
+
+
+
+////////////////////////////////////////CLAUDE/////////////////////
+
+// =============================================================================
+// PATCH: adicionar em routes/professor.js
+// Inserir estas linhas ANTES de "module.exports = router;" (final do arquivo)
+// =============================================================================
+
+const aulasFixasSemana = require('../controllers/aulasFixasSemanaController');
+
+// ---------- Painel da Semana ----------
+router.get('/semana', authProfessor, aulasFixasSemana.painelSemana);
+
+// Histórico (acessível dos dois lugares)
+router.get('/semana/historico', authProfessor, aulasFixasSemana.verHistorico);
+
+// LIMPAR histórico (preserva uso_creditos dos alunos)
+router.post('/semana/historico/limpar', authProfessor, aulasFixasSemana.limparHistorico);
+
+// Liberar UMA aula
+router.post('/semana/liberar/:id', authProfessor, aulasFixasSemana.liberarSemana);
+
+// Liberar TODAS
+router.post('/semana/liberar-todas', authProfessor, aulasFixasSemana.liberarTodasSemana);
+
+// Cadastra aluno como fixo permanente
+router.post('/semana/aula/:id/aluno-fixo', authProfessor, aulasFixasSemana.adicionarAlunoFixo);
+
+// Remove vínculo permanente
+router.post('/semana/aula/:aulaId/aluno-fixo/:alunoId/remover',
+  authProfessor,
+  aulasFixasSemana.removerAlunoFixo
+);
+
+// ---------- Arquivamento (chamado por /aulas-fixas/nova) ----------
+router.post('/aulas-fixas/arquivar/:id', authProfessor, aulasFixasSemana.arquivarAula);
+router.post('/aulas-fixas/arquivar-todas', authProfessor, aulasFixasSemana.arquivarTodasSemana);
+
+
+
+
+
+
+router.post('/pacotes/observacao/:id', authProfessor, async (req, res) => {
+  try {
+    const pacoteId = parseInt(req.params.id, 10);
+    const observacao = (req.body.observacao || '').trim() || null;
+    const alunoId = req.body.aluno_id;
+
+    await db.query(
+      'UPDATE pacotes_aluno SET observacao = ? WHERE id = ?',
+      [observacao, pacoteId]
+    );
+
+    res.redirect(`/professor/pacotes/aluno/${alunoId}`);
+  } catch (err) {
+    console.error('Erro ao salvar observação:', err);
+    res.status(500).send('Erro ao salvar observação.');
+  }
+});
+
+
+
+
+
+
+
+
 
 
 

@@ -1,8 +1,32 @@
+{{!-- views/professor/novaAulaFixa.handlebars --}}
 <div class="container py-5 text-white">
   <div class="row justify-content-center">
     <div class="col-12 col-md-10 col-lg-8">
 
-      <h2 class="text-center mb-4">Cadastrar Aula Fixa</h2>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h2 class="mb-0">Cadastrar Aula Fixa</h2>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="/professor/semana/historico" class="btn btn-outline-info btn-sm">📜 Histórico</a>
+          <form method="POST" action="/professor/aulas-fixas/arquivar-todas" class="d-inline"
+                onsubmit="return confirm('Arquivar TODAS as aulas liberadas? Isso encerra a semana e move tudo para o histórico.');">
+            <button type="submit" class="btn btn-secondary btn-sm">📦 Arquivar TODAS</button>
+          </form>
+        </div>
+      </div>
+
+      {{!-- Flash messages do arquivamento --}}
+      {{#if (eq msg "arquivada")}}
+        <div class="alert alert-success">📦 Aula arquivada! Foi movida para o histórico.</div>
+      {{/if}}
+      {{#if (eq msg "ja_arquivada")}}
+        <div class="alert alert-info">ℹ️ Esta aula já estava arquivada.</div>
+      {{/if}}
+      {{#if (eq msg "nao_liberada")}}
+        <div class="alert alert-warning">⚠️ Você só pode arquivar uma aula que já foi liberada.</div>
+      {{/if}}
+      {{#if (eq msg "lote_arquivado")}}
+        <div class="alert alert-success">📦 {{arquivadas}} aula(s) arquivada(s) com sucesso!</div>
+      {{/if}}
 
       <form method="POST" action="/professor/aulas-fixas/nova" class="mb-5">
         <div class="mb-3">
@@ -54,10 +78,22 @@
 
       {{#each aulasFixas}}
       <div class="border rounded p-4 mb-4">
-        <h5>{{this.categoria_nome}}</h5>
-        <h6>{{this.professor_nome}}</h6>
-        <p><strong>{{this.dia_semana}} - {{this.horario}}</strong></p>
-        <p><strong>Vagas:</strong> {{this.vagas}}</p>
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <h5 class="mb-1">{{this.categoria_nome}}</h5>
+            <h6 class="mb-1 text-muted">{{this.professor_nome}}</h6>
+            <p class="mb-1"><strong>{{this.dia_semana}} - {{this.horario_fmt}}</strong></p>
+            <p class="mb-1"><strong>Próxima:</strong> {{this.proxima_data_fmt}}</p>
+            <p class="mb-1"><strong>Vagas:</strong> {{this.vagas}}</p>
+          </div>
+          <div class="text-end">
+            {{#if this.semana_arquivada}}
+              <span class="badge bg-secondary">📦 Arquivada</span>
+            {{else}}
+              <span class="badge bg-success">✅ Liberada</span>
+            {{/if}}
+          </div>
+        </div>
 
         {{#if this.alunos.length}}
         <h6 class="mt-3">Alunos cadastrados:</h6>
@@ -94,10 +130,23 @@
           </div>
         </form>
 
-        <!-- CONFIRMAÇÃO AO DELETAR AULA FIXA -->
-        <form method="POST" action="/professor/aulas-fixas/deletar/{{this.id}}" onsubmit="return confirm('Deseja realmente excluir esta aula fixa?');">
-          <button class="btn btn-outline-danger w-100">Deletar Aula</button>
-        </form>
+        {{!-- Ações: arquivar (sempre disponível aqui) + deletar --}}
+        <div class="d-flex gap-2 flex-wrap">
+          <form method="POST" action="/professor/aulas-fixas/arquivar/{{this.id}}" class="flex-grow-1"
+                onsubmit="return confirm('Arquivar esta aula? Ela some daqui e vai para o histórico.');">
+            <button class="btn btn-secondary w-100">📦 Arquivar Aula</button>
+          </form>
+
+          <form method="POST" action="/professor/aulas-fixas/deletar/{{this.id}}" class="flex-grow-1"
+                onsubmit="return confirm('Deseja realmente excluir esta aula fixa?');">
+            <button class="btn btn-outline-danger w-100">🗑️ Deletar Aula</button>
+          </form>
+        </div>
+      </div>
+      {{else}}
+      <div class="alert alert-info text-dark">
+        <strong>Nenhuma aula liberada nesta semana.</strong><br>
+        Vá em <a href="/professor/semana"><strong>Liberar Aulas da Semana</strong></a> para liberar as aulas fixas e elas aparecerão aqui.
       </div>
       {{/each}}
 

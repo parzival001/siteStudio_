@@ -24,6 +24,7 @@
                 <th>Status</th>  
                 <th>Pago</th>  
                 <th>Créditos</th>  
+                <th>Observação</th>  
                 <th>Ações</th>  
               </tr>  
             </thead>  
@@ -85,6 +86,15 @@
                       <span class="badge bg-warning text-dark">⚠ Aulas Acabando</span>  
                     </div>  
                   {{/if}}  
+                </td>  
+                <td style="min-width: 200px;">  
+                  <form method="POST" action="/professor/pacotes/observacao/{{this.id}}">  
+                    <textarea name="observacao" rows="3"  
+                              class="form-control form-control-sm mb-1"  
+                              placeholder="Anotação sobre o pacote...">{{this.observacao}}</textarea>  
+                    <input type="hidden" name="aluno_id" value="{{../aluno.id}}">  
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">Salvar</button>  
+                  </form>  
                 </td>  
                 <td>  
                   <div class="d-flex flex-column gap-1">  
@@ -151,9 +161,9 @@
           {{/if}}  
 
           {{#if (eq this.quantidade_aulas this.aulas_utilizadas)}}  
-            <span class="badge bg-secondary">Pacote Acabou</span>  
+            <span class="badge bg-secondary mb-2">Pacote Acabou</span>  
           {{else if (lte (subtract this.quantidade_aulas this.aulas_utilizadas) 2)}}  
-            <span class="badge bg-warning text-dark">⚠ Aulas Acabando</span>  
+            <span class="badge bg-warning text-dark mb-2">⚠ Aulas Acabando</span>  
           {{/if}}  
 
           <form method="POST" action="/professor/pacotes/atualizar-utilizadas/{{this.id}}" class="mb-2">  
@@ -164,13 +174,24 @@
               <button type="submit" class="btn btn-sm btn-outline-primary">Alterar Aulas Usadas</button>  
             </div>  
           </form>  
+
+          <!-- Campo de observação (mobile) -->  
+          <form method="POST" action="/professor/pacotes/observacao/{{this.id}}" class="mb-2">  
+            <label class="form-label mb-1"><strong>Observação:</strong></label>  
+            <textarea name="observacao" rows="3"  
+                      class="form-control form-control-sm mb-1"  
+                      placeholder="Anotação sobre o pacote...">{{this.observacao}}</textarea>  
+            <input type="hidden" name="aluno_id" value="{{../aluno.id}}">  
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Salvar Observação</button>  
+          </form>  
+
           <div class="d-flex flex-column gap-1">  
+            <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary">Editar</a>  
             <form method="POST" action="/professor/pacotes/deletar/{{this.id}}"  
               onsubmit="return confirm('Deseja excluir este pacote?');">  
               <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>  
             </form>  
           </div>  
-          <a href="/professor/pacotes/editar/{{this.id}}" class="btn btn-sm btn-outline-secondary mb-2">Editar</a>  
         </div>  
         {{/each}}  
       </div>  

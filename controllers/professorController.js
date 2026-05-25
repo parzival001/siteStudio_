@@ -524,7 +524,40 @@ exports.listarAulasFixas = async (req, res) => {
     console.log('[DEBUG] Total de aulas fixas retornadas:', aulasFixas.length);
     console.log('[DEBUG] Primeira aula fixa:', aulasFixas[0]);
 
-    res.render('professor/novaAulaFixa', { aulasFixas });
+        const aulasSemana = require('./aulasFixasSemanaController');
+
+    console.log('🔍 ENRIQUECIMENTO: tipo do horario:', typeof aulasFixas[0]?.horario, 'valor:', JSON.stringify(aulasFixas[0]?.horario));
+
+
+    for (const aula of aulasFixas) {
+      const dataAula = aulasSemana.proximaOcorrencia(aula.dia_semana, aula.horario);
+      aula.proxima_data = dataAula;
+
+      if (dataAula) {
+        const [y, m, d] = dataAula.split('-');
+        aula.proxima_data_fmt = `${d}/${m}/${y}`;
+      } else {
+        aula.proxima_data_fmt = '—';
+      }
+
+      aula.horario_fmt = (aula.horario || '').slice(0, 5);
+
+      // Busca status da liberação dessa data
+      const [[lib]] = await db.query(`
+        SELECT id, arquivada
+        FROM aulas_fixas_liberacoes
+        WHERE aula_fixa_id = ? AND data_aula = ?
+      `, [aula.id, dataAula]);
+
+      aula.semana_liberada = !!lib;
+      aula.semana_arquivada = !!(lib && lib.arquivada);
+    }
+
+    res.render('professor/novaAulaFixa', {
+      aulasFixas,
+      msg: req.query.msg,
+      arquivadas: req.query.arquivadas,
+    });
   } catch (err) {
     console.error('Erro ao listar aulas fixas:', err);
     res.status(500).send('Erro interno no servidor');
@@ -601,7 +634,7 @@ exports.deletarAulaFixa = async (req, res) => {
     // Por fim, excluir a aula fixa
     await db.query('DELETE FROM aulas_fixas WHERE id = ?', [id]);
 
-    res.redirect('/professor/aulas-fixas/nova');
+    res.redirect(req.get('Referer') || '/professor/semana');
   } catch (err) {
     console.error('Erro ao deletar aula fixa:', err);
     res.status(500).send('Erro interno no servidor');
@@ -1277,6 +1310,18 @@ exports.verPacotesAluno = async (req, res) => {
       const usadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = total - usadas;
 
+      // Passe Livre não tem categoria — exibe rótulo dedicado
+      if (pacote.passe_livre == 1) {
+        pacote.categoria_nome = 'Passe Livre';
+      } else if (!pacote.categoria_nome) {
+        pacote.categoria_nome = '—';
+      }
+
+
+
+
+
+
       // Formata data de início
       if (pacote.data_inicio) {
         const data = new Date(pacote.data_inicio);
@@ -1415,22 +1460,14 @@ const [result] = await db.query(
     if (result.affectedRows > 0) {
       const pacote_id = result.insertId;
 
-      // Inserir modalidades do passe livre, se houver
-      if (novoPacote.passe_livre && Array.isArray(req.body.modalidades_passe_livre)) {
-        for (const categoria_id of req.body.modalidades_passe_livre) {
-          const [categoriaExistente] = await db.query(
-            `SELECT categoria_id FROM categorias WHERE categoria_id = ?`,
-            [categoria_id]
+      // Passe Livre: vincula TODAS as categorias automaticamente
+      if (novoPacote.passe_livre) {
+        const [todasCategorias] = await db.query(`SELECT categoria_id FROM categorias`);
+        for (const cat of todasCategorias) {
+          await db.query(
+            `INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`,
+            [pacote_id, cat.categoria_id]
           );
-
-          if (categoriaExistente.length > 0) {
-            await db.query(
-              `INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`,
-              [pacote_id, categoria_id]
-            );
-          } else {
-            console.log(`Categoria com ID ${categoria_id} não encontrada.`);
-          }
         }
       }
 
@@ -1642,18 +1679,19 @@ exports.editarPacote = async (req, res) => {
       req.params.id
     ]);
 
-    // Atualizar modalidades se for passe livre
+    // Passe Livre: re-sincroniza com TODAS as categorias atuais do sistema
     if (passeLivreFinal) {
       await db.query(`DELETE FROM pacotes_modalidades WHERE pacote_id = ?`, [req.params.id]);
-
-      if (Array.isArray(modalidades_passe_livre)) {
-        for (const nome_categoria of modalidades_passe_livre) {
-          const [[cat]] = await db.query(`SELECT categoria_id FROM categorias WHERE nome = ?`, [nome_categoria]);
-          if (cat) {
-            await db.query(`INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`, [req.params.id, cat.categoria_id]);
-          }
-        }
+      const [todasCategorias] = await db.query(`SELECT categoria_id FROM categorias`);
+      for (const cat of todasCategorias) {
+        await db.query(
+          `INSERT INTO pacotes_modalidades (pacote_id, categoria_id) VALUES (?, ?)`,
+          [req.params.id, cat.categoria_id]
+        );
       }
+    } else {
+      // Se mudou de Passe Livre para categoria específica, limpa as vinculações
+      await db.query(`DELETE FROM pacotes_modalidades WHERE pacote_id = ?`, [req.params.id]);
     }
 
     return res.redirect(`/professor/pacotes/${aluno_id}`);

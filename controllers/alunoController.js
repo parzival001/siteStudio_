@@ -154,6 +154,7 @@ exports.homeAluno = async (req, res) => {
 
 exports.listarPacotes = async (req, res) => {
   try {
+    const { formatarDataBR } = require('../utils/formatarData');
     const alunoId = req.session.user?.id;
 
     if (!alunoId) {
@@ -161,20 +162,22 @@ exports.listarPacotes = async (req, res) => {
     }
 
     const [pacotes] = await db.query(`
-      SELECT 
-        p.id, 
-        a.nome AS aluno_nome, 
-        p.quantidade_aulas AS aulas_total, 
-        p.aulas_utilizadas, 
+      SELECT
+        p.id,
+        a.nome AS aluno_nome,
+        p.quantidade_aulas AS aulas_total,
+        p.aulas_utilizadas,
         p.data_inicio,
-        p.data_validade AS validade, 
-        p.pago, 
-        p.passe_livre, 
+        p.data_validade AS validade,
+        p.pago,
+        p.passe_livre,
+        p.observacao,
         c.nome AS modalidade
       FROM pacotes_aluno p
       JOIN alunos a ON a.id = p.aluno_id
       LEFT JOIN categorias c ON c.categoria_id = p.categoria_id
       WHERE p.aluno_id = ?
+      ORDER BY p.data_inicio DESC, p.id DESC
     `, [alunoId]);
 
     for (const pacote of pacotes) {
@@ -182,67 +185,95 @@ exports.listarPacotes = async (req, res) => {
       const aulasUtilizadas = parseInt(pacote.aulas_utilizadas, 10) || 0;
       pacote.aulas_restantes = aulasTotal - aulasUtilizadas;
 
-      // ✅ Formatar data de início
-      if (pacote.data_inicio) {
-        const inicio = new Date(pacote.data_inicio);
-        const dia = String(inicio.getDate()).padStart(2, '0');
-        const mes = String(inicio.getMonth() + 1).padStart(2, '0');
-        const ano = inicio.getFullYear();
-        pacote.data_inicio_formatada = `${dia}/${mes}/${ano}`;
-      } else {
-        pacote.data_inicio_formatada = '-';
+      // Passe Livre não tem categoria — exibe rótulo dedicado
+      if (pacote.passe_livre == 1) {
+        pacote.modalidade = 'Passe Livre';
+      } else if (!pacote.modalidade) {
+        pacote.modalidade = '—';
       }
 
-      // ✅ Formatar validade e status
+      // ===== Histórico de uso =====
+      const [usosAtivos] = await db.query(`
+        SELECT
+          uc.data_utilizacao AS data,
+          c.nome AS categoria,
+          af.horario,
+          p.nome AS professor
+        FROM uso_creditos uc
+        LEFT JOIN aulas_fixas af ON af.id = uc.aula_fixa_id
+        LEFT JOIN categorias c ON c.categoria_id = af.categoria_id
+        LEFT JOIN professores p ON p.id = af.professor_id
+        WHERE uc.pacote_id = ?
+        ORDER BY uc.data_utilizacao DESC
+      `, [pacote.id]);
+
+      const [usosArquivados] = await db.query(`
+        SELECT
+          arq.data_aula AS data,
+          arq.categoria_nome AS categoria,
+          arq.horario,
+          arq.professor_nome AS professor
+        FROM aulas_fixas_arquivadas_alunos arqa
+        JOIN aulas_fixas_arquivadas arq ON arq.id = arqa.arquivamento_id
+        WHERE arqa.pacote_id = ?
+          AND arqa.credito_usado = 1
+        ORDER BY arq.data_aula DESC
+      `, [pacote.id]);
+
+      const chaveDuplicada = new Set();
+      const usos = [];
+      for (const u of [...usosAtivos, ...usosArquivados]) {
+        const dataFmt = formatarDataBR(u.data);
+        const chave = `${dataFmt}_${u.horario || ''}`;
+        if (chaveDuplicada.has(chave)) continue;
+        chaveDuplicada.add(chave);
+
+        usos.push({
+          data_fmt: dataFmt,
+          data_raw: u.data,
+          categoria: u.categoria || '-',
+          horario: String(u.horario || '').slice(0, 5),
+          professor: u.professor || '-',
+        });
+      }
+      usos.sort((a, b) => {
+        const sa = String(a.data_raw instanceof Date ? a.data_raw.toISOString() : a.data_raw);
+        const sb = String(b.data_raw instanceof Date ? b.data_raw.toISOString() : b.data_raw);
+        return sb.localeCompare(sa);
+      });
+      pacote.historico_uso = usos;
+
+      pacote.data_inicio_formatada = formatarDataBR(pacote.data_inicio);
+      const validadeFmt = formatarDataBR(pacote.validade);
+
       if (pacote.validade) {
-        const validade = new Date(pacote.validade);
-        validade.setHours(0, 0, 0, 0);
+        const validadeDate = pacote.validade instanceof Date
+          ? pacote.validade
+          : new Date(String(pacote.validade).slice(0, 10) + 'T00:00:00Z');
 
         const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-
-        const diasRestantes = Math.floor((validade - hoje) / (1000 * 60 * 60 * 24));
+        const hojeUTC = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()));
+        const diasRestantes = Math.floor((validadeDate - hojeUTC) / (1000 * 60 * 60 * 24));
 
         pacote.status_validade = diasRestantes < 0
           ? 'Vencido'
           : diasRestantes <= 7
             ? 'Próximo do vencimento'
             : 'Válido';
-
-        const dia = String(validade.getDate()).padStart(2, '0');
-        const mes = String(validade.getMonth() + 1).padStart(2, '0');
-        const ano = validade.getFullYear();
-        pacote.validade = `${dia}/${mes}/${ano}`;
       } else {
         pacote.status_validade = 'Sem validade';
-        pacote.validade = '-';
       }
 
-      // ✅ Corrigir valor do campo "pago"
-      pacote.pago = pacote.pago === 1 || pacote.pago === '1' ? 'Sim' : 'Não';
-
-      // ✅ Buscar créditos usados do pacote com data, horário e categoria
-      const [usos] = await db.query(`
-        SELECT 
-          DATE_FORMAT(u.data_utilizacao, '%d/%m/%Y') AS data,
-          af.horario,
-          c.nome AS categoria
-        FROM uso_creditos u
-        LEFT JOIN aulas_fixas af ON af.id = u.aula_fixa_id
-        LEFT JOIN categorias c ON c.categoria_id = af.categoria_id
-        WHERE u.pacote_id = ?
-        ORDER BY u.data_utilizacao DESC
-      `, [pacote.id]);
-
-      pacote.usos = usos;
+      pacote.validade = validadeFmt;
     }
 
     res.render('aluno/pacotes', { pacotes });
   } catch (err) {
     console.error('Erro ao listar pacotes:', err);
-    res.status(500).send('Erro ao listar pacotes');
+    res.status(500).send('Erro ao carregar pacotes.');
   }
 };
+
 
 
 exports.historicoAluno = async (req, res) => {
@@ -536,7 +567,6 @@ exports.desistirAulaFixa = async (req, res) => {
   const aulaId = req.params.aulaId;
 
   try {
-    // 1) Verifica se o aluno está inscrito na aula
     const [[inscricao]] = await db.query(`
       SELECT * FROM alunos_aulas_fixas
       WHERE aluno_id = ? AND aula_fixa_id = ?
@@ -546,7 +576,6 @@ exports.desistirAulaFixa = async (req, res) => {
       return res.status(400).send('Você não está inscrito nesta aula fixa.');
     }
 
-    // 2) Busca dados da aula (categoria e professor)
     const [[aula]] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
       FROM aulas_fixas af
@@ -559,54 +588,98 @@ exports.desistirAulaFixa = async (req, res) => {
       return res.status(404).send('Aula fixa não encontrada.');
     }
 
-const dataAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
+    const dataAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
+    const dataAulaStr = dataAula.toISOString().slice(0, 10);
+    const dataFormatada = dataAula.toLocaleDateString('pt-BR');
 
-// para salvar no banco
-const dataAulaStr = dataAula.toISOString().slice(0, 10);
+    // ---- Regra de antecedência (mantém 2h primeira da semana / 12h demais) ----
+    const agora = getNowSP();
+    const inicioSemana = new Date(dataAula);
+    inicioSemana.setDate(dataAula.getDate() - dataAula.getDay());
+    inicioSemana.setHours(0, 0, 0, 0);
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(inicioSemana.getDate() + 6);
+    fimSemana.setHours(23, 59, 59, 999);
 
-// para exibir na mensagem
-const dataFormatada = dataAula.toLocaleDateString('pt-BR');
+    const [desistenciasSemana] = await db.query(`
+      SELECT id FROM aulas_fixas_desistencias
+      WHERE aluno_id = ? AND data >= ? AND data <= ?
+    `, [
+      alunoId,
+      inicioSemana.toISOString().slice(0, 10),
+      fimSemana.toISOString().slice(0, 10)
+    ]);
 
+    const jaDesistiuNaSemana = desistenciasSemana.length > 0;
+    const limiteHoras = jaDesistiuNaSemana ? 12 : 2;
+    const diffHoras = (dataAula - agora) / (1000 * 60 * 60);
+    const dentroDoPrazo = diffHoras >= limiteHoras;
 
+    if (!dentroDoPrazo) {
+      return res.status(400).send(
+        jaDesistiuNaSemana
+          ? `Desistências adicionais na semana exigem ${limiteHoras}h de antecedência.`
+          : `A primeira desistência da semana exige ${limiteHoras}h de antecedência.`
+      );
+    }
 
-    // Evita duplicidade de registro para a mesma aula/data
+    // ---- Tudo ok: registra desistência ----
     await db.query(`
-      DELETE FROM aulas_fixas_desistencias
-      WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
-    `, [alunoId, aulaId, dataAulaStr]);
-
-    // Registra desistência
-    await db.query(`
-      INSERT INTO aulas_fixas_desistencias (aluno_id, aula_fixa_id, data)
+      INSERT IGNORE INTO aulas_fixas_desistencias (aluno_id, aula_fixa_id, data)
       VALUES (?, ?, ?)
     `, [alunoId, aulaId, dataAulaStr]);
 
-    // Remove da lista de participantes
+    // Remove da semana corrente
     await db.query(`
       DELETE FROM alunos_aulas_fixas
       WHERE aluno_id = ? AND aula_fixa_id = ?
     `, [alunoId, aulaId]);
 
-    // Libera a vaga
     await db.query(`
       UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?
     `, [aulaId]);
 
-    // // Notificações
-     const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
+    // ---- Devolução de crédito se já tinha sido descontado ----
+    const [[uso]] = await db.query(`
+      SELECT id, pacote_id FROM uso_creditos
+      WHERE aluno_id = ? AND aula_fixa_id = ? AND data_utilizacao = ?
+    `, [alunoId, aulaId, dataAulaStr]);
 
-     const mensagem =
-       `⚠️ *Cancelamento de Aula*\n\n` +
-       `👤 Aluno: ${alunoInfo.nome}\n` +
+    if (uso) {
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+        await conn.query(`
+          UPDATE pacotes_aluno
+          SET aulas_utilizadas = GREATEST(0, aulas_utilizadas - 1)
+          WHERE id = ?
+        `, [uso.pacote_id]);
+        await conn.query(`DELETE FROM uso_creditos WHERE id = ?`, [uso.id]);
+        await conn.commit();
+        console.log(`💰 Crédito devolvido (aluno ${alunoId}, aula ${aulaId}, ${dataAulaStr})`);
+      } catch (e) {
+        await conn.rollback();
+        console.error('Erro ao devolver crédito:', e);
+      } finally {
+        conn.release();
+      }
+    }
+
+    // Notificação
+    const [[alunoInfo]] = await db.query(`SELECT nome FROM alunos WHERE id = ?`, [alunoId]);
+    const mensagem =
+      `⚠️ *Cancelamento de Aula*\n\n` +
+      `👤 Aluno: ${alunoInfo.nome}\n` +
       `📅 Data: ${dataFormatada}\n` +
-       `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
-       `🏷️ Categoria: ${aula.categoria_nome}\n` +
-       `👨‍🏫 Professor: ${aula.professor_nome}`;
+      `⏰ Horário: ${aula.horario.slice(0, 5)}\n` +
+      `🏷️ Categoria: ${aula.categoria_nome}\n` +
+      `👨‍🏫 Professor: ${aula.professor_nome}` +
+      (uso ? `\n💰 Crédito devolvido` : '');
 
-    // // Se você usa essas funções, mantenha os imports no topo do arquivo:
-     const { enviarMensagem } = require('../utils/telegram');
-     await enviarMensagem(mensagem);
-     await enviarMensagemAluno(mensagem);
+    enviarMensagem(mensagem).catch(() => {});
+    if (typeof enviarMensagemAluno === 'function') {
+      enviarMensagemAluno(mensagem).catch(() => {});
+    }
 
     return res.redirect('/aluno/aulas-fixas');
   } catch (error) {
@@ -761,3 +834,7 @@ exports.atualizarDadosAluno = async (req, res) => {
     res.status(500).send('Erro ao atualizar dados');
   }
 };
+
+///////////////////////////////////////cLAUDE///////////////////////
+
+

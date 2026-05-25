@@ -1,3 +1,4 @@
+{{!-- views/aluno/pacotes.handlebars --}}
 <div class="container my-4 text-white">
   <h2 class="mb-4 text-center">Meus Pacotes</h2>
 
@@ -19,6 +20,7 @@
               <th>Status</th>
               <th>Pago</th>
               <th>Créditos Usados</th>
+              <th>Observação</th>
             </tr>
           </thead>
           <tbody>
@@ -50,14 +52,21 @@
                   {{/if}}
                 </td>
                 <td>
-                  {{#if usos}}
-                    <ul style="list-style:none; padding-left:0; max-height:100px; overflow-y:auto; font-size: 0.85em;">
-                      {{#each usos}}
-                        <li>{{this.data}} ({{this.diaSemana}} {{this.horario}}) - {{this.categoria}}</li>
+                  {{#if historico_uso.length}}
+                    <ul style="list-style:none; padding-left:0; max-height:120px; overflow-y:auto; font-size: 0.85em; margin:0;">
+                      {{#each historico_uso}}
+                        <li>📅 {{this.data_fmt}} {{this.horario}} — {{this.categoria}}</li>
                       {{/each}}
                     </ul>
                   {{else}}
                     <span class="text-muted">Nenhum uso</span>
+                  {{/if}}
+                </td>
+                <td style="min-width: 180px; max-width: 250px;">
+                  {{#if observacao}}
+                    <small style="white-space: pre-wrap;">{{observacao}}</small>
+                  {{else}}
+                    <span class="text-muted fst-italic">—</span>
                   {{/if}}
                 </td>
               </tr>
@@ -100,16 +109,21 @@
         </p>
 
         <p class="mb-1"><strong>Créditos Usados:</strong></p>
-        {{#if usos}}
-          <div style="max-height: 120px; overflow-y: auto; font-size: 0.9em;">
+        {{#if historico_uso.length}}
+          <div style="max-height: 150px; overflow-y: auto; font-size: 0.9em;">
             <ul style="list-style:none; padding-left:0; margin-top: 4px;">
-              {{#each usos}}
-                <li>{{this.data}} ({{this.diaSemana}}, {{this.horario}}) - {{this.categoria}}</li>
+              {{#each historico_uso}}
+                <li>📅 {{this.data_fmt}} às {{this.horario}} — {{this.categoria}} ({{this.professor}})</li>
               {{/each}}
             </ul>
           </div>
         {{else}}
           <p class="text-muted">Nenhum crédito utilizado</p>
+        {{/if}}
+
+        {{#if observacao}}
+          <p class="mb-1 mt-2"><strong>Observação:</strong></p>
+          <p class="small mb-0" style="white-space: pre-wrap; background: rgba(255,255,255,0.4); padding: 6px 10px; border-radius: 6px;">{{observacao}}</p>
         {{/if}}
 
       </div>

@@ -12,6 +12,11 @@
           <a href="/professor/aulas-fixas/nova" class="btn btn-outline-custom w-auto"
             style="color: #5A189A; border-color: #5A189A;">Aulas Fixas</a>
 
+          <a href="/professor/semana" class="btn btn-outline-custom w-auto"
+            style="color: #5A189A; border-color: #5A189A;">
+            Liberar Semana
+          </a>
+
           <a href="/professor/alunos" class="btn btn-outline-custom w-auto"
             style="color: #5A189A; border-color: #5A189A;">Ver Alunos</a>
 
@@ -32,27 +37,27 @@
           <a href="/logout" class="btn btn-outline-danger w-auto">Sair</a>
 
           <script>
-  function limparTabela() {
-    if (!confirm("⚠️ Tem certeza que deseja zerar?.")) {
-      return;
-    }
+            function limparTabela() {
+              if (!confirm("⚠️ Tem certeza que deseja zerar?.")) {
+                return;
+              }
 
-    fetch('/professor/limpar-tabela', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      alert(data.message);
-    })
-    .catch(error => {
-      console.error(error);
-      alert("Erro ao zerar.");
-    });
-  }
-</script>
+              fetch('/professor/limpar-tabela', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              })
+                .then(response => response.json())
+                .then(data => {
+                  alert(data.message);
+                })
+                .catch(error => {
+                  console.error(error);
+                  alert("Erro ao zerar.");
+                });
+            }
+          </script>
 
         </div>
       </div>

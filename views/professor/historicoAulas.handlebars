@@ -1,0 +1,93 @@
+{{!-- views/professor/historicoAulas.handlebars --}}
+<div class="container py-4 text-white">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h2 class="mb-0">Histórico de Aulas Arquivadas</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="/professor/semana" class="btn btn-outline-light">← Painel Semana</a>
+      <a href="/professor/home" class="btn btn-outline-light">🏠 Home</a>
+      {{#if arquivos.length}}
+        <form method="POST" action="/professor/semana/historico/limpar" class="d-inline"
+              onsubmit="return confirm('Tem certeza que deseja LIMPAR todo o histórico de arquivamento?\n\nO histórico de créditos usados pelos alunos será preservado nos pacotes.\n\nEsta ação não pode ser desfeita.');">
+          <button type="submit" class="btn btn-danger">🧹 Limpar Histórico</button>
+        </form>
+      {{/if}}
+    </div>
+  </div>
+
+  {{#if (eq msg "limpo")}}
+    <div class="alert alert-success">
+      🧹 Histórico de arquivamento limpo com sucesso!
+      O histórico de créditos usados pelos alunos foi preservado.
+    </div>
+  {{/if}}
+
+  {{!-- Filtro por aula --}}
+  <form method="GET" action="/professor/semana/historico" class="card mb-4 p-3 text-dark"
+        style="background-color: #f7f3fa;">
+    <label class="form-label mb-1"><strong>Filtrar por aula:</strong></label>
+    <div class="d-flex gap-2">
+      <select name="aula_fixa_id" class="form-select">
+        <option value="">Todas as aulas</option>
+        {{#each aulasFiltro}}
+          <option value="{{this.id}}" {{#if (eq ../filtroAulaId this.id)}}selected{{/if}}>
+            {{this.categoria}} • {{capitalize this.dia_semana}} {{this.horario}}
+          </option>
+        {{/each}}
+      </select>
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      {{#if filtroAulaId}}
+        <a href="/professor/semana/historico" class="btn btn-outline-secondary">Limpar</a>
+      {{/if}}
+    </div>
+  </form>
+
+  {{#if arquivos.length}}
+    {{#each arquivos}}
+      <div class="card mb-3 text-dark" style="background-color: #f7f3fa;">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center"
+             style="background-color: #6c757d; color: white;">
+          <div>
+            <h5 class="mb-0">
+              📅 {{this.data_fmt}} • {{capitalize this.dia_semana}} • {{this.horario_fmt}}
+            </h5>
+            <small>{{this.categoria_nome}} • Prof. {{this.professor_nome}}</small>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-info">{{this.total_inscritos}} participante(s)</span>
+            <small class="d-block text-white-50 mt-1">Arquivada em {{this.arquivada_em_fmt}}</small>
+          </div>
+        </div>
+
+        <div class="card-body">
+          {{#if this.participantes.length}}
+            <ul class="list-group list-group-flush">
+              {{#each this.participantes}}
+                <li class="list-group-item d-flex justify-content-between align-items-center px-2 py-1">
+                  <span>{{this.aluno_nome}}</span>
+                  <div>
+                    {{#if (eq this.era_fixo 1)}}
+                      <span class="badge bg-primary">fixo</span>
+                    {{else}}
+                      <span class="badge bg-warning text-dark">avulso</span>
+                    {{/if}}
+                    {{#if (eq this.credito_usado 1)}}
+                      <span class="badge bg-success">crédito usado</span>
+                    {{else}}
+                      <span class="badge bg-secondary">sem crédito</span>
+                    {{/if}}
+                  </div>
+                </li>
+              {{/each}}
+            </ul>
+          {{else}}
+            <p class="text-muted small mb-0 fst-italic">Aula arquivada sem participantes.</p>
+          {{/if}}
+        </div>
+      </div>
+    {{/each}}
+  {{else}}
+    <div class="alert alert-warning">
+      Nenhuma aula arquivada {{#if filtroAulaId}}para o filtro selecionado{{/if}}.
+    </div>
+  {{/if}}
+</div>

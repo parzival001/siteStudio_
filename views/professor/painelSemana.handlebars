@@ -1,0 +1,154 @@
+{{!-- views/professor/painelSemana.handlebars --}}
+<div class="container py-4 text-white">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h2 class="mb-0">Gestão Semanal de Aulas Fixas</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="/professor/home" class="btn btn-outline-light">← Voltar</a>
+      <a href="/professor/semana/historico" class="btn btn-outline-info">📜 Histórico</a>
+      <button type="button" class="btn btn-info"
+              data-bs-toggle="collapse" data-bs-target="#formNovaAula">
+        ➕ Nova Aula Fixa
+      </button>
+      <form method="POST" action="/professor/semana/liberar-todas" class="d-inline"
+            onsubmit="return confirm('Liberar TODAS as aulas que ainda não foram liberadas para esta semana?');">
+        <button type="submit" class="btn btn-warning">🔓 Liberar TODAS</button>
+      </form>
+    </div>
+  </div>
+
+  {{#if (eq msg "liberada")}}
+    <div class="alert alert-success">✅ Aula liberada com sucesso! Alunos fixos já podem visualizar.</div>
+  {{/if}}
+  {{#if (eq msg "ja_liberada")}}
+    <div class="alert alert-info">ℹ️ Esta aula já foi liberada para esta semana.</div>
+  {{/if}}
+  {{#if (eq msg "lote")}}
+    <div class="alert alert-success">
+      ✅ Liberação em lote concluída — {{liberadas}} liberada(s), {{puladas}} já estavam ativas.
+    </div>
+  {{/if}}
+
+  {{!-- ============= FORMULÁRIO DE NOVA AULA FIXA (collapse) ============= --}}
+  <div class="collapse mb-4" id="formNovaAula">
+    <div class="card text-dark" style="background-color: #f7f3fa;">
+      <div class="card-header" style="background-color: #5A189A; color: white;">
+        <h5 class="mb-0">Cadastrar nova aula fixa</h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/professor/aulas-fixas/nova" class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Categoria</label>
+            <select name="categoria_id" class="form-select" required>
+              <option value="">Selecione…</option>
+              {{#each categorias}}
+                <option value="{{this.id}}">{{this.nome}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Professor</label>
+            <select name="professor_id" class="form-select" required>
+              <option value="">Selecione…</option>
+              {{#each professores}}
+                <option value="{{this.id}}">{{this.nome}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small mb-1">Dia da semana</label>
+            <select name="dia_semana" class="form-select" required>
+              <option value="">…</option>
+              <option value="segunda">Segunda</option>
+              <option value="terca">Terça</option>
+              <option value="quarta">Quarta</option>
+              <option value="quinta">Quinta</option>
+              <option value="sexta">Sexta</option>
+              <option value="sabado">Sábado</option>
+              <option value="domingo">Domingo</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small mb-1">Horário</label>
+            <input type="time" name="horario" class="form-control" required>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small mb-1">Vagas</label>
+            <input type="number" name="vagas" class="form-control" min="1" value="10" required>
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">Criar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {{!-- ============= LISTA DAS AULAS ============= --}}
+  {{#each aulas}}
+    <div class="card mb-3 text-dark" style="background-color: #f7f3fa;">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center"
+           style="background-color: #B395C0; color: white;">
+        <div>
+          <h5 class="mb-0">
+            {{capitalize this.dia_semana}} • {{this.horario_fmt}} • {{this.categoria_nome}}
+          </h5>
+          <small>Prof. {{this.professor_nome}} • próxima: {{this.proxima_data_fmt}} • vagas: {{this.vagas}}</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          {{#if this.semana_arquivada}}
+            <span class="badge bg-secondary">📦 Semana arquivada</span>
+          {{else if this.semana_liberada}}
+            <span class="badge bg-success">✅ Semana liberada</span>
+          {{else}}
+            <form method="POST" action="/professor/semana/liberar/{{this.id}}" class="d-inline">
+              <button type="submit" class="btn btn-sm btn-success">🔓 Liberar Semana</button>
+            </form>
+          {{/if}}
+          <form method="POST" action="/professor/aulas-fixas/deletar/{{this.id}}" class="d-inline"
+                onsubmit="return confirm('Excluir esta aula fixa? Isso remove também todos os vínculos de alunos fixos.');">
+            <button type="submit" class="btn btn-sm btn-outline-light" title="Excluir aula">🗑️</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <h6 class="border-bottom pb-2">
+          <span class="badge bg-primary">FIXOS</span> Alunos permanentes
+          <small class="text-muted">({{this.alunos_fixos.length}})</small>
+        </h6>
+
+        {{#if this.alunos_fixos.length}}
+          <ul class="list-group list-group-flush mb-2">
+            {{#each this.alunos_fixos}}
+              <li class="list-group-item d-flex justify-content-between align-items-center px-2 py-1">
+                <span>{{this.nome}}</span>
+                <form method="POST"
+                      action="/professor/semana/aula/{{../this.id}}/aluno-fixo/{{this.id}}/remover"
+                      onsubmit="return confirm('Remover {{this.nome}} do vínculo permanente desta aula?');">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                </form>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p class="text-muted small">Nenhum aluno fixo cadastrado nesta aula.</p>
+        {{/if}}
+
+        {{!-- Form para adicionar aluno fixo --}}
+        <form method="POST" action="/professor/semana/aula/{{this.id}}/aluno-fixo" class="d-flex gap-1 mt-2">
+          <select name="aluno_id" class="form-select form-select-sm" required>
+            <option value="">+ Adicionar aluno fixo…</option>
+            {{#each ../alunos}}
+              <option value="{{this.id}}">{{this.nome}}</option>
+            {{/each}}
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Adicionar</button>
+        </form>
+      </div>
+    </div>
+  {{else}}
+    <div class="alert alert-warning">
+      Nenhuma aula fixa cadastrada. Clique em <strong>➕ Nova Aula Fixa</strong> acima para criar a primeira.
+    </div>
+  {{/each}}
+</div>
