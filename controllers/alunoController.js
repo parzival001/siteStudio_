@@ -2,6 +2,7 @@ const db = require('../config/db'); // Ajuste o caminho conforme o seu projeto
 const bcrypt = require('bcryptjs');
 const moment = require('moment');
 const { enviarMensagem, enviarMensagemAluno } = require('../utils/telegram');
+const { formatarDataBR } = require('../utils/formatarData');
 const path = require('path');
 const fs = require('fs');
 
@@ -464,6 +465,7 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       return {
         ...aula,
         horario: aula.horario?.slice(0, 5),
+        data_aula_fmt: formatarDataBR(dataHoraAula),
         temPacote: temPacoteParaCategoria(aula.categoria_id),
         pode_desistir: podeDesistir,
         ehFixo: aula.eh_fixo === 1,
