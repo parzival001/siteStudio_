@@ -372,39 +372,51 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
   const hoje = hojeSP.toISOString().slice(0, 10);
 
   try {
-    const [aulas] = await db.query(`
-      SELECT
-        af.id,
-        c.nome AS categoria_nome,
-        p.nome AS professor_nome,
-        af.dia_semana,
-        af.horario,
-        af.vagas,
-        af.categoria_id,
-        CASE
-          WHEN aaf.aluno_id IS NOT NULL THEN 1
-          ELSE 0
-        END AS inscrito,
-        IFNULL(aaf.eh_fixo, 0) AS eh_fixo
-      FROM aulas_fixas af
-      JOIN categorias c ON af.categoria_id = c.categoria_id
-      JOIN professores p ON af.professor_id = p.id
-      LEFT JOIN alunos_aulas_fixas aaf
-        ON af.id = aaf.aula_fixa_id AND aaf.aluno_id = ?
-      ORDER BY
-        CASE
-          WHEN af.dia_semana = 'domingo' THEN 0
-          WHEN af.dia_semana = 'segunda' THEN 1
-          WHEN af.dia_semana = 'terca' THEN 2
-          WHEN af.dia_semana = 'terça' THEN 2
-          WHEN af.dia_semana = 'quarta' THEN 3
-          WHEN af.dia_semana = 'quinta' THEN 4
-          WHEN af.dia_semana = 'sexta' THEN 5
-          WHEN af.dia_semana = 'sabado' THEN 6
-          WHEN af.dia_semana = 'sábado' THEN 6
-        END,
-        af.horario
-    `, [alunoId]);
+const [aulas] = await db.query(`
+  SELECT
+    af.id,
+    c.nome AS categoria_nome,
+    p.nome AS professor_nome,
+    af.dia_semana,
+    af.horario,
+    af.vagas,
+    af.categoria_id,
+    CASE
+      WHEN aaf.aluno_id IS NOT NULL THEN 1
+      ELSE 0
+    END AS inscrito,
+    IFNULL(aaf.eh_fixo, 0) AS eh_fixo
+
+  FROM aulas_fixas af
+
+  INNER JOIN aulas_fixas_liberacoes afl
+    ON afl.aula_fixa_id = af.id
+    AND afl.arquivada = 0
+
+  JOIN categorias c
+    ON af.categoria_id = c.categoria_id
+
+  JOIN professores p
+    ON af.professor_id = p.id
+
+  LEFT JOIN alunos_aulas_fixas aaf
+    ON af.id = aaf.aula_fixa_id
+    AND aaf.aluno_id = ?
+
+  ORDER BY
+    CASE
+      WHEN af.dia_semana = 'domingo' THEN 0
+      WHEN af.dia_semana = 'segunda' THEN 1
+      WHEN af.dia_semana = 'terca' THEN 2
+      WHEN af.dia_semana = 'terça' THEN 2
+      WHEN af.dia_semana = 'quarta' THEN 3
+      WHEN af.dia_semana = 'quinta' THEN 4
+      WHEN af.dia_semana = 'sexta' THEN 5
+      WHEN af.dia_semana = 'sabado' THEN 6
+      WHEN af.dia_semana = 'sábado' THEN 6
+    END,
+    af.horario
+`, [alunoId]);
 
     const [pacotes] = await db.query(`
       SELECT categoria_id, passe_livre, quantidade_aulas, aulas_utilizadas, data_validade
@@ -425,7 +437,14 @@ exports.listarAulasFixasDisponiveis = async (req, res) => {
       );
     }
 
-  
+    const [teste] = await db.query(`
+  SELECT af.id, afl.arquivada
+  FROM aulas_fixas af
+  LEFT JOIN aulas_fixas_liberacoes afl
+    ON afl.aula_fixa_id = af.id
+`);
+
+console.log(teste);
 
     const aulasComExtras = aulas.map(aula => {
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);

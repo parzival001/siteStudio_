@@ -120,6 +120,7 @@ exports.deletarAluno = async (req, res) => {
 /////////////////////////////////////////////////AULAS FIXAS///////////////////////////////////////////
 // Exibe form para criar nova aula fixa
 exports.listarAulasFixas = async (req, res) => {
+  console.log('🔥 ENTROU NO listarAulasFixas');
   try {
     const [aulasFixas] = await db.query(`
       SELECT af.*, c.nome AS categoria_nome, p.nome AS professor_nome
@@ -735,45 +736,6 @@ exports.atualizarPacote = async (req, res) => {
 };
 
 
-
-
-// exports.selecionarAulaParaMover = async (req, res) => {
-//   try {
-//     const pacoteId = req.params.id;
-
-//     // Buscar o pacote e o aluno correspondente
-//     const [pacote] = await db.query(`
-//       SELECT pacotes.*, alunos.nome AS nomeAluno
-//       FROM pacotes
-//       JOIN alunos ON pacotes.aluno_id = alunos.id
-//       WHERE pacotes.id = ?
-//     `, [pacoteId]);
-
-//     if (pacote.length === 0) {
-//       return res.status(404).send('Pacote não encontrado');
-//     }
-
-//     const alunoId = pacote[0].aluno_id;
-
-//     // Buscar aulas avulsas do aluno que ainda não foram vinculadas a pacotes
-//     const [aulasAvulsas] = await db.query(`
-//       SELECT aulas.id, aulas.titulo, aulas.data, aulas.horario, categorias.nome AS modalidade
-//       FROM aulas
-//       JOIN categorias ON aulas.categoria_id = categorias.id
-//       WHERE aulas.aluno_id = ? AND aulas.pacote_id IS NULL
-//       ORDER BY aulas.data DESC
-//     `, [alunoId]);
-
-//     res.render('professor/selecionarAulaParaMover', {
-//       pacote: pacote[0],
-//       aulasAvulsas,
-//     });
-//   } catch (error) {
-//     console.error('Erro ao buscar aulas avulsas para mover:', error);
-//     res.status(500).send('Erro no servidor');
-//   }
-// };
-
 exports.atualizarAulasUtilizadas = async (req, res) => {
   try {
     const pacoteId = parseInt(req.params.id, 10);
@@ -834,55 +796,6 @@ exports.deletarPacote = async (req, res) => {
     res.status(500).send('Erro ao deletar pacote.');
   }
 };
-
-// exports.moverAulaParaPacote = async (req, res) => {
-//   const connection = await db.getConnection();
-
-//   try {
-//     const { aulaId, pacoteId } = req.body;
-
-//     // Verifica se a aula já está associada a um pacote
-//     const [aulaResult] = await connection.query(`
-//       SELECT pacote_id FROM aulas WHERE id = ?
-//     `, [aulaId]);
-
-//     if (aulaResult.length === 0) {
-//       req.flash('error_msg', 'Aula não encontrada.');
-//       return res.redirect('/professor/pacotes');
-//     }
-
-//     if (aulaResult[0].pacote_id) {
-//       req.flash('error_msg', 'A aula já está vinculada a um pacote.');
-//       return res.redirect('/professor/pacotes');
-//     }
-
-//     // Atualiza a aula para associá-la ao pacote
-//     await connection.query(`
-//       UPDATE aulas
-//       SET pacote_id = ?
-//       WHERE id = ?
-//     `, [pacoteId, aulaId]);
-
-//     // Atualiza créditos usados e disponíveis
-//     await connection.query(`
-//       UPDATE pacotes
-//       SET aulas_usadas = aulas_usadas + 1,
-//           aulas_disponiveis = aulas_disponiveis - 1
-//       WHERE id = ?
-//     `, [pacoteId]);
-
-//     req.flash('success_msg', 'Aula movida com sucesso para o pacote.');
-//     return res.redirect('/professor/pacotes');
-
-//   } catch (error) {
-//     console.error('Erro ao mover aula para pacote:', error);
-//     req.flash('error_msg', 'Erro ao mover aula para o pacote.');
-//     return res.redirect('/professor/pacotes');
-//   } finally {
-//     connection.release();
-//   }
-// };
-
 
 
 exports.verPacotesPorAluno = async (req, res) => {
@@ -1403,76 +1316,6 @@ exports.editarPacote = async (req, res) => {
 };
 
 
-
-////////////////////////////////////////////////TESTE///////////////////////////
-
-// // exports.simularDescontoNaData = async (dataSimulada) => {
-//   try {
-//     const dataForcada = new Date(dataSimulada);
-//     const diaSemanaTexto = dataForcada.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
-//     const hojeISO = dataForcada.toISOString().slice(0, 10);
-
-//     const [aulas] = await db.query(`
-//       SELECT af.*, c.nome AS categoria_nome
-//       FROM aulas_fixas af
-//       JOIN categorias c ON c.categoria_id = af.categoria_id
-//       WHERE af.dia_semana = ?
-//     `, [diaSemanaTexto]);
-
-//     for (const aula of aulas) {
-//       const [alunosFixo] = await db.query(`
-//         SELECT aaf.aluno_id FROM alunos_aulas_fixas aaf
-//         WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = true
-//       `, [aula.id]);
-
-//       for (const aluno of alunosFixo) {
-//         // Verifica se desistiu para essa data
-//         const [desistiu] = await db.query(`
-//           SELECT 1 FROM aulas_fixas_desistencias
-//           WHERE aluno_id = ? AND aula_fixa_id = ? AND data = ?
-//         `, [aluno.aluno_id, aula.id, hojeISO]);
-
-//         if (desistiu.length > 0) continue;
-
-//         // Já foi descontado?
-//         const [usoExistente] = await db.query(`
-//           SELECT 1 FROM uso_creditos
-//           WHERE aluno_id = ? AND aula_fixa_id = ? AND data_utilizacao = ?
-//         `, [aluno.aluno_id, aula.id, hojeISO]);
-
-//         if (usoExistente.length > 0) continue;
-
-//         const [pacote] = await db.query(`
-//           SELECT id FROM pacotes_aluno
-//           WHERE aluno_id = ?
-//           AND (categoria_id = ? OR passe_livre = 1)
-//           AND (data_validade IS NULL OR data_validade >= ?)
-//           AND aulas_utilizadas < quantidade_aulas
-//           ORDER BY data_validade ASC
-//           LIMIT 1
-//         `, [aluno.aluno_id, aula.categoria_id, hojeISO]);
-
-//         if (pacote.length === 0) continue;
-
-//         await db.query(`
-//           UPDATE pacotes_aluno SET aulas_utilizadas = aulas_utilizadas + 1
-//           WHERE id = ?
-//         `, [pacote[0].id]);
-
-//         await db.query(`
-//           INSERT INTO uso_creditos (aluno_id, pacote_id, aula_fixa_id, data_utilizacao)
-//           VALUES (?, ?, ?, ?)
-//         `, [aluno.aluno_id, pacote[0].id, aula.id, hojeISO]);
-
-//         console.log(`✅ Descontado para aluno ${aluno.aluno_id} na aula ${aula.id} em ${hojeISO}`);
-//       }
-//     }
-
-//     console.log(`🧪 Simulação concluída para o dia ${hojeISO}`);
-//   } catch (err) {
-//     console.error('Erro na simulação de desconto:', err);
-//   }
-// };
 
 ////////////////////////////////////////////////////////////////////////
 

@@ -75,6 +75,14 @@ exports.painelSemana = async (req, res) => {
       JOIN professores p ON af.professor_id = p.id
     `);
 
+    console.log('TOTAL DE AULAS:', aulas.length);
+
+aulas.forEach(a => {
+  console.log(
+    `ID: ${a.id} | Categoria: ${a.categoria_nome} | Professor: ${a.professor_nome}`
+  );
+});
+
     for (const aula of aulas) {
       const [[ultimaLiberacao]] = await db.query(`
   SELECT data_aula, arquivada
@@ -155,7 +163,7 @@ aula.semana_arquivada = false;;
     const [categorias] = await db.query('SELECT categoria_id AS id, nome FROM categorias ORDER BY nome');
 
     res.render('professor/painelSemana', {
-      aulas,
+      aulas: aulas,
       alunos,
       professores,
       categorias,
@@ -201,7 +209,7 @@ exports.liberarSemana = async (req, res) => {
   WHERE aula_fixa_id = ?
   ORDER BY data_aula DESC
   LIMIT 1
-`, [aulaFixaId]);
+`, [aula.id]);
 
 let dataAula;
 
