@@ -129,6 +129,8 @@ exports.listarAulasFixas = async (req, res) => {
       LEFT JOIN professores p ON af.professor_id = p.id
     `);
 
+    console.log('TOTAL AULAS FIXAS:', aulasFixas.length, JSON.stringify(aulasFixas));
+
     const ordemDias = {
       segunda: 1, seg: 1,
       terca: 2, terça: 2, ter: 2,
@@ -185,51 +187,61 @@ exports.listarAulasFixas = async (req, res) => {
     });
 
     for (const aula of aulasFixas) {
-      // Só envia mensagem se a aula já foi concluída (já ocorreu)
-      if (!aulaConcluida(aula.dia_semana, aula.horario)) {
-        continue; // pula o envio
-      }
+      console.log('AULA ID:', aula.id, '| FIXOS:', JSON.stringify(aula.alunos_fixos));
+  // Busca alunos SEMPRE (fixos)
+  const [alunosFixo] = await db.query(`
+    SELECT 
+      aaf.aluno_id AS aluno_id,
+      a.nome AS nome
+    FROM alunos_fixos_aulas_fixas aaf
+    JOIN alunos a ON a.id = aaf.aluno_id
+    WHERE aaf.aula_fixa_id = ? 
+      AND aaf.ativo = 1
+      AND aaf.eh_fixo = 1
+  `, [aula.id]);
 
-      const [alunosFixo] = await db.query(`
-        SELECT aaf.aluno_id, a.nome
-        FROM alunos_aulas_fixas aaf
-        JOIN alunos a ON a.id = aaf.aluno_id
-        WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = true
-      `, [aula.id]);
+  // Busca alunos SEMPRE (temporários)
+  const [alunosTemporarios] = await db.query(`
+    SELECT 
+      aaf.aluno_id AS aluno_id,
+      a.nome AS nome
+    FROM alunos_fixos_aulas_fixas aaf
+    JOIN alunos a ON a.id = aaf.aluno_id
+    WHERE aaf.aula_fixa_id = ? 
+      AND aaf.ativo = 1
+      AND aaf.eh_fixo = 0
+  `, [aula.id]);
 
-      const [alunosTemporarios] = await db.query(`
-        SELECT aaf.aluno_id, a.nome
-        FROM alunos_aulas_fixas aaf
-        JOIN alunos a ON a.id = aaf.aluno_id
-        WHERE aaf.aula_fixa_id = ? AND aaf.eh_fixo = false
-      `, [aula.id]);
+  console.log('AULA ID:', aula.id, '| FIXOS:', JSON.stringify(alunosFixo), '| TEMP:', JSON.stringify(alunosTemporarios));
 
-      aula.alunosFixo = alunosFixo;
-      aula.alunosTemporarios = alunosTemporarios;
+  aula.alunos_fixos = alunosFixo || [];
+  aula.alunos_fixos_temporarios = alunosTemporarios || [];
 
-      const todosAlunos = [...alunosFixo, ...alunosTemporarios];
+  // Envio de mensagem só se a aula já ocorreu
+  if (aulaConcluida(aula.dia_semana, aula.horario)) {
+    const todosAlunos = [...alunosFixo, ...alunosTemporarios];
 
-      const nomes = todosAlunos.length > 0
-        ? todosAlunos.map(a => `- ${a.nome}`).join('\n')
-        : '_Nenhum participante._';
+    const nomes = todosAlunos.length > 0
+      ? todosAlunos.map(a => `- ${a.nome}`).join('\n')
+      : '_Nenhum participante._';
 
-      const mensagem = 
-        `📚 *Aula fixa finalizada!*\n` +
-        `👨‍🏫 *Professor:* ${aula.professor_nome}\n` +
-        `📘 *Categoria:* ${aula.categoria_nome}\n` +
-        `👥 *Participantes de hoje:*\n${nomes}`;
+    const mensagem =
+      `📚 *Aula fixa finalizada!*\n` +
+      `👨‍🏫 *Professor:* ${aula.professor_nome}\n` +
+      `📘 *Categoria:* ${aula.categoria_nome}\n` +
+      `👥 *Participantes de hoje:*\n${nomes}`;
 
-      console.log('[DEBUG] Enviando mensagem ao grupo:\n', mensagem);
-      await enviarMensagem(mensagem);
-    }
+    console.log('[DEBUG] Enviando mensagem ao grupo:\n', mensagem);
+    await enviarMensagem(mensagem);
+  }
+}
 
-    console.log('[DEBUG] Total de aulas fixas retornadas:', aulasFixas.length);
-    console.log('[DEBUG] Primeira aula fixa:', aulasFixas[0]);
+    
 
         const aulasSemana = require('./aulasFixasSemanaController');
 
     console.log('🔍 ENRIQUECIMENTO: tipo do horario:', typeof aulasFixas[0]?.horario, 'valor:', JSON.stringify(aulasFixas[0]?.horario));
-
+    
 
     for (const aula of aulasFixas) {
       const dataAula = aulasSemana.proximaOcorrencia(aula.dia_semana, aula.horario);
@@ -241,6 +253,7 @@ exports.listarAulasFixas = async (req, res) => {
       } else {
         aula.proxima_data_fmt = '—';
       }
+      
 
       aula.horario_fmt = (aula.horario || '').slice(0, 5);
 
@@ -253,6 +266,8 @@ exports.listarAulasFixas = async (req, res) => {
 
       aula.semana_liberada = !!lib;
       aula.semana_arquivada = !!(lib && lib.arquivada);
+
+      
     }
 
     res.render('professor/novaAulaFixa', {

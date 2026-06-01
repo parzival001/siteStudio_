@@ -302,13 +302,14 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
       aula.dia_semana = aula.dia_semana.charAt(0).toUpperCase() + aula.dia_semana.slice(1);
 
       const [alunosAula] = await db.query(`
-        SELECT a.id, a.nome
-        FROM alunos a
-        JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
-        WHERE aaf.aula_fixa_id = ?
-      `, [aula.id]);
+  SELECT a.id AS aluno_id, a.nome, aaf.aula_fixa_id
+  FROM alunos a
+  JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
+  WHERE aaf.aula_fixa_id = ?
+`, [aula.id]);
 
-      aula.alunos = alunosAula;
+      aula.alunos_fixos = alunosAula;
+      console.log('ALUNOS_FIXOS DA AULA', aula.id, ':', JSON.stringify(alunosAula));
     }
 
     aulasFixas.sort((a, b) => {
@@ -400,6 +401,7 @@ router.post('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
 });
 
 router.post('/aulas-fixas/:aulaId/remover-aluno/:alunoId', authProfessor, async (req, res) => {
+  console.log('PARAMS:', req.params); 
   const { aulaId, alunoId } = req.params;
 
   try {
