@@ -76,7 +76,27 @@ exports.painelSemana = async (req, res) => {
     `);
 
     for (const aula of aulas) {
-      aula.proxima_data = proximaOcorrencia(aula.dia_semana, aula.horario);
+      const [[ultimaLiberacao]] = await db.query(`
+  SELECT data_aula, arquivada
+  FROM aulas_fixas_liberacoes
+  WHERE aula_fixa_id = ?
+  ORDER BY data_aula DESC
+  LIMIT 1
+`, [aula.id]);
+
+if (
+  ultimaLiberacao &&
+  ultimaLiberacao.arquivada === 1
+) {
+  aula.proxima_data = dayjs(ultimaLiberacao.data_aula)
+    .add(7, 'day')
+    .format('YYYY-MM-DD');
+} else {
+  aula.proxima_data = proximaOcorrencia(
+    aula.dia_semana,
+    aula.horario
+  );
+}
       const { formatarDataBR } = require('../utils/formatarData');
       aula.proxima_data_fmt = formatarDataBR(aula.proxima_data);
       aula.horario_fmt = (aula.horario || '').slice(0, 5);
@@ -93,12 +113,15 @@ exports.painelSemana = async (req, res) => {
 
       // Verifica se a próxima ocorrência já foi liberada
       const [[lib]] = await db.query(`
-        SELECT id, liberada_em, arquivada
-        FROM aulas_fixas_liberacoes
-        WHERE aula_fixa_id = ? AND data_aula = ?
-      `, [aula.id, aula.proxima_data]);
-      aula.semana_liberada = !!lib;
-      aula.semana_arquivada = !!(lib && lib.arquivada);
+  SELECT id, liberada_em, arquivada
+  FROM aulas_fixas_liberacoes
+  WHERE aula_fixa_id = ?
+    AND data_aula = ?
+    AND arquivada = 0
+`, [aula.id, aula.proxima_data]);
+
+aula.semana_liberada = !!lib;
+aula.semana_arquivada = false;;
       aula.liberada_em = lib ? dayjs(lib.liberada_em).format('DD/MM/YYYY HH:mm') : null;
 
       // Alunos visíveis na semana corrente (já liberados)
@@ -172,13 +195,45 @@ exports.liberarSemana = async (req, res) => {
       return res.status(404).send('Aula fixa não encontrada.');
     }
 
-    const dataAula = proximaOcorrencia(aula.dia_semana, aula.horario);
+    const [[ultimaLiberacao]] = await conn.query(`
+  SELECT data_aula, arquivada
+  FROM aulas_fixas_liberacoes
+  WHERE aula_fixa_id = ?
+  ORDER BY data_aula DESC
+  LIMIT 1
+`, [aulaFixaId]);
+
+let dataAula;
+
+if (ultimaLiberacao) {
+  dataAula = dayjs(ultimaLiberacao.data_aula)
+    .add(7, 'day')
+    .format('YYYY-MM-DD');
+} else {
+  dataAula = proximaOcorrencia(
+    aula.dia_semana,
+    aula.horario
+  );
+}
+    console.log(
+  'Aula:',
+  aulaFixaId,
+  'Dia:',
+  aula.dia_semana,
+  'Horário:',
+  aula.horario,
+  'Data calculada:',
+  dataAula
+);
 
     // Verifica idempotência: já foi liberada?
     const [[ja]] = await conn.query(`
-      SELECT id FROM aulas_fixas_liberacoes
-      WHERE aula_fixa_id = ? AND data_aula = ?
-    `, [aulaFixaId, dataAula]);
+  SELECT id
+  FROM aulas_fixas_liberacoes
+  WHERE aula_fixa_id = ?
+    AND data_aula = ?
+    AND arquivada = 0
+`, [aulaFixaId, dataAula]);
 
     if (ja) {
       await conn.rollback();
@@ -266,7 +321,27 @@ exports.liberarTodasSemana = async (req, res) => {
         const [[aula]] = await conn.query(
           'SELECT * FROM aulas_fixas WHERE id = ?', [a.id]
         );
-        const dataAula = proximaOcorrencia(aula.dia_semana, aula.horario);
+        const [[ultimaLiberacao]] = await conn.query(`
+  SELECT data_aula, arquivada
+  FROM aulas_fixas_liberacoes
+  WHERE aula_fixa_id = ?
+  ORDER BY data_aula DESC
+  LIMIT 1
+`, [aulaFixaId]);
+
+let dataAula;
+
+if (ultimaLiberacao) {
+  dataAula = dayjs(ultimaLiberacao.data_aula)
+    .add(7, 'day')
+    .format('YYYY-MM-DD');
+} else {
+  dataAula = proximaOcorrencia(
+    aula.dia_semana,
+    aula.horario
+  );
+  console.log('Nova data calculada:', dataAula);
+}
 
         const [[ja]] = await conn.query(`
           SELECT id FROM aulas_fixas_liberacoes
