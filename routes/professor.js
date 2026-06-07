@@ -296,20 +296,30 @@ router.get('/aulas-fixas/nova', authProfessor, async (req, res) => {
       return dia.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
     }
 
-    for (const aula of aulasFixas) {
+        for (const aula of aulasFixas) {
       aula.proxima_data_fmt = formatarDataBR(aula.data_liberada);
       aula.horario_fmt = String(aula.horario || '').slice(0, 5);
       aula.dia_semana = aula.dia_semana.charAt(0).toUpperCase() + aula.dia_semana.slice(1);
 
+      // Calcula vagas dinamicamente — mesma lógica do painel da semana
+      // (vagas = capacidade total - alunos atualmente inscritos)
+      const capacidade = aula.capacidade ?? aula.vagas ?? 0;
+      const [[contagem]] = await db.query(
+        `SELECT COUNT(*) AS inscritos FROM alunos_aulas_fixas WHERE aula_fixa_id = ?`,
+        [aula.id]
+      );
+      const inscritos = contagem.inscritos || 0;
+      aula.capacidade = capacidade;
+      aula.vagas = Math.max(0, capacidade - inscritos);
+ 
       const [alunosAula] = await db.query(`
-  SELECT a.id AS aluno_id, a.nome, aaf.aula_fixa_id
-  FROM alunos a
-  JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
-  WHERE aaf.aula_fixa_id = ?
-`, [aula.id]);
-
+        SELECT a.id AS aluno_id, a.nome, aaf.aula_fixa_id
+        FROM alunos a
+        JOIN alunos_aulas_fixas aaf ON a.id = aaf.aluno_id
+        WHERE aaf.aula_fixa_id = ?
+      `, [aula.id]);
+ 
       aula.alunos_fixos = alunosAula;
-      console.log('ALUNOS_FIXOS DA AULA', aula.id, ':', JSON.stringify(alunosAula));
     }
 
     aulasFixas.sort((a, b) => {
@@ -370,10 +380,11 @@ router.get('/aulas-fixas/:id', authProfessor, async (req, res) => {
 router.post('/aulas-fixas/nova', authProfessor, async (req, res) => {
   const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
   try {
+    // Ao criar, vagas atuais = capacidade total
     await db.query(`
-      INSERT INTO aulas_fixas (categoria_id, professor_id, dia_semana, horario, vagas)
-      VALUES (?, ?, ?, ?, ?)`,
-      [categoria_id, professor_id, dia_semana, horario, vagas]
+      INSERT INTO aulas_fixas (categoria_id, professor_id, dia_semana, horario, vagas, capacidade)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [categoria_id, professor_id, dia_semana, horario, vagas, vagas]
     );
     res.redirect(req.get('Referer') || '/professor/semana');
   } catch (err) {
@@ -383,19 +394,51 @@ router.post('/aulas-fixas/nova', authProfessor, async (req, res) => {
 });
 
 
+
+router.get('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [[aula]] = await db.query('SELECT * FROM aulas_fixas WHERE id = ?', [id]);
+    if (!aula) return res.status(404).send('Aula fixa não encontrada.');
+
+    // Garante que capacidade exista (se ainda não rodou a migration ou for null)
+    if (aula.capacidade == null) aula.capacidade = aula.vagas;
+    aula.horario_fmt = String(aula.horario || '').slice(0, 5);
+
+    const [categorias] = await db.query('SELECT categoria_id, nome FROM categorias ORDER BY nome');
+    const [professores] = await db.query('SELECT id, nome FROM professores ORDER BY nome');
+
+    res.render('professor/editarAulaFixa', { aula, categorias, professores });
+  } catch (err) {
+    console.error('Erro ao carregar editar aula:', err);
+    res.status(500).send('Erro ao carregar tela de edição.');
+  }
+});
+
 router.post('/aulas-fixas/editar/:id', authProfessor, async (req, res) => {
   const { categoria_id, professor_id, dia_semana, horario, vagas } = req.body;
   const id = req.params.id;
 
   try {
+    // Ao editar, atualiza capacidade junto. Tambem ajusta vagas atuais
+    // considerando quantos alunos ja estao inscritos.
+    const [[contagem]] = await db.query(
+      `SELECT COUNT(*) AS inscritos FROM alunos_aulas_fixas WHERE aula_fixa_id = ?`,
+      [id]
+    );
+    const inscritos = contagem.inscritos || 0;
+    const novasVagas = Math.max(0, vagas - inscritos);
+
     await db.query(`
       UPDATE aulas_fixas
-      SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?, vagas = ?
+      SET categoria_id = ?, professor_id = ?, dia_semana = ?, horario = ?,
+          vagas = ?, capacidade = ?
       WHERE id = ?`,
-      [categoria_id, professor_id, dia_semana, horario, vagas, id]
+      [categoria_id, professor_id, dia_semana, horario, novasVagas, vagas, id]
     );
     res.redirect(req.get('Referer') || '/professor/semana');
   } catch (err) {
+    console.error('Erro ao editar aula fixa:', err);
     res.status(500).send('Erro ao atualizar aula fixa');
   }
 });

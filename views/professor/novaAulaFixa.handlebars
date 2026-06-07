@@ -4,8 +4,9 @@
     <div class="col-12 col-md-10 col-lg-8">
 
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-        <h2 class="mb-0">Cadastrar Aula Fixa</h2>
+        <h2 class="mb-0">Aulas Liberadas — Gerenciar Alunos</h2>
         <div class="d-flex gap-2 flex-wrap">
+          <a href="/professor/semana" class="btn btn-outline-light btn-sm">← Painel Semana</a>
           <a href="/professor/semana/historico" class="btn btn-outline-info btn-sm">📜 Histórico</a>
           <form method="POST" action="/professor/aulas-fixas/arquivar-todas" class="d-inline"
             onsubmit="return confirm('Arquivar TODAS as aulas liberadas? Isso encerra a semana e move tudo para o histórico.');">
@@ -28,53 +29,11 @@
       <div class="alert alert-success">📦 {{arquivadas}} aula(s) arquivada(s) com sucesso!</div>
       {{/if}}
 
-      <form method="POST" action="/professor/aulas-fixas/nova" class="mb-5">
-        <div class="mb-3">
-          <label for="categoria_id" class="form-label">Categoria:</label>
-          <select name="categoria_id" class="form-control" required>
-            <option value="">Selecione a categoria</option>
-            {{#each categorias}}
-            <option value="{{this.categoria_id}}">{{this.nome}}</option>
-            {{/each}}
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label for="professor_id" class="form-label">Professor:</label>
-          <select class="form-select" name="professor_id" required>
-            {{#each professores}}
-            <option value="{{this.id}}">{{this.nome}}</option>
-            {{/each}}
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label for="dia_semana" class="form-label">Dia da semana:</label>
-          <select class="form-select" name="dia_semana" required>
-            <option value="segunda">Segunda</option>
-            <option value="terça">Terça</option>
-            <option value="quarta">Quarta</option>
-            <option value="quinta">Quinta</option>
-            <option value="sexta">Sexta</option>
-            <option value="sábado">Sábado</option>
-            <option value="domingo">Domingo</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label for="horario" class="form-label">Horário:</label>
-          <input type="time" name="horario" class="form-control" required>
-        </div>
-
-        <div class="mb-3">
-          <label for="vagas" class="form-label">Vagas:</label>
-          <input type="number" name="vagas" class="form-control" required>
-        </div>
-
-        <button type="submit" class="btn btn-outline-custom w-100">Cadastrar</button>
-      </form>
-
-      <hr class="my-4">
+      <div class="alert alert-secondary small text-dark">
+        Aqui aparecem as aulas que você já liberou na semana corrente.
+        Para <strong>criar</strong> uma nova aula fixa, vá ao
+        <a href="/professor/semana"><strong>Painel da Semana</strong></a>.
+      </div>
 
       {{#each aulasFixas}}
       <div class="border rounded p-4 mb-4">

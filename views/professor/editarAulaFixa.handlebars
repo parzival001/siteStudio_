@@ -1,28 +1,69 @@
-<h2>Editar Aula Fixa</h2>
+<div class="container py-5 text-white">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
 
-<form method="POST" action="/professor/aulas-fixas/editar/{{aula.id}}">
-  <label>Categoria:</label>
-  <select class="form-select" name="categoria_id">
-    {{#each categorias}}
-      <option value="{{this.id}}" {{#if (eq this.id ../aula.categoria_id)}}selected{{/if}}>{{this.nome}}</option>
-    {{/each}}
-  </select>
+      <h2 class="text-center mb-4">Editar Aula Fixa</h2>
 
-  <label>Professor:</label>
-  <select class="form-select" name="professor_id">
-    {{#each professores}}
-      <option value="{{this.id}}" {{#if (eq this.id ../aula.professor_id)}}selected{{/if}}>{{this.nome}}</option>
-    {{/each}}
-  </select>
+      <a href="/professor/semana" class="btn btn-outline-light mb-3">← Voltar</a>
 
-  <label>Dia da Semana:</label>
-  <input type="text" name="dia_semana" value="{{aula.dia_semana}}" class="form-control">
+      <div class="card p-4 text-dark" style="background-color: #B395C0;">
+        <form method="POST" action="/professor/aulas-fixas/editar/{{aula.id}}">
 
-  <label>Horário:</label>
-  <input type="time" name="horario" value="{{aula.horario}}" class="form-control">
+          <div class="mb-3">
+            <label class="form-label"><strong>Categoria:</strong></label>
+            <select class="form-select" name="categoria_id" required>
+              {{#each categorias}}
+                <option value="{{this.categoria_id}}" {{#if (eq this.categoria_id ../aula.categoria_id)}}selected{{/if}}>
+                  {{this.nome}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
 
-  <label>Vagas:</label>
-  <input type="number" name="vagas" value="{{aula.vagas}}" class="form-control">
+          <div class="mb-3">
+            <label class="form-label"><strong>Professor:</strong></label>
+            <select class="form-select" name="professor_id" required>
+              {{#each professores}}
+                <option value="{{this.id}}" {{#if (eq this.id ../aula.professor_id)}}selected{{/if}}>
+                  {{this.nome}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
 
-  <button type="submit" class="btn btn-primary mt-3">Salvar</button>
-</form>
+          <div class="mb-3">
+            <label class="form-label"><strong>Dia da Semana:</strong></label>
+            <select class="form-select" name="dia_semana" required>
+              <option value="segunda" {{#if (eq aula.dia_semana "segunda")}}selected{{/if}}>Segunda</option>
+              <option value="terça"   {{#if (eq aula.dia_semana "terça")}}selected{{/if}}>Terça</option>
+              <option value="terca"   {{#if (eq aula.dia_semana "terca")}}selected{{/if}}>Terça (sem cedilha)</option>
+              <option value="quarta"  {{#if (eq aula.dia_semana "quarta")}}selected{{/if}}>Quarta</option>
+              <option value="quinta"  {{#if (eq aula.dia_semana "quinta")}}selected{{/if}}>Quinta</option>
+              <option value="sexta"   {{#if (eq aula.dia_semana "sexta")}}selected{{/if}}>Sexta</option>
+              <option value="sábado"  {{#if (eq aula.dia_semana "sábado")}}selected{{/if}}>Sábado</option>
+              <option value="sabado"  {{#if (eq aula.dia_semana "sabado")}}selected{{/if}}>Sábado (sem acento)</option>
+              <option value="domingo" {{#if (eq aula.dia_semana "domingo")}}selected{{/if}}>Domingo</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label"><strong>Horário:</strong></label>
+            <input type="time" name="horario" value="{{aula.horario_fmt}}" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label"><strong>Capacidade total (vagas máximas):</strong></label>
+            <input type="number" name="vagas" min="1" value="{{aula.capacidade}}" class="form-control" required>
+            <small class="form-text">Esta é a capacidade máxima da aula. Quando você libera uma nova semana, as vagas voltam a este número (menos os alunos fixos que entram automaticamente).</small>
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-success flex-grow-1">💾 Salvar</button>
+            <a href="/professor/semana" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>

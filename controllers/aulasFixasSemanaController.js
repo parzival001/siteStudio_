@@ -109,6 +109,18 @@ if (
       aula.proxima_data_fmt = formatarDataBR(aula.proxima_data);
       aula.horario_fmt = (aula.horario || '').slice(0, 5);
 
+      // Calcula vagas dinamicamente — fonte da verdade é COUNT(alunos_aulas_fixas)
+      // (a coluna `vagas` no banco pode estar dessincronizada por bugs antigos
+      //  ou ainda por mexer manualmente; agora exibimos sempre o cálculo real).
+      const capacidade = aula.capacidade ?? aula.vagas ?? 0;
+      const [[contagem]] = await db.query(
+        `SELECT COUNT(*) AS inscritos FROM alunos_aulas_fixas WHERE aula_fixa_id = ?`,
+        [aula.id]
+      );
+      const inscritos = contagem.inscritos || 0;
+      aula.capacidade = capacidade;
+      aula.vagas = Math.max(0, capacidade - inscritos);
+
       // Alunos fixos permanentes desta aula
       const [fixos] = await db.query(`
         SELECT a.id, a.nome
@@ -276,13 +288,15 @@ if (ultimaLiberacao) {
       inseridos++;
     }
 
-    // Recalcula vagas: vagas originais - inseridos
-    // (Atenção: aqui assumimos que a coluna "vagas" no aulas_fixas é o LIMITE
-    //  e não as restantes. Se for o contrário no seu modelo, ajustar.)
-    const vagasRestantes = Math.max(0, aula.vagas - inseridos);
+    // Reseta as vagas: capacidade total - alunos fixos inseridos.
+    // A coluna `capacidade` guarda o limite imutável da aula (criada na primeira
+    // vez que foi cadastrada). A coluna `vagas` muda durante a semana conforme
+    // alunos entram e saem.
+    const capacidade = aula.capacidade ?? aula.vagas; // fallback se ainda não tem capacidade preenchida
+    const vagasReset = Math.max(0, capacidade - inseridos);
     await conn.query(`
-      UPDATE aulas_fixas SET vagas = ? WHERE id = ?
-    `, [vagasRestantes, aulaFixaId]);
+      UPDATE aulas_fixas SET vagas = ?, capacidade = ? WHERE id = ?
+    `, [vagasReset, capacidade, aulaFixaId]);
 
     // Marca como liberada
     await conn.query(`
@@ -329,27 +343,23 @@ exports.liberarTodasSemana = async (req, res) => {
         const [[aula]] = await conn.query(
           'SELECT * FROM aulas_fixas WHERE id = ?', [a.id]
         );
+
         const [[ultimaLiberacao]] = await conn.query(`
-  SELECT data_aula, arquivada
-  FROM aulas_fixas_liberacoes
-  WHERE aula_fixa_id = ?
-  ORDER BY data_aula DESC
-  LIMIT 1
-`, [aulaFixaId]);
+          SELECT data_aula, arquivada
+          FROM aulas_fixas_liberacoes
+          WHERE aula_fixa_id = ?
+          ORDER BY data_aula DESC
+          LIMIT 1
+        `, [a.id]);
 
-let dataAula;
-
-if (ultimaLiberacao) {
-  dataAula = dayjs(ultimaLiberacao.data_aula)
-    .add(7, 'day')
-    .format('YYYY-MM-DD');
-} else {
-  dataAula = proximaOcorrencia(
-    aula.dia_semana,
-    aula.horario
-  );
-  console.log('Nova data calculada:', dataAula);
-}
+        let dataAula;
+        if (ultimaLiberacao) {
+          dataAula = dayjs(ultimaLiberacao.data_aula)
+            .add(7, 'day')
+            .format('YYYY-MM-DD');
+        } else {
+          dataAula = proximaOcorrencia(aula.dia_semana, aula.horario);
+        }
 
         const [[ja]] = await conn.query(`
           SELECT id FROM aulas_fixas_liberacoes
@@ -381,9 +391,12 @@ if (ultimaLiberacao) {
           inseridos++;
         }
 
+        // Reseta vagas pra capacidade total - inseridos.
+        const capacidade = aula.capacidade ?? aula.vagas;
+        const vagasReset = Math.max(0, capacidade - inseridos);
         await conn.query(`
-          UPDATE aulas_fixas SET vagas = GREATEST(0, vagas - ?) WHERE id = ?
-        `, [inseridos, a.id]);
+          UPDATE aulas_fixas SET vagas = ?, capacidade = ? WHERE id = ?
+        `, [vagasReset, capacidade, a.id]);
 
         await conn.query(`
           INSERT INTO aulas_fixas_liberacoes (aula_fixa_id, data_aula, liberada_por)
@@ -445,7 +458,7 @@ exports.adicionarAlunoFixo = async (req, res) => {
           INSERT INTO alunos_aulas_fixas (aluno_id, aula_fixa_id, eh_fixo)
           VALUES (?, ?, 1)
         `, [alunoId, aulaFixaId]);
-        await db.query('UPDATE aulas_fixas SET vagas = GREATEST(0, vagas - 1) WHERE id = ?', [aulaFixaId]);
+        // OBS: vagas é calculado dinamicamente no painel — não precisa decrementar aqui
       }
     }
 
@@ -471,14 +484,13 @@ exports.removerAlunoFixo = async (req, res) => {
     `, [aulaFixaId, alunoId]);
 
     // Remove da semana corrente também, se estiver lá
-    const [r] = await db.query(`
+    await db.query(`
       DELETE FROM alunos_aulas_fixas
       WHERE aula_fixa_id = ? AND aluno_id = ?
     `, [aulaFixaId, alunoId]);
 
-    if (r.affectedRows > 0) {
-      await db.query('UPDATE aulas_fixas SET vagas = vagas + 1 WHERE id = ?', [aulaFixaId]);
-    }
+    // OBS: não mexemos mais em aulas_fixas.vagas — o painel calcula
+    // dinamicamente como `capacidade - COUNT(alunos_aulas_fixas)`.
 
     res.redirect('/professor/semana');
   } catch (err) {
