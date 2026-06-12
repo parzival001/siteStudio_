@@ -450,6 +450,22 @@ console.log(teste);
       const dataHoraAula = proximaDataDoDiaSemana(aula.dia_semana, aula.horario);
       const agora = getNowSP();
 
+      // ⏱️ Esconde aulas cujo horário já começou HOJE
+      const diasSemanaMap = {
+        'domingo': 0, 'segunda': 1, 'terca': 2, 'terça': 2,
+        'quarta': 3, 'quinta': 4, 'sexta': 5, 'sabado': 6, 'sábado': 6
+      };
+      const diaAula = diasSemanaMap[aula.dia_semana.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')];
+
+      if (diaAula === agora.getDay()) {
+        const [hAula, mAula] = String(aula.horario).split(':').map(Number);
+        const hAgora = agora.getHours();
+        const mAgora = agora.getMinutes();
+        if (hAgora > hAula || (hAgora === hAula && mAgora >= mAula)) {
+          return null;
+        }
+      }
+
       // Semana de referência
       const dataBase = new Date(dataHoraAula);
       const inicioSemana = new Date(dataBase);
@@ -493,7 +509,8 @@ console.log(teste);
       };
     });
 
-    res.render('aluno/aulasFixasDisponiveis', { aulas: aulasComExtras });
+   const aulasFiltradas = aulasComExtras.filter(a => a !== null);
+res.render('aluno/aulasFixasDisponiveis', { aulas: aulasFiltradas });
 
   } catch (err) {
     console.error('Erro ao listar aulas fixas:', err);
